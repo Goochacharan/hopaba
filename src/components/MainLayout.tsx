@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { Home, User, ListChecks, Calendar, ShoppingCart, LogIn, Compass } from 'lucide-react';
+import { Home, User, LogIn } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,22 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       return;
     }
     if (query.trim()) {
-      if (location.pathname === '/marketplace' || location.pathname.startsWith('/marketplace')) {
-        console.log("Marketplace search: Navigating to marketplace with query:", query);
-        const currentParams = new URLSearchParams(location.search);
-        const category = currentParams.get('category');
-        if (category) {
-          navigate(`/marketplace?q=${encodeURIComponent(query)}&category=${category}`);
-        } else {
-          navigate(`/marketplace?q=${encodeURIComponent(query)}`);
-        }
-      } else if (location.pathname === '/events') {
-        navigate(`/events?q=${encodeURIComponent(query)}`);
-      } else if (location.pathname === '/explore') {
-        navigate(`/explore?q=${encodeURIComponent(query)}`);
-      } else {
-        navigate(`/search?q=${encodeURIComponent(query)}`);
-      }
+      navigate(`/search?q=${encodeURIComponent(query)}`);
     }
   };
   const navigateToHome = () => {
@@ -55,15 +41,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     return !['/location', '/search'].some(path => location.pathname.startsWith(path));
   };
   const getSearchPlaceholder = () => {
-    if (location.pathname === '/events') {
-      return "Search for events...";
-    } else if (location.pathname === '/marketplace' || location.pathname.startsWith('/marketplace')) {
-      return "Search marketplace listings...";
-    } else if (location.pathname === '/explore') {
-      return "Discover businesses and services...";
-    } else {
-      return "What are you looking for today?";
-    }
+    return "What are you looking for today?";
   };
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
@@ -104,14 +82,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 px-4 z-[60] py-px">
         <div className="max-w-5xl mx-auto flex justify-around">
           <NavButton to="/" icon={<Home className="h-5 w-5" />} label="Home" isActive={location.pathname === '/'} />
-          
-          <NavButton to="/explore" icon={<Compass className="h-5 w-5" />} label="Explore" isActive={location.pathname === '/explore'} />
-          
-          <NavButton to="/marketplace" icon={<ShoppingCart className="h-5 w-5" />} label="Market" isActive={location.pathname.startsWith('/marketplace')} />
-          
-          <NavButton to="/events" icon={<Calendar className="h-5 w-5" />} label="Events" isActive={location.pathname === '/events'} />
-          
-          <NavButton to="/my-list" icon={<ListChecks className="h-5 w-5" />} label="List" isActive={location.pathname === '/my-list'} />
           
           <NavButton to={user ? "/profile" : "/login"} icon={<User className="h-5 w-5" />} label={user ? "Profile" : "Login"} isActive={location.pathname === '/profile' || location.pathname === '/login'} />
         </div>

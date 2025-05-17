@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,24 +9,16 @@ import { AuthProvider } from "./hooks/useAuth";
 import React, { Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-// Eagerly import MyList to ensure it's available
-import MyList from "./pages/MyList";
-
-// Lazy load other route components with chunks named for better debugging
+// Lazy load route components with chunks named for better debugging
 const SearchResults = React.lazy(() => import(/* webpackChunkName: "search-results" */ "./pages/SearchResults"));
 const LocationDetails = React.lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = React.lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
 const Profile = React.lazy(() => import(/* webpackChunkName: "profile" */ "./pages/Profile"));
-const Events = React.lazy(() => import(/* webpackChunkName: "events" */ "./pages/Events"));
-const Map = React.lazy(() => import(/* webpackChunkName: "map" */ "./pages/Map"));
 const Login = React.lazy(() => import(/* webpackChunkName: "login" */ "./pages/Login"));
 const Signup = React.lazy(() => import(/* webpackChunkName: "signup" */ "./pages/Signup"));
-const Marketplace = React.lazy(() => import(/* webpackChunkName: "marketplace" */ "./pages/Marketplace"));
-const MarketplaceListingDetails = React.lazy(() => import(/* webpackChunkName: "marketplace-listing" */ "./pages/MarketplaceListingDetails"));
 const SellerDetails = React.lazy(() => import(/* webpackChunkName: "seller-details" */ "./pages/SellerDetails"));
 const AdminPanel = React.lazy(() => import(/* webpackChunkName: "admin-panel" */ "./pages/AdminPanel"));
 const Settings = React.lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
-const Explore = React.lazy(() => import(/* webpackChunkName: "explore" */ "./pages/Explore"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -76,17 +69,8 @@ const RoutePrefetcher = () => {
     const prefetchRoutes = () => {
       if (location.pathname === '/') {
         import("./pages/SearchResults");
-        import("./pages/Marketplace");
-        import("./pages/Explore");
-      } else if (location.pathname === '/explore') {
-        import("./pages/SearchResults");
+      } else if (location.pathname.startsWith('/location/')) {
         import("./pages/LocationDetails");
-      } else if (location.pathname.startsWith('/marketplace')) {
-        import("./pages/MarketplaceListingDetails");
-        import("./pages/SellerDetails");
-      } else if (location.pathname === '/my-list') {
-        // Make sure MyList is always loaded when on this route
-        import("./pages/MyList"); 
       }
     };
 
@@ -137,16 +121,10 @@ const App = () => (
                   <Route path="/location/:id" element={<LocationDetails />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="/my-list" element={<MyList />} />
-                  <Route path="/events" element={<Events />} />
-                  <Route path="/map" element={<Map />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
-                  <Route path="/marketplace" element={<Marketplace />} />
-                  <Route path="/marketplace/:id" element={<MarketplaceListingDetails />} />
                   <Route path="/seller/:id" element={<SellerDetails />} />
                   <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/explore" element={<Explore />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
