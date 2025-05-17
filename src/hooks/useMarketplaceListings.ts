@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -109,22 +108,37 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
                   filteredListings = filteredListings.filter(listing => listing.approval_status === 'approved');
                 }
                 
-                // Fix the error in the original code by safely handling missing fields
+                // Fix the error by explicitly mapping each enhanced listing to the MarketplaceListing interface
                 return filteredListings.map(item => ({
-                  ...item,
-                  // Ensure required fields exist with safe fallbacks
+                  id: item.id,
+                  title: item.title,
+                  description: item.description,
+                  price: item.price,
+                  category: item.category,
+                  condition: item.condition,
+                  model_year: item.model_year || '',
+                  location: item.location,
+                  map_link: item.map_link || '',
+                  seller_name: item.seller_name,
+                  seller_id: item.seller_id || '',
+                  seller_phone: item.seller_phone || '',
+                  seller_whatsapp: item.seller_whatsapp || '',
+                  seller_instagram: item.seller_instagram || '',
                   seller_role: (item.seller_role || 'owner') as 'owner' | 'dealer',
                   seller_rating: item.seller_rating || 0,
-                  images: item.images || [],
-                  shop_images: item.shop_images || [],
-                  damage_images: item.damage_images || [],
-                  inspection_certificates: item.inspection_certificates || [],
-                  bill_images: item.bill_images || [],
                   review_count: item.review_count || 0,
-                  area: item.area || '',
-                  city: item.city || '',
-                  postal_code: item.postal_code || '',
-                  updated_at: item.updated_at || item.created_at,
+                  images: item.images || [],
+                  created_at: item.created_at,
+                  approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
+                  is_negotiable: item.is_negotiable || false,
+                  shop_images: [] as string[], // Default empty array
+                  damage_images: [] as string[], // Default empty array
+                  inspection_certificates: [] as string[], // Default empty array
+                  bill_images: [] as string[], // Default empty array
+                  area: '', // Default empty string
+                  city: '', // Default empty string
+                  postal_code: '', // Default empty string
+                  updated_at: item.created_at, // Default to created_at
                   search_rank: item.search_rank || 0
                 })) as MarketplaceListing[];
               }
@@ -212,11 +226,12 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
           damage_images: item.damage_images || [],
           inspection_certificates: item.inspection_certificates || [],
           bill_images: item.bill_images || [],
-          review_count: item.review_count || 0, // Fixed: Default to 0 for review_count
+          review_count: 0, // Fixed: Default to 0 for review_count
           search_rank: 0, // Add a default search_rank for regular listings
           area: item.area || '',
           city: item.city || '',
-          postal_code: item.postal_code || ''
+          postal_code: item.postal_code || '',
+          updated_at: item.updated_at || item.created_at
         })) as MarketplaceListing[];
       } catch (error) {
         console.error("Error in useMarketplaceListings:", error);
@@ -246,7 +261,7 @@ export const useMarketplaceListing = (id: string) => {
       return {
         ...data,
         // Ensure required fields exist
-        seller_role: (data.seller_role as string || 'owner') as 'owner' | 'dealer',
+        seller_role: (data.seller_role || 'owner') as 'owner' | 'dealer',
         seller_rating: data.seller_rating || 0,
         shop_images: data.shop_images || [],
         bill_images: data.bill_images || [],

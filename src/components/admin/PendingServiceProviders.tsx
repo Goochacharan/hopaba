@@ -77,7 +77,7 @@ export const PendingServiceProviders: React.FC<PendingServiceProvidersProps> = (
                 {service.name}
               </TableCell>
               <TableCell>{service.category}</TableCell>
-              <TableCell>{service.area}, {service.city}</TableCell>
+              <TableCell>{service.area && service.city ? `${service.area}, ${service.city}` : 'N/A'}</TableCell>
               <TableCell>{formatDistanceToNow(new Date(service.created_at), { addSuffix: true })}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">

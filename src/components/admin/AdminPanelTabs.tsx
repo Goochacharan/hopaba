@@ -7,7 +7,7 @@ import { PendingEvents } from './PendingEvents';
 import { usePendingListings } from '@/hooks/usePendingListings';
 
 export const AdminPanelTabs = () => {
-  const { pendingListings, loading, error, updateApprovalStatus, refreshListings } = usePendingListings();
+  const { pendingListings, loading, error, updateApprovalStatus, refetch } = usePendingListings();
   
   const totalPending = 
     pendingListings.marketplace.length + 
@@ -50,7 +50,7 @@ export const AdminPanelTabs = () => {
           error={error}
           onApprove={(id) => updateApprovalStatus('marketplace', id, 'approved')}
           onReject={(id) => updateApprovalStatus('marketplace', id, 'rejected')}
-          onRefresh={refreshListings}
+          onRefresh={refetch}
         />
       </TabsContent>
       
@@ -61,7 +61,7 @@ export const AdminPanelTabs = () => {
           error={error}
           onApprove={(id) => updateApprovalStatus('services', id, 'approved')}
           onReject={(id) => updateApprovalStatus('services', id, 'rejected')}
-          onRefresh={refreshListings}
+          onRefresh={refetch}
         />
       </TabsContent>
       
@@ -72,7 +72,7 @@ export const AdminPanelTabs = () => {
           error={error}
           onApprove={(id) => updateApprovalStatus('events', id, 'approved')}
           onReject={(id) => updateApprovalStatus('events', id, 'rejected')}
-          onRefresh={refreshListings}
+          onRefresh={refetch}
         />
       </TabsContent>
     </Tabs>

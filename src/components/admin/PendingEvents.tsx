@@ -76,8 +76,8 @@ export const PendingEvents: React.FC<PendingEventsProps> = ({
               <TableCell className="font-medium max-w-[200px] truncate">
                 {event.title}
               </TableCell>
-              <TableCell>{event.date}</TableCell>
-              <TableCell>{event.location}</TableCell>
+              <TableCell>{event.date || 'N/A'}</TableCell>
+              <TableCell>{event.location || 'N/A'}</TableCell>
               <TableCell>{formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}</TableCell>
               <TableCell>
                 <div className="flex space-x-2">
