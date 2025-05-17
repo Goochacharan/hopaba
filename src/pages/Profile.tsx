@@ -5,10 +5,7 @@ import MainLayout from '@/components/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import UserMarketplaceListings from '@/components/UserMarketplaceListings';
-import UserEventListings from '@/components/UserEventListings';
 import { Plus, Settings as SettingsIcon, LogOut, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
@@ -26,7 +23,6 @@ const Profile = () => {
   const [refreshBusinesses, setRefreshBusinesses] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [showAddBusinessForm, setShowAddBusinessForm] = useState(false);
-  const [activeTab, setActiveTab] = useState("listings");
   const [pageError, setPageError] = useState<string | null>(null);
   
   useEffect(() => {
@@ -50,13 +46,11 @@ const Profile = () => {
   const handleAddBusiness = () => {
     setEditingBusiness(null);
     setShowAddBusinessForm(true);
-    setActiveTab("businesses"); // Ensure we're on the businesses tab
   };
 
   const handleEditBusiness = (business: Business) => {
     setEditingBusiness(business);
     setShowAddBusinessForm(true);
-    setActiveTab("businesses"); // Ensure we're on the businesses tab
   };
 
   const handleBusinessSaved = () => {
@@ -147,7 +141,8 @@ const Profile = () => {
           </Suspense>
         )}
 
-        {showAddBusinessForm ? <Card className="mb-8">
+        {showAddBusinessForm ? (
+          <Card className="mb-8">
             <CardHeader>
               <CardTitle>{editingBusiness ? 'Edit Business' : 'Add Business'}</CardTitle>
               <CardDescription>
@@ -157,33 +152,20 @@ const Profile = () => {
             <CardContent>
               <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
             </CardContent>
-          </Card> : <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-8">
-              <TabsTrigger value="listings">Marketplace</TabsTrigger>
-              <TabsTrigger value="events">Events</TabsTrigger>
-              <TabsTrigger value="businesses">Your Businesses</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="listings">
-              <UserMarketplaceListings />
-            </TabsContent>
-            
-            <TabsContent value="events">
-              <UserEventListings />
-            </TabsContent>
-            
-            <TabsContent value="businesses">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Your Business Listings</h2>
-                <Button onClick={handleAddBusiness} className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Business
-                </Button>
-              </div>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Your Business Listings</h2>
+              <Button onClick={handleAddBusiness} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Business
+              </Button>
+            </div>
 
-              <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
-            </TabsContent>
-          </Tabs>}
+            <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
+          </div>
+        )}
       </div>
     </MainLayout>;
 };
