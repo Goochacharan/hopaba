@@ -45,6 +45,31 @@ interface MarketplaceListingsQueryOptions {
   includeAllStatuses?: boolean;
 }
 
+// This interface matches the return type from the search_enhanced_listings database function
+interface EnhancedSearchResult {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  condition: string;
+  model_year: string;
+  location: string;
+  map_link: string;
+  seller_name: string;
+  seller_id: string;
+  seller_phone: string;
+  seller_whatsapp: string;
+  seller_instagram: string;
+  seller_rating: number;
+  review_count: number;
+  images: string[];
+  created_at: string;
+  approval_status: string;
+  is_negotiable: boolean;
+  search_rank: number;
+}
+
 export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions = {}) => {
   const {
     category,
@@ -108,39 +133,44 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
                   filteredListings = filteredListings.filter(listing => listing.approval_status === 'approved');
                 }
                 
-                // Fix the error by explicitly mapping each enhanced listing to the MarketplaceListing interface
-                return filteredListings.map(item => ({
-                  id: item.id,
-                  title: item.title,
-                  description: item.description,
-                  price: item.price,
-                  category: item.category,
-                  condition: item.condition,
-                  model_year: item.model_year || '',
-                  location: item.location,
-                  map_link: item.map_link || '',
-                  seller_name: item.seller_name,
-                  seller_id: item.seller_id || '',
-                  seller_phone: item.seller_phone || '',
-                  seller_whatsapp: item.seller_whatsapp || '',
-                  seller_instagram: item.seller_instagram || '',
-                  seller_role: (item.seller_role || 'owner') as 'owner' | 'dealer',
-                  seller_rating: item.seller_rating || 0,
-                  review_count: item.review_count || 0,
-                  images: item.images || [],
-                  created_at: item.created_at,
-                  approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
-                  is_negotiable: item.is_negotiable || false,
-                  shop_images: [] as string[], // Default empty array
-                  damage_images: [] as string[], // Default empty array
-                  inspection_certificates: [] as string[], // Default empty array
-                  bill_images: [] as string[], // Default empty array
-                  area: '', // Default empty string
-                  city: '', // Default empty string
-                  postal_code: '', // Default empty string
-                  updated_at: item.created_at, // Default to created_at
-                  search_rank: item.search_rank || 0
-                })) as MarketplaceListing[];
+                // Fix the error by properly mapping each enhanced listing to the MarketplaceListing interface
+                // with all required fields and proper type casting
+                return filteredListings.map(item => {
+                  const listing: MarketplaceListing = {
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    price: item.price,
+                    category: item.category,
+                    condition: item.condition,
+                    model_year: item.model_year || undefined,
+                    location: item.location,
+                    map_link: item.map_link || undefined,
+                    seller_name: item.seller_name,
+                    seller_id: item.seller_id || undefined,
+                    seller_phone: item.seller_phone || undefined,
+                    seller_whatsapp: item.seller_whatsapp || undefined,
+                    seller_instagram: item.seller_instagram || undefined,
+                    seller_role: (item.seller_role === 'dealer' ? 'dealer' : 'owner'),
+                    seller_rating: item.seller_rating || 0,
+                    review_count: item.review_count || 0,
+                    images: item.images || [],
+                    created_at: item.created_at,
+                    approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
+                    is_negotiable: item.is_negotiable || false,
+                    // Add default values for fields not returned by search_enhanced_listings
+                    shop_images: [],
+                    damage_images: [],
+                    inspection_certificates: [],
+                    bill_images: [],
+                    area: '',
+                    city: '',
+                    postal_code: '',
+                    updated_at: item.created_at,
+                    search_rank: item.search_rank || 0
+                  };
+                  return listing;
+                });
               }
             } catch (searchError) {
               console.error("Exception in enhanced listings search:", searchError);

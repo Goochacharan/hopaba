@@ -22,7 +22,7 @@ export interface Event {
   created_at: string;
 }
 
-interface PendingListingsState {
+export interface PendingListingsState {
   marketplace: MarketplaceListing[];
   services: ServiceProvider[];
   events: Event[];
@@ -33,6 +33,15 @@ const defaultState: PendingListingsState = {
   services: [],
   events: []
 };
+
+// Define database table names as constants
+const TABLES = {
+  MARKETPLACE: 'marketplace_listings',
+  SERVICES: 'service_providers',
+  EVENTS: 'events'
+} as const;
+
+type TableName = typeof TABLES[keyof typeof TABLES];
 
 export const usePendingListings = () => {
   const [pendingListings, setPendingListings] = useState<PendingListingsState>(defaultState);
@@ -49,21 +58,21 @@ export const usePendingListings = () => {
       const [marketplaceResult, servicesResult, eventsResult] = await Promise.allSettled([
         // Fetch pending marketplace listings
         supabase
-          .from('marketplace_listings')
+          .from(TABLES.MARKETPLACE)
           .select('*')
           .eq('approval_status', 'pending')
           .order('created_at', { ascending: false }),
           
         // Fetch pending service providers
         supabase
-          .from('service_providers')
+          .from(TABLES.SERVICES)
           .select('id, name, category, area, city, created_at')
           .eq('approval_status', 'pending')
           .order('created_at', { ascending: false }),
           
         // Fetch pending events
         supabase
-          .from('events')
+          .from(TABLES.EVENTS)
           .select('id, title, date, location, created_at')
           .eq('approval_status', 'pending')
           .order('created_at', { ascending: false })
@@ -147,17 +156,21 @@ export const usePendingListings = () => {
     status: 'approved' | 'rejected'
   ) => {
     try {
-      let table = '';
+      let table: TableName;
+      
+      // Map contentType to actual table names
       switch (contentType) {
         case 'marketplace':
-          table = 'marketplace_listings';
+          table = TABLES.MARKETPLACE;
           break;
         case 'services':
-          table = 'service_providers';
+          table = TABLES.SERVICES;
           break;
         case 'events':
-          table = 'events';
+          table = TABLES.EVENTS;
           break;
+        default:
+          throw new Error(`Invalid content type: ${contentType}`);
       }
       
       const { error } = await supabase
