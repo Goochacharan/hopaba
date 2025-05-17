@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,28 +9,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import UserMarketplaceListings from '@/components/UserMarketplaceListings';
 import UserEventListings from '@/components/UserEventListings';
-import { AdminSection } from '@/components/admin/AdminSection';
-import { Plus, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Plus, Settings as SettingsIcon, LogOut, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
 import BusinessListSimple from '@/components/business/BusinessListSimple';
 import { Business } from '@/components/business/BusinessFormSimple';
 
+// Lazy load the AdminSection to improve performance and avoid initial loading issues
+const AdminSection = lazy(() => import('@/components/admin/AdminSectionWrapper'));
+
 const Profile = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, loading: adminLoading, error: adminError } = useAdmin();
   const { toast } = useToast();
   const [refreshBusinesses, setRefreshBusinesses] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [showAddBusinessForm, setShowAddBusinessForm] = useState(false);
   const [activeTab, setActiveTab] = useState("listings");
+  const [pageError, setPageError] = useState<string | null>(null);
   
   useEffect(() => {
     if (!user) {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  // Handle admin error to prevent profile page from crashing
+  useEffect(() => {
+    if (adminError) {
+      console.error('Admin error:', adminError);
+      toast({
+        title: "Admin section error",
+        description: "There was an issue loading the admin section. The rest of your profile is still available.",
+        variant: "destructive"
+      });
+    }
+  }, [adminError, toast]);
 
   const handleAddBusiness = () => {
     setEditingBusiness(null);
@@ -59,6 +74,25 @@ const Profile = () => {
     setEditingBusiness(null);
     setShowAddBusinessForm(false);
   };
+
+  if (pageError) {
+    return <MainLayout>
+        <div className="container mx-auto py-8 px-4">
+          <h1 className="text-3xl font-bold mb-4">Profile</h1>
+          <Card>
+            <CardHeader>
+              <CardTitle>Error</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>There was an error loading your profile: {pageError}</p>
+              <Button className="mt-4" onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>;
+  }
 
   if (!user) {
     return <MainLayout>
@@ -99,7 +133,19 @@ const Profile = () => {
           </div>
         </div>
 
-        {isAdmin && <AdminSection />}
+        {/* Admin section with error handling and loading state */}
+        {isAdmin && !adminLoading && (
+          <Suspense fallback={
+            <Card className="mb-8">
+              <CardContent className="p-6 flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2">Loading admin section...</span>
+              </CardContent>
+            </Card>
+          }>
+            <AdminSection />
+          </Suspense>
+        )}
 
         {showAddBusinessForm ? <Card className="mb-8">
             <CardHeader>
@@ -114,7 +160,7 @@ const Profile = () => {
           </Card> : <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-3 mb-8">
               <TabsTrigger value="listings">Marketplace</TabsTrigger>
-              <TabsTrigger value="events"> Events</TabsTrigger>
+              <TabsTrigger value="events">Events</TabsTrigger>
               <TabsTrigger value="businesses">Your Businesses</TabsTrigger>
             </TabsList>
             

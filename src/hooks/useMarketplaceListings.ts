@@ -68,62 +68,69 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
             const normalizedQuery = searchQuery.replace(/\s+/g, ' ').trim();
             console.log(`Using enhanced search for marketplace with query: "${normalizedQuery}"`);
             
-            const { data: enhancedListings, error } = await supabase.rpc(
-              'search_enhanced_listings', 
-              { search_query: normalizedQuery }
-            );
-  
-            if (error) {
-              console.error("Error using enhanced listings search:", error);
-              // Fall back to regular search if RPC fails
-            } else if (enhancedListings && enhancedListings.length > 0) {
-              console.log(`Found ${enhancedListings.length} items through enhanced search`);
-              
-              let filteredListings = enhancedListings;
-              
-              // Apply category filter if provided
-              if (category) {
-                filteredListings = filteredListings.filter(listing => listing.category === category);
+            // Fix the error that was occurring in the original code by adding safety checks
+            try {
+              const { data: enhancedListings, error } = await supabase.rpc(
+                'search_enhanced_listings', 
+                { search_query: normalizedQuery }
+              );
+    
+              if (error) {
+                console.error("Error using enhanced listings search:", error);
+                // Fall back to regular search if RPC fails
+              } else if (enhancedListings && enhancedListings.length > 0) {
+                console.log(`Found ${enhancedListings.length} items through enhanced search`);
+                
+                let filteredListings = enhancedListings;
+                
+                // Apply category filter if provided
+                if (category) {
+                  filteredListings = filteredListings.filter(listing => listing.category === category);
+                }
+                
+                // Apply other filters
+                if (condition) {
+                  filteredListings = filteredListings.filter(listing => listing.condition === condition);
+                }
+                
+                if (minPrice !== undefined) {
+                  filteredListings = filteredListings.filter(listing => listing.price >= minPrice);
+                }
+                
+                if (maxPrice !== undefined) {
+                  filteredListings = filteredListings.filter(listing => listing.price <= maxPrice);
+                }
+                
+                if (minRating !== undefined) {
+                  filteredListings = filteredListings.filter(listing => (listing.seller_rating || 0) >= minRating);
+                }
+                
+                if (!includeAllStatuses) {
+                  filteredListings = filteredListings.filter(listing => listing.approval_status === 'approved');
+                }
+                
+                // Fix the error in the original code by safely handling missing fields
+                return filteredListings.map(item => ({
+                  ...item,
+                  // Ensure required fields exist with safe fallbacks
+                  seller_role: (item.seller_role || 'owner') as 'owner' | 'dealer',
+                  seller_rating: item.seller_rating || 0,
+                  images: item.images || [],
+                  shop_images: item.shop_images || [],
+                  damage_images: item.damage_images || [],
+                  inspection_certificates: item.inspection_certificates || [],
+                  bill_images: item.bill_images || [],
+                  review_count: item.review_count || 0,
+                  area: item.area || '',
+                  city: item.city || '',
+                  postal_code: item.postal_code || '',
+                  updated_at: item.updated_at || item.created_at,
+                  search_rank: item.search_rank || 0
+                })) as MarketplaceListing[];
               }
-              
-              // Apply other filters
-              if (condition) {
-                filteredListings = filteredListings.filter(listing => listing.condition === condition);
-              }
-              
-              if (minPrice !== undefined) {
-                filteredListings = filteredListings.filter(listing => listing.price >= minPrice);
-              }
-              
-              if (maxPrice !== undefined) {
-                filteredListings = filteredListings.filter(listing => listing.price <= maxPrice);
-              }
-              
-              if (minRating !== undefined) {
-                filteredListings = filteredListings.filter(listing => (listing.seller_rating || 0) >= minRating);
-              }
-              
-              if (!includeAllStatuses) {
-                filteredListings = filteredListings.filter(listing => listing.approval_status === 'approved');
-              }
-              
-              return filteredListings.map(item => ({
-                ...item,
-                // Ensure required fields exist
-                seller_role: ((item as any).seller_role || 'owner') as 'owner' | 'dealer',
-                seller_rating: item.seller_rating || 0,
-                images: item.images || [],
-                shop_images: (item as any).shop_images || [],
-                damage_images: (item as any).damage_images || [],
-                inspection_certificates: (item as any).inspection_certificates || [],
-                bill_images: (item as any).bill_images || [],
-                review_count: (item as any).review_count || 0,
-                area: (item as any).area || '',
-                city: (item as any).city || '',
-                postal_code: (item as any).postal_code || '',
-                updated_at: (item as any).updated_at || item.created_at,
-                search_rank: item.search_rank || 0
-              })) as MarketplaceListing[];
+            } catch (searchError) {
+              console.error("Exception in enhanced listings search:", searchError);
+              // Continue to fallback search
             }
           } catch (err) {
             console.error("Failed to use enhanced listings search:", err);
@@ -198,14 +205,18 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
         return (data || []).map(item => ({
           ...item,
           // Ensure required fields exist
-          seller_role: (item.seller_role as string || 'owner') as 'owner' | 'dealer',
+          seller_role: (item.seller_role || 'owner') as 'owner' | 'dealer',
           seller_rating: item.seller_rating || 0,
+          images: item.images || [],
           shop_images: item.shop_images || [],
           damage_images: item.damage_images || [],
           inspection_certificates: item.inspection_certificates || [],
           bill_images: item.bill_images || [],
-          review_count: 0, // Fixed: Default to 0 for review_count
-          search_rank: 0 // Add a default search_rank for regular listings
+          review_count: item.review_count || 0, // Fixed: Default to 0 for review_count
+          search_rank: 0, // Add a default search_rank for regular listings
+          area: item.area || '',
+          city: item.city || '',
+          postal_code: item.postal_code || ''
         })) as MarketplaceListing[];
       } catch (error) {
         console.error("Error in useMarketplaceListings:", error);
