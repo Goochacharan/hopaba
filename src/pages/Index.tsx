@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import AnimatedLogo from '@/components/AnimatedLogo';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +9,6 @@ import { Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 
 const queryCategoryMap = {
   "Find me a cozy café nearby": "cafes",
@@ -38,14 +38,6 @@ const Index = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isEnhancing, setIsEnhancing] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedSubcategory, setSelectedSubcategory] = useState("");
-  
-  // Debug category and subcategory selection
-  useEffect(() => {
-    console.log("Home page - Selected Category:", selectedCategory);
-    console.log("Home page - Selected Subcategory:", selectedSubcategory);
-  }, [selectedCategory, selectedSubcategory]);
 
   const exampleQueries = [
     {
@@ -176,11 +168,10 @@ const Index = () => {
       try {
         const enhancedQuery = await enhanceSearchQuery(query);
 
-        // Get category hint from the map or use the selected category if it's not "all"
-        const categoryHint = queryCategoryMap[query] || 
-          (selectedCategory !== "all" ? selectedCategory : "");
+        // Get category hint from the map
+        const categoryHint = queryCategoryMap[query] || "";
         
-        console.log("Search with category:", categoryHint, "subcategory:", selectedSubcategory);
+        console.log("Search with category hint:", categoryHint);
 
         setTimeout(() => {
           const searchParams = new URLSearchParams();
@@ -188,35 +179,12 @@ const Index = () => {
           if (categoryHint) {
             searchParams.set('category', categoryHint);
           }
-          if (selectedSubcategory) {
-            searchParams.set('subcategory', selectedSubcategory);
-          }
           navigate(`/search?${searchParams.toString()}`);
         }, 100);
       } catch (error) {
         console.error('Search error:', error);
         navigate(`/search?q=${encodeURIComponent(query)}`);
       }
-    }
-  };
-
-  const handleCategorySelect = (category: string) => {
-    console.log("Category selected:", category);
-    setSelectedCategory(category);
-    setSelectedSubcategory(""); // Reset subcategory when category changes
-  };
-
-  const handleSubcategorySelect = (subcategory: string) => {
-    console.log("Subcategory selected:", subcategory);
-    setSelectedSubcategory(subcategory);
-    
-    if (subcategory && selectedCategory !== "all") {
-      // Navigate immediately when a subcategory is selected
-      console.log("Navigating with category:", selectedCategory, "subcategory:", subcategory);
-      const searchParams = new URLSearchParams();
-      searchParams.set('category', selectedCategory);
-      searchParams.set('subcategory', subcategory);
-      navigate(`/search?${searchParams.toString()}`);
     }
   };
 
@@ -229,14 +197,6 @@ const Index = () => {
         </div>
         <div className="w-full max-w-2xl mx-auto">
           <ScrollArea className="h-[calc(100vh-180px)] w-full px-1 pb-0">
-            <CategoryScrollBar
-              selected={selectedCategory}
-              onSelect={handleCategorySelect}
-              className="mb-2"
-              selectedSubcategory={selectedSubcategory}
-              onSubcategorySelect={handleSubcategorySelect}
-            />
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 pr-4">
               {exampleQueries.map((example, idx) => (
                 <Button 
