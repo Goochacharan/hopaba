@@ -1,31 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from '@/components/ui/form';
-import { Card, CardContent } from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -36,20 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogCancel
 } from '@/components/ui/alert-dialog';
-import { Separator } from '@/components/ui/separator';
-import { TagsInput } from '@/components/ui/tags-input';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
-import { 
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus } from 'lucide-react';
+import BusinessFormContent from './BusinessFormContent';
 import { useCategories, useSubcategories } from '@/hooks/useCategories';
 
 export interface BusinessFormValues {
@@ -270,7 +242,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
   
   // Fetch subcategories based on selected category
   const { data: subcategories, isLoading: loadingSubcategories } = useSubcategories(selectedCategoryId);
-  
+
   useEffect(() => {
     const savedCategories = localStorage.getItem('customCategories');
     let customCategories: string[] = [];
@@ -536,7 +508,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory || null, // Explicitly handle empty string as null
+        subcategory: data.subcategory || null,
         description: data.description,
         area: data.area,
         city: data.city,
@@ -588,7 +560,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
         console.log("Creating new business");
         result = await supabase
           .from('service_providers')
-          .insert([businessData]); // Make sure we're using array here
+          .insert([businessData]);
 
         if (result.error) {
           console.error("Supabase insert error:", result.error);
@@ -621,586 +593,23 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
           <Card>
             <CardContent className="pt-6">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Building className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Basic Information</h3>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Name*</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your business name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Category*</FormLabel>
-                        <div className="flex gap-2">
-                          <Select value={field.value} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              {loadingCategories ? (
-                                <div className="px-2 py-1.5 text-sm">Loading categories...</div>
-                              ) : dbCategories?.length ? (
-                                dbCategories.map(category => (
-                                  <SelectItem key={category.id} value={category.name}>
-                                    {category.name}
-                                  </SelectItem>
-                                ))
-                              ) : categories.map(category => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                              {isAdmin && (
-                                <button 
-                                  className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
-                                  type="button"
-                                  onClick={() => setShowAddCategoryDialog(true)}
-                                >
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Add New Category
-                                </button>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {isAdmin && (
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="icon" 
-                              onClick={() => setShowAddCategoryDialog(true)}
-                              title="Add New Category"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="subcategory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <ListOrdered className="h-4 w-4" />
-                          Subcategory
-                        </FormLabel>
-                        <div className="flex gap-2">
-                          <Select value={field.value || ""} onValueChange={field.onChange}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a subcategory (optional)" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              {!selectedCategoryId ? (
-                                <div className="px-2 py-1.5 text-sm">Select a category first</div>
-                              ) : loadingSubcategories ? (
-                                <div className="px-2 py-1.5 text-sm">Loading subcategories...</div>
-                              ) : subcategories?.length ? (
-                                subcategories.map(subcategory => (
-                                  <SelectItem key={subcategory.id} value={subcategory.name}>
-                                    {subcategory.name}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <div className="px-2 py-1.5 text-sm">No subcategories found</div>
-                              )}
-                              {isAdmin && selectedCategoryId && (
-                                <button 
-                                  className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
-                                  type="button"
-                                  onClick={() => setShowAddSubcategoryDialog(true)}
-                                >
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Add New Subcategory
-                                </button>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {isAdmin && selectedCategoryId && (
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="icon" 
-                              onClick={() => setShowAddSubcategoryDialog(true)}
-                              title="Add New Subcategory"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        {!selectedCategoryId && (
-                          <FormDescription>Select a category first to see subcategories (optional)</FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description*</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Describe your business or service" className="min-h-[120px]" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="images"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Business Images</FormLabel>
-                        <FormDescription>
-                          Upload images of your business or services
-                        </FormDescription>
-                        <FormControl>
-                          <ImageUpload 
-                            images={field.value || []} 
-                            onImagesChange={(images) => form.setValue('images', images, { shouldValidate: true })}
-                            maxImages={10}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Location Information</h3>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address*</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your street address" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City*</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter city" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="area"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Area/Neighborhood*</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter neighborhood or area" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="map_link"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Google Maps Link</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Paste your Google Maps link here" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Optional: Add a link to your business on Google Maps
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Contact Information</h3>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number*</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter phone number" 
-                            value={field.value} 
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handlePhoneInput(e, 'contact_phone');
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="whatsapp"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
-                          WhatsApp Number*
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter WhatsApp number" 
-                            value={field.value}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handlePhoneInput(e, 'whatsapp');
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="contact_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter email address" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          Website <span className="text-xs text-muted-foreground">(optional)</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter website URL" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="instagram"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Instagram className="h-4 w-4" />
-                          Instagram <span className="text-xs text-muted-foreground">(optional)</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input placeholder="@yourusername or full URL" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Services & Pricing</h3>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="tags"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Services/Items Tags* (minimum 3)</FormLabel>
-                        <FormDescription>
-                          Add at least 3 tags describing your services or items
-                        </FormDescription>
-                        <FormControl>
-                          <TagsInput
-                            placeholder="Type and press enter (e.g., Ice Cream, Massage, Haircut)"
-                            tags={field.value || []}
-                            setTags={(newTags) => form.setValue('tags', newTags, { shouldValidate: true })}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="price_range_min"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Min Price (₹)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="300"
-                              value={field.value || ''}
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="price_range_max"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Max Price (₹)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="400"
-                              value={field.value || ''}
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="price_unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price Unit</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a price unit" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PRICE_UNITS.map(unit => (
-                              <SelectItem key={unit} value={unit}>
-                                {unit}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-medium">Experience & Availability</h3>
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="experience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Professional Experience</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value || undefined}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select years of experience" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {EXPERIENCE_OPTIONS.map(exp => (
-                              <SelectItem key={exp} value={exp}>
-                                {exp}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="availability_days"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Available Days
-                        </FormLabel>
-                        <FormDescription>
-                          Select the days you are available
-                        </FormDescription>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          {DAYS_OF_WEEK.map((day) => (
-                            <FormItem
-                              key={day}
-                              className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={selectedDays.includes(day)}
-                                  onCheckedChange={(checked) => {
-                                    handleDayToggle(day, checked as boolean);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal cursor-pointer">
-                                {day}
-                              </FormLabel>
-                            </FormItem>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="hours_from"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Working Hours From
-                          </FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value || "9:00 AM"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select start time" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              {TIME_OPTIONS.map(time => (
-                                <SelectItem key={`from-${time}`} value={time}>
-                                  {time}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="hours_to"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Working Hours To
-                          </FormLabel>
-                          <Select 
-                            onValueChange={field.onChange}
-                            value={field.value || "5:00 PM"}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select end time" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              {TIME_OPTIONS.map(time => (
-                                <SelectItem key={`to-${time}`} value={time}>
-                                  {time}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              </div>
+              <BusinessFormContent 
+                form={form}
+                handlePhoneInput={handlePhoneInput}
+                handleDayToggle={handleDayToggle}
+                selectedDays={selectedDays}
+                loadingCategories={loadingCategories}
+                dbCategories={dbCategories}
+                categories={categories}
+                isAdmin={isAdmin}
+                setShowAddCategoryDialog={setShowAddCategoryDialog}
+                selectedCategoryId={selectedCategoryId}
+                loadingSubcategories={loadingSubcategories}
+                subcategories={subcategories}
+                setShowAddSubcategoryDialog={setShowAddSubcategoryDialog}
+                isSubmitting={isSubmitting}
+                business={business}
+              />
             </CardContent>
           </Card>
           
