@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,7 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0); // Changed from 5 to 0 for empty stars initially
   const [reviewText, setReviewText] = useState('');
   const [isMustVisit, setIsMustVisit] = useState(false);
   const [isHiddenGem, setIsHiddenGem] = useState(false);
@@ -144,6 +143,15 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
       return;
     }
     
+    if (rating === 0) {
+      toast({
+        title: "Rating required",
+        description: "Please select a rating",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       await onAddReview({
         rating,
@@ -159,7 +167,7 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
       });
       
       setShowReviewForm(false);
-      setRating(5);
+      setRating(0);
       setReviewText('');
       setIsMustVisit(false);
       setIsHiddenGem(false);

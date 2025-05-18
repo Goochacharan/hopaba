@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -275,84 +274,8 @@ const BusinessDetails = () => {
             </Tabs>
           </div>
           
-          {/* Right column with contact info */}
+          {/* Right column - Remove contact info section and only keep owner/rep card */}
           <div className="space-y-6">
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
-                
-                <div className="space-y-4">
-                  {/* Phone */}
-                  {business.contact_phone && (
-                    <div className="flex items-center gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-medium">Phone</h3>
-                        <a 
-                          href={`tel:${business.contact_phone}`} 
-                          className="hover:underline"
-                        >
-                          {business.contact_phone}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Email */}
-                  {business.contact_email && (
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-medium">Email</h3>
-                        <a 
-                          href={`mailto:${business.contact_email}`} 
-                          className="hover:underline break-all"
-                        >
-                          {business.contact_email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Website */}
-                  {business.website && (
-                    <div className="flex items-center gap-3">
-                      <Globe className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-medium">Website</h3>
-                        <a 
-                          href={business.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline break-all text-primary"
-                        >
-                          {new URL(business.website).hostname}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Instagram */}
-                  {business.instagram && (
-                    <div className="flex items-center gap-3">
-                      <Instagram className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h3 className="font-medium">Instagram</h3>
-                        <a 
-                          href={`https://instagram.com/${business.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-pink-600 hover:underline"
-                        >
-                          {business.instagram}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            
             {/* Owner/Representative Card */}
             <Card>
               <CardContent className="pt-6">

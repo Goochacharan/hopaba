@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Business } from '@/hooks/useBusinesses';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export interface BusinessReview {
   id: string;
@@ -56,8 +56,25 @@ export const useBusinessDetail = (id: string | undefined) => {
 };
 
 export const useBusinessReviews = (businessId: string | undefined) => {
-  // Start with empty reviews array instead of dummy data
-  const [reviews, setReviews] = useState<BusinessReview[]>([]);
+  // Load reviews from localStorage when the hook is initialized
+  const [reviews, setReviews] = useState<BusinessReview[]>(() => {
+    if (!businessId) return [];
+    
+    try {
+      const savedReviews = localStorage.getItem(`reviews_${businessId}`);
+      return savedReviews ? JSON.parse(savedReviews) : [];
+    } catch (error) {
+      console.error('Error loading reviews from localStorage:', error);
+      return [];
+    }
+  });
+  
+  // Save reviews to localStorage whenever they change
+  useEffect(() => {
+    if (businessId && reviews.length > 0) {
+      localStorage.setItem(`reviews_${businessId}`, JSON.stringify(reviews));
+    }
+  }, [businessId, reviews]);
   
   // Function to add a review
   const addReview = (review: Omit<BusinessReview, 'id' | 'date' | 'name'> & { name: string }) => {
@@ -67,7 +84,14 @@ export const useBusinessReviews = (businessId: string | undefined) => {
       date: new Date().toISOString().split('T')[0]
     };
     
-    setReviews([newReview, ...reviews]);
+    const updatedReviews = [newReview, ...reviews];
+    setReviews(updatedReviews);
+    
+    // Save to localStorage immediately
+    if (businessId) {
+      localStorage.setItem(`reviews_${businessId}`, JSON.stringify(updatedReviews));
+    }
+    
     return Promise.resolve();
   };
   
@@ -78,8 +102,25 @@ export const useBusinessReviews = (businessId: string | undefined) => {
 };
 
 export const useBusinessNotes = (businessId: string | undefined) => {
-  // Start with empty notes array instead of dummy data
-  const [notes, setNotes] = useState<BusinessNote[]>([]);
+  // Load notes from localStorage when the hook is initialized
+  const [notes, setNotes] = useState<BusinessNote[]>(() => {
+    if (!businessId) return [];
+    
+    try {
+      const savedNotes = localStorage.getItem(`notes_${businessId}`);
+      return savedNotes ? JSON.parse(savedNotes) : [];
+    } catch (error) {
+      console.error('Error loading notes from localStorage:', error);
+      return [];
+    }
+  });
+  
+  // Save notes to localStorage whenever they change
+  useEffect(() => {
+    if (businessId && notes.length > 0) {
+      localStorage.setItem(`notes_${businessId}`, JSON.stringify(notes));
+    }
+  }, [businessId, notes]);
   
   // Function to add a note
   const addNote = (note: { title: string; content: { text: string; videoUrl?: string } }) => {
@@ -94,7 +135,14 @@ export const useBusinessNotes = (businessId: string | undefined) => {
       thumbs_up_users: []
     };
     
-    setNotes([newNote, ...notes]);
+    const updatedNotes = [newNote, ...notes];
+    setNotes(updatedNotes);
+    
+    // Save to localStorage immediately
+    if (businessId) {
+      localStorage.setItem(`notes_${businessId}`, JSON.stringify(updatedNotes));
+    }
+    
     return Promise.resolve();
   };
   
