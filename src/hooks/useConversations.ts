@@ -19,15 +19,39 @@ export const useConversations = () => {
       .select(`
         *,
         service_requests (id, title, category, subcategory),
-        service_providers (id, name)
+        service_providers (id, name, user_id)
       `)
       .or(`user_id.eq.${user.id},service_providers.user_id.eq.${user.id}`)
       .order('last_message_at', { ascending: false });
 
     if (error) throw error;
-    return data as (Conversation & {
+    
+    // Get latest quotations for each conversation
+    const conversationsWithQuotations = await Promise.all(
+      data.map(async (conversation) => {
+        const { data: quotationMessage } = await supabase
+          .from('messages')
+          .select('quotation_price')
+          .eq('conversation_id', conversation.id)
+          .not('quotation_price', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        const latestQuotation = quotationMessage && quotationMessage.length > 0 
+          ? quotationMessage[0].quotation_price 
+          : undefined;
+          
+        return {
+          ...conversation,
+          latest_quotation: latestQuotation
+        };
+      })
+    );
+
+    return conversationsWithQuotations as (Conversation & {
       service_requests: { id: string; title: string; category: string; subcategory?: string };
-      service_providers: { id: string; name: string };
+      service_providers: { id: string; name: string; user_id: string };
+      latest_quotation?: number;
     })[];
   };
 
@@ -68,8 +92,32 @@ export const useConversations = () => {
       .order('last_message_at', { ascending: false });
 
     if (error) throw error;
-    return data as (Conversation & {
+    
+    // Get latest quotations for each conversation
+    const conversationsWithQuotations = await Promise.all(
+      data.map(async (conversation) => {
+        const { data: quotationMessage } = await supabase
+          .from('messages')
+          .select('quotation_price')
+          .eq('conversation_id', conversation.id)
+          .not('quotation_price', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        const latestQuotation = quotationMessage && quotationMessage.length > 0 
+          ? quotationMessage[0].quotation_price 
+          : undefined;
+          
+        return {
+          ...conversation,
+          latest_quotation: latestQuotation
+        };
+      })
+    );
+
+    return conversationsWithQuotations as (Conversation & {
       service_providers: { id: string; name: string; user_id: string };
+      latest_quotation?: number;
     })[];
   };
 
@@ -137,13 +185,10 @@ export const useConversations = () => {
   };
 
   // Mark messages as read
-  const markMessagesAsRead = async ({
-    conversationId, 
-    senderType
-  }: {
-    conversationId: string;
-    senderType: 'user' | 'provider';
-  }) => {
+  const markMessagesAsRead = async (
+    conversationId: string,
+    senderType: 'user' | 'provider'
+  ) => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -290,11 +335,6 @@ export const useConversations = () => {
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
-    markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider', options?: any) => {
-      return markMessagesAsReadMutation.mutate({
-        conversationId,
-        senderType
-      }, options);
-    }
+    markMessagesAsRead
   };
 };
