@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +19,7 @@ export interface Business {
   id: string;
   name: string;
   category: string;
+  subcategory: string;
   description: string;
   area: string;
   city: string;
@@ -53,6 +55,9 @@ const businessSchema = z.object({
   }),
   category: z.string().min(1, {
     message: "Please select a category.",
+  }),
+  subcategory: z.string().min(1, {
+    message: "Please select a subcategory.",
   }),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
@@ -124,6 +129,7 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
     defaultValues: {
       name: business?.name || "",
       category: business?.category || "",
+      subcategory: business?.subcategory || "",
       description: business?.description || "",
       area: business?.area || "",
       city: business?.city || "",
@@ -162,6 +168,7 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
       const businessData = {
         name: data.name,
         category: data.category,
+        subcategory: data.subcategory,
         description: data.description,
         area: data.area,
         city: data.city,

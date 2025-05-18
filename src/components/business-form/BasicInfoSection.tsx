@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
   FormField, 
@@ -15,14 +15,36 @@ import { TagsInput } from '@/components/ui/tags-input';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BusinessFormValues } from '../AddBusinessForm';
-import { Tag } from 'lucide-react';
+import { Tag, ListFilter } from 'lucide-react';
+import { useCategories, useSubcategories } from '@/hooks/useCategories';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface BasicInfoSectionProps {
   maxImages?: number;
 }
 
 export default function BasicInfoSection({ maxImages = 10 }: BasicInfoSectionProps) {
-  const { control, setValue, getValues } = useFormContext<BusinessFormValues>();
+  const { control, setValue, getValues, watch } = useFormContext<BusinessFormValues>();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  
+  // Watch for category changes
+  const selectedCategory = watch('category');
+  
+  // Fetch categories
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  
+  // Fetch subcategories based on selected category
+  const { data: subcategories, isLoading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
+  
+  // Find category ID when category name changes
+  useEffect(() => {
+    if (categories && selectedCategory) {
+      const category = categories.find(cat => cat.name === selectedCategory);
+      if (category) {
+        setSelectedCategoryId(category.id);
+      }
+    }
+  }, [selectedCategory, categories]);
   
   return (
     <div className="space-y-6">
@@ -48,22 +70,67 @@ export default function BasicInfoSection({ maxImages = 10 }: BasicInfoSectionPro
         render={({ field }) => (
           <FormItem>
             <FormLabel>Category*</FormLabel>
-            <Select 
-              onValueChange={field.onChange} 
-              defaultValue={field.value}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="education">Education</SelectItem>
-                <SelectItem value="healthcare">Healthcare</SelectItem>
-                <SelectItem value="food">Food</SelectItem>
-                <SelectItem value="home_services">Home Services</SelectItem>
-              </SelectContent>
-            </Select>
+            {categoriesLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select 
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  // Reset subcategory when category changes
+                  setValue('subcategory', '');
+                }}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {categories?.map(category => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      
+      <FormField
+        control={control}
+        name="subcategory"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="flex items-center gap-2">
+              <ListFilter className="h-4 w-4" /> 
+              Subcategory*
+            </FormLabel>
+            {subcategoriesLoading || !selectedCategoryId ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select 
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+                disabled={!selectedCategoryId}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={!selectedCategoryId ? "Select category first" : "Select subcategory"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {subcategories?.map(subcategory => (
+                    <SelectItem key={subcategory.id} value={subcategory.name}>
+                      {subcategory.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <FormMessage />
           </FormItem>
         )}

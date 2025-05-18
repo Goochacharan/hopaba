@@ -24,6 +24,27 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       community_notes: {
         Row: {
           content: Json
@@ -465,6 +486,7 @@ export type Database = {
           price_range_max: number | null
           price_range_min: number | null
           price_unit: string | null
+          subcategory: string | null
           tags: string[] | null
           updated_at: string
           user_id: string
@@ -498,6 +520,7 @@ export type Database = {
           price_range_max?: number | null
           price_range_min?: number | null
           price_unit?: string | null
+          subcategory?: string | null
           tags?: string[] | null
           updated_at?: string
           user_id: string
@@ -531,6 +554,7 @@ export type Database = {
           price_range_max?: number | null
           price_range_min?: number | null
           price_unit?: string | null
+          subcategory?: string | null
           tags?: string[] | null
           updated_at?: string
           user_id?: string
@@ -538,6 +562,38 @@ export type Database = {
           whatsapp?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,80 +1,48 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PendingMarketplaceListings } from './PendingMarketplaceListings';
-import { PendingServiceProviders } from './PendingServiceProviders';
-import { PendingEvents } from './PendingEvents';
-import { usePendingListings } from '@/hooks/usePendingListings';
+import PendingServiceProviders from './PendingServiceProviders';
+import PendingMarketplaceListings from './PendingMarketplaceListings';
+import PendingEvents from './PendingEvents';
+import SellerListingLimits from './SellerListingLimits';
+import HighLimitSellers from './HighLimitSellers';
+import CategoryManager from './CategoryManager';
 
-export const AdminPanelTabs = () => {
-  const { pendingListings, loading, error, updateApprovalStatus, refetch } = usePendingListings();
-  
-  const totalPending = 
-    pendingListings.marketplace.length + 
-    pendingListings.services.length + 
-    pendingListings.events.length;
-
+export default function AdminPanelTabs() {
   return (
-    <Tabs defaultValue="marketplace" className="w-full">
-      <TabsList className="grid grid-cols-3 mb-8">
-        <TabsTrigger value="marketplace" className="relative">
-          Marketplace
-          {pendingListings.marketplace.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {pendingListings.marketplace.length}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="services" className="relative">
-          Services
-          {pendingListings.services.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {pendingListings.services.length}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="events" className="relative">
-          Events
-          {pendingListings.events.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {pendingListings.events.length}
-            </span>
-          )}
-        </TabsTrigger>
+    <Tabs defaultValue="services" className="w-full space-y-6">
+      <TabsList className="grid grid-cols-3 md:grid-cols-6">
+        <TabsTrigger value="services">Services</TabsTrigger>
+        <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+        <TabsTrigger value="events">Events</TabsTrigger>
+        <TabsTrigger value="seller_limits">Seller Limits</TabsTrigger>
+        <TabsTrigger value="high_limit_sellers">High Limit Sellers</TabsTrigger>
+        <TabsTrigger value="categories">Categories</TabsTrigger>
       </TabsList>
       
-      <TabsContent value="marketplace">
-        <PendingMarketplaceListings 
-          listings={pendingListings.marketplace}
-          loading={loading}
-          error={error}
-          onApprove={(id) => updateApprovalStatus('marketplace', id, 'approved')}
-          onReject={(id) => updateApprovalStatus('marketplace', id, 'rejected')}
-          onRefresh={refetch}
-        />
+      <TabsContent value="services" className="space-y-4">
+        <PendingServiceProviders />
       </TabsContent>
       
-      <TabsContent value="services">
-        <PendingServiceProviders 
-          services={pendingListings.services}
-          loading={loading}
-          error={error}
-          onApprove={(id) => updateApprovalStatus('services', id, 'approved')}
-          onReject={(id) => updateApprovalStatus('services', id, 'rejected')}
-          onRefresh={refetch}
-        />
+      <TabsContent value="marketplace" className="space-y-4">
+        <PendingMarketplaceListings />
       </TabsContent>
       
-      <TabsContent value="events">
-        <PendingEvents 
-          events={pendingListings.events}
-          loading={loading}
-          error={error}
-          onApprove={(id) => updateApprovalStatus('events', id, 'approved')}
-          onReject={(id) => updateApprovalStatus('events', id, 'rejected')}
-          onRefresh={refetch}
-        />
+      <TabsContent value="events" className="space-y-4">
+        <PendingEvents />
+      </TabsContent>
+      
+      <TabsContent value="seller_limits" className="space-y-4">
+        <SellerListingLimits />
+      </TabsContent>
+      
+      <TabsContent value="high_limit_sellers" className="space-y-4">
+        <HighLimitSellers />
+      </TabsContent>
+
+      <TabsContent value="categories" className="space-y-4">
+        <CategoryManager />
       </TabsContent>
     </Tabs>
   );
-};
+}
