@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,9 +55,7 @@ const businessSchema = z.object({
   category: z.string().min(1, {
     message: "Please select a category.",
   }),
-  subcategory: z.string().min(1, {
-    message: "Please select a subcategory.",
-  }),
+  subcategory: z.string().optional().or(z.literal('')),
   description: z.string().min(10, {
     message: "Description must be at least 10 characters.",
   }),
@@ -90,7 +87,7 @@ const businessSchema = z.object({
     }),
   contact_email: z.string().email({
     message: "Please enter a valid email address."
-  }).optional(),
+  }).optional().or(z.literal('')),
   website: z.string().url({
     message: "Please enter a valid URL."
   }).optional().or(z.literal('')),
@@ -168,7 +165,7 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory,
+        subcategory: data.subcategory || null,
         description: data.description,
         area: data.area,
         city: data.city,
@@ -204,10 +201,10 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
 
         if (result.error) {
           console.error("Supabase update error:", result.error);
-          throw new Error(result.error.message);
+          throw new Error(`Update failed: ${result.error.message}`);
         }
 
-        console.log("Business updated successfully");
+        console.log("Business updated successfully:", result);
         toast({
           title: "Business Updated",
           description: "Your business listing has been updated and will be reviewed by an admin.",
@@ -220,10 +217,10 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
 
         if (result.error) {
           console.error("Supabase insert error:", result.error);
-          throw new Error(result.error.message);
+          throw new Error(`Creation failed: ${result.error.message}`);
         }
 
-        console.log("Business created successfully");
+        console.log("Business created successfully:", result);
         toast({
           title: "Business Added",
           description: "Your business has been listed and will be reviewed by an admin.",

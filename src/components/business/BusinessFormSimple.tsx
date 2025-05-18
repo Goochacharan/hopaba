@@ -55,7 +55,7 @@ import { useCategories, useSubcategories } from '@/hooks/useCategories';
 export interface BusinessFormValues {
   name: string;
   category: string;
-  subcategory: string;
+  subcategory?: string;
   description: string;
   area: string;
   city: string;
@@ -117,7 +117,7 @@ export interface Business {
 const businessSchema = z.object({
   name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  subcategory: z.string().min(1, { message: "Please select a subcategory." }),
+  subcategory: z.string().optional().or(z.literal('')),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   area: z.string().min(2, { message: "Area must be at least 2 characters." }),
   city: z.string().min(2, { message: "City must be at least 2 characters." }),
@@ -530,11 +530,13 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       const availabilityString = availabilityDays.join(', ');
       
       console.log("Submitting availability days:", availabilityDays);
+      console.log("Subcategory value:", data.subcategory);
       
+      // Prepare business data, ensuring subcategory can be null
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory || null,
+        subcategory: data.subcategory || null, // Explicitly handle empty string as null
         description: data.description,
         area: data.area,
         city: data.city,
@@ -574,9 +576,10 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
 
         if (result.error) {
           console.error("Supabase update error:", result.error);
-          throw new Error(result.error.message);
+          throw new Error(`Update failed: ${result.error.message}`);
         }
 
+        console.log("Business updated successfully:", result);
         toast({
           title: "Business Updated",
           description: "Your business listing has been updated and will be reviewed by an admin.",
@@ -589,9 +592,10 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
 
         if (result.error) {
           console.error("Supabase insert error:", result.error);
-          throw new Error(result.error.message);
+          throw new Error(`Creation failed: ${result.error.message}`);
         }
 
+        console.log("Business created successfully:", result);
         toast({
           title: "Business Added",
           description: "Your business has been listed and will be reviewed by an admin.",
@@ -701,13 +705,13 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                       <FormItem>
                         <FormLabel className="flex items-center gap-2">
                           <ListOrdered className="h-4 w-4" />
-                          Subcategory*
+                          Subcategory
                         </FormLabel>
                         <div className="flex gap-2">
-                          <Select value={field.value} onValueChange={field.onChange}>
+                          <Select value={field.value || ""} onValueChange={field.onChange}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a subcategory" />
+                                <SelectValue placeholder="Select a subcategory (optional)" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[300px]">
@@ -749,7 +753,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                           )}
                         </div>
                         {!selectedCategoryId && (
-                          <FormDescription>Select a category first to see subcategories</FormDescription>
+                          <FormDescription>Select a category first to see subcategories (optional)</FormDescription>
                         )}
                         <FormMessage />
                       </FormItem>

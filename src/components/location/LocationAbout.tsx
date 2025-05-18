@@ -41,7 +41,7 @@ const LocationAbout = ({ name, description, tags, category, subcategory }: Locat
       </ScrollArea>
       
       <div className="mt-4">
-        {tags.map((tag, i) => (
+        {tags && tags.map((tag, i) => (
           <span key={i} className="inline-block bg-secondary text-xs px-2 py-1 rounded-full text-muted-foreground mr-2 mb-2">
             {tag}
           </span>
