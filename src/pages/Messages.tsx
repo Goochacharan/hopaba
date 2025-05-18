@@ -167,7 +167,10 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
-      markMessagesAsRead(id, isProvider ? 'provider' : 'user');
+      markMessagesAsRead({
+        conversationId: id,
+        senderType: isProvider ? 'provider' : 'user'
+      });
     }
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
@@ -183,14 +186,11 @@ const Messages: React.FC = () => {
       content: messageContent,
       senderType: isProvider ? 'provider' : 'user',
       quotationPrice: quotationMode ? Number(quotationPrice) : undefined
-    }, {
-      onSuccess: () => {
-        setMessage('');
-        setQuotationMode(false);
-        setQuotationPrice('');
-        refetch();
-      }
     });
+    
+    setMessage('');
+    setQuotationMode(false);
+    setQuotationPrice('');
   };
   
   // Handle keypress event for sending messages

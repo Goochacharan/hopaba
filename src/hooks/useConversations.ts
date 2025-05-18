@@ -32,11 +32,15 @@ export const useConversations = () => {
   };
 
   // Create a new conversation
-  const createConversation = async (
-    requestId: string,
-    providerId: string,
-    userId: string
-  ) => {
+  const createConversationFn = async ({
+    requestId,
+    providerId,
+    userId
+  }: {
+    requestId: string;
+    providerId: string;
+    userId: string;
+  }) => {
     const { data, error } = await supabase
       .from('conversations')
       .insert({
@@ -76,7 +80,7 @@ export const useConversations = () => {
       .select(`
         *,
         service_requests (id, title, category, subcategory),
-        service_providers (id, name)
+        service_providers (id, name, user_id)
       `)
       .eq('id', conversationId)
       .single();
@@ -94,7 +98,7 @@ export const useConversations = () => {
     return {
       conversation: conversation as (Conversation & {
         service_requests: { id: string; title: string; category: string; subcategory?: string };
-        service_providers: { id: string; name: string };
+        service_providers: { id: string; name: string; user_id: string };
       }),
       messages: messages as Message[]
     };
@@ -133,7 +137,13 @@ export const useConversations = () => {
   };
 
   // Mark messages as read
-  const markMessagesAsRead = async (conversationId: string, senderType: 'user' | 'provider') => {
+  const markMessagesAsRead = async ({
+    conversationId, 
+    senderType
+  }: {
+    conversationId: string;
+    senderType: 'user' | 'provider';
+  }) => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -200,7 +210,7 @@ export const useConversations = () => {
   });
 
   const createConversationMutation = useMutation({
-    mutationFn: createConversation,
+    mutationFn: createConversationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
@@ -220,7 +230,7 @@ export const useConversations = () => {
   const markMessagesAsReadMutation = useMutation({
     mutationFn: markMessagesAsRead,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables[0]] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     }
   });
@@ -268,12 +278,23 @@ export const useConversations = () => {
     refetchConversations,
     unreadCount,
     refetchUnreadCount,
-    createConversation: createConversationMutation.mutate,
+    createConversation: (requestId: string, providerId: string, userId: string, options?: any) => {
+      return createConversationMutation.mutate({
+        requestId,
+        providerId,
+        userId
+      }, options);
+    },
     isCreatingConversation: createConversationMutation.isPending,
     sendMessage: sendMessageMutation.mutate,
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
-    markMessagesAsRead: markMessagesAsReadMutation.mutate
+    markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider', options?: any) => {
+      return markMessagesAsReadMutation.mutate({
+        conversationId,
+        senderType
+      }, options);
+    }
   };
 };

@@ -1,6 +1,7 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 export interface Category {
   id: string;
@@ -18,7 +19,11 @@ export interface Subcategory {
 }
 
 export const useCategories = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+
+  const { data: dbCategories, isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -30,6 +35,48 @@ export const useCategories = () => {
       return data as Category[];
     }
   });
+
+  const getSubcategoriesByCategoryName = async (categoryName: string) => {
+    setLoadingSubcategories(true);
+    
+    const categoryId = getCategoryIdByName(categoryName);
+    if (!categoryId) {
+      setLoadingSubcategories(false);
+      setSubcategories([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('subcategories')
+      .select('*')
+      .eq('category_id', categoryId)
+      .order('name');
+    
+    setLoadingSubcategories(false);
+    
+    if (error) {
+      console.error("Error fetching subcategories:", error);
+      return;
+    }
+    
+    setSubcategories(data as Subcategory[]);
+  };
+
+  const getCategoryIdByName = (categoryName: string): string | null => {
+    if (!dbCategories) return null;
+    
+    const category = dbCategories.find(cat => cat.name === categoryName);
+    return category ? category.id : null;
+  };
+
+  return {
+    dbCategories,
+    loadingCategories,
+    subcategories,
+    loadingSubcategories,
+    getSubcategoriesByCategoryName,
+    getCategoryIdByName
+  };
 };
 
 export const useSubcategories = (categoryId?: string) => {
