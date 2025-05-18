@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Event, SupabaseEvent } from '@/hooks/types/recommendationTypes';
 import { toast } from '@/components/ui/use-toast';
@@ -36,8 +35,9 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
           
           // Apply subcategory filter if provided
           if (subcategoryFilter) {
+            // Check if the provider has a subcategory field before filtering
             filteredProviders = filteredProviders.filter(provider => 
-              provider.subcategory?.toLowerCase() === subcategoryFilter.toLowerCase()
+              provider.subcategory && provider.subcategory.toLowerCase() === subcategoryFilter.toLowerCase()
             );
           }
         }
@@ -50,7 +50,7 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
             id: item.id,
             name: item.name,
             category: item.category,
-            subcategory: item.subcategory || null,
+            subcategory: item.subcategory || null, // Handle the subcategory field safely
             tags: item.tags || [],
             rating: 4.5,
             address: `${item.area}, ${item.city}`,
