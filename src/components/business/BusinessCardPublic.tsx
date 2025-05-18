@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Phone, Mail, Globe, MapPin, Instagram, Clock, Languages, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 
 interface BusinessCardPublicProps {
@@ -13,6 +13,8 @@ interface BusinessCardPublicProps {
 }
 
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
+  const navigate = useNavigate();
+  
   // Map days numbers to actual day names
   const dayMap: Record<string, string> = {
     '0': 'Sun',
@@ -51,8 +53,15 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     );
   };
 
+  const handleCardClick = () => {
+    navigate(`/business/${business.id}`);
+  };
+
   return (
-    <Card className={`overflow-hidden border-primary/20 h-full ${className}`}>
+    <Card 
+      className={`overflow-hidden border-primary/20 h-full ${className} cursor-pointer hover:shadow-md transition-shadow`}
+      onClick={handleCardClick}
+    >
       <div className="aspect-video w-full overflow-hidden relative">
         {business.images && business.images.length > 0 ? (
           <img 
@@ -104,7 +113,11 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           {business.contact_phone && (
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <a href={`tel:${business.contact_phone}`} className="hover:underline">
+              <a 
+                href={`tel:${business.contact_phone}`} 
+                className="hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {business.contact_phone}
               </a>
             </div>
@@ -139,7 +152,12 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         
         <div className="flex flex-wrap gap-2 pt-2">
           {business.website && (
-            <a href={business.website} target="_blank" rel="noopener noreferrer">
+            <a 
+              href={business.website} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Button size="sm" variant="outline">
                 <Globe className="h-4 w-4 mr-1" />
                 Website
@@ -148,7 +166,12 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           )}
           
           {business.instagram && (
-            <a href={`https://instagram.com/${business.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
+            <a 
+              href={`https://instagram.com/${business.instagram.replace('@', '')}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Button size="sm" variant="outline" className="text-pink-600 hover:text-pink-700">
                 <Instagram className="h-4 w-4 mr-1" />
                 Instagram
@@ -157,7 +180,10 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           )}
           
           {business.contact_email && (
-            <a href={`mailto:${business.contact_email}`}>
+            <a 
+              href={`mailto:${business.contact_email}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <Button size="sm" variant="outline">
                 <Mail className="h-4 w-4 mr-1" />
                 Email

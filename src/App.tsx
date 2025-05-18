@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ const SellerDetails = React.lazy(() => import(/* webpackChunkName: "seller-detai
 const AdminPanel = React.lazy(() => import(/* webpackChunkName: "admin-panel" */ "./pages/AdminPanel"));
 const Settings = React.lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
 const Shop = React.lazy(() => import(/* webpackChunkName: "shop" */ "./pages/Shop"));
+const BusinessDetails = React.lazy(() => import(/* webpackChunkName: "business-details" */ "./pages/BusinessDetails"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -127,6 +127,7 @@ const App = () => (
                   <Route path="/seller/:id" element={<SellerDetails />} />
                   <Route path="/admin" element={<AdminPanel />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/business/:id" element={<BusinessDetails />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

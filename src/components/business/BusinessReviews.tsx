@@ -1,0 +1,288 @@
+
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
+import { Star, Award, Gem } from 'lucide-react';
+import { BusinessReview } from '@/hooks/useBusinessDetail';
+
+interface BusinessReviewsProps {
+  businessName: string;
+  businessCategory?: string;
+  reviews: BusinessReview[];
+  onAddReview: (review: {
+    rating: number;
+    text?: string;
+    isMustVisit?: boolean;
+    isHiddenGem?: boolean;
+    criteriaRatings?: Record<string, number>;
+  }) => Promise<void>;
+}
+
+const BusinessReviews: React.FC<BusinessReviewsProps> = ({
+  businessName,
+  businessCategory,
+  reviews,
+  onAddReview
+}) => {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [isMustVisit, setIsMustVisit] = useState(false);
+  const [isHiddenGem, setIsHiddenGem] = useState(false);
+  
+  // Calculate average rating
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
+  
+  // Count reviews by rating
+  const ratingCounts = [5, 4, 3, 2, 1].map(rating => {
+    return {
+      rating,
+      count: reviews.filter(r => r.rating === rating).length,
+      percentage: reviews.length > 0 
+        ? (reviews.filter(r => r.rating === rating).length / reviews.length) * 100
+        : 0
+    };
+  });
+  
+  const handleAddReview = async () => {
+    if (!user) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to leave a review",
+        variant: "destructive",
+      });
+      navigate('/login');
+      return;
+    }
+    
+    if (!reviewText.trim()) {
+      toast({
+        title: "Review text required",
+        description: "Please share your experience",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await onAddReview({
+        rating,
+        text: reviewText,
+        isMustVisit,
+        isHiddenGem
+      });
+      
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+      });
+      
+      setShowReviewForm(false);
+      setRating(5);
+      setReviewText('');
+      setIsMustVisit(false);
+      setIsHiddenGem(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit your review. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex justify-between items-center">
+          <span>Reviews</span>
+          <Button 
+            onClick={() => setShowReviewForm(!showReviewForm)}
+            size="sm"
+          >
+            {showReviewForm ? "Cancel" : "Write a Review"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent>
+        {showReviewForm && (
+          <div className="mb-6 p-4 bg-secondary/10 rounded-lg">
+            <h3 className="text-lg font-medium mb-4">Share your experience</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Rating</p>
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map(value => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRating(value)}
+                      className="focus:outline-none"
+                    >
+                      <Star 
+                        className={`w-6 h-6 ${
+                          value <= rating
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-gray-300"
+                        }`} 
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium mb-2">Your experience</p>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  className="w-full p-2 border rounded-md h-24"
+                  placeholder="Share your experience with this business..."
+                />
+              </div>
+              
+              <div className="flex flex-col md:flex-row gap-2">
+                <Button
+                  type="button"
+                  variant={isMustVisit ? "default" : "outline"}
+                  onClick={() => setIsMustVisit(!isMustVisit)}
+                  className="flex gap-2 items-center"
+                >
+                  <Award className="w-4 h-4" />
+                  Must Visit
+                </Button>
+                
+                <Button
+                  type="button"
+                  variant={isHiddenGem ? "default" : "outline"}
+                  onClick={() => setIsHiddenGem(!isHiddenGem)}
+                  className="flex gap-2 items-center"
+                >
+                  <Gem className="w-4 h-4" />
+                  Hidden Gem
+                </Button>
+              </div>
+              
+              <Button onClick={handleAddReview}>Submit Review</Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Rating summary */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map(star => (
+                <Star
+                  key={star}
+                  className={`w-5 h-5 ${
+                    star <= Math.round(avgRating)
+                      ? "text-amber-500 fill-amber-500"
+                      : "text-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-lg font-bold">{avgRating.toFixed(1)}</span>
+            <span className="text-muted-foreground">({reviews.length} reviews)</span>
+          </div>
+          
+          <div className="space-y-2">
+            {ratingCounts.map(item => (
+              <div key={item.rating} className="flex items-center gap-2">
+                <span className="w-12 text-sm">{item.rating} star</span>
+                <Progress value={item.percentage} className="h-2 flex-1" />
+                <span className="text-xs text-muted-foreground w-10 text-right">
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Reviews list */}
+        <div className="space-y-6">
+          {reviews.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No reviews yet. Be the first to share your experience!
+            </div>
+          ) : (
+            reviews.map(review => (
+              <div key={review.id} className="border-t pt-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold">{review.name}</h4>
+                    <div className="flex items-center mt-1 space-x-2">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${
+                              star <= review.rating
+                                ? "text-amber-500 fill-amber-500"
+                                : "text-gray-300"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-muted-foreground text-xs">
+                        {review.date}
+                      </span>
+                    </div>
+                    
+                    {/* Badges */}
+                    {(review.isMustVisit || review.isHiddenGem) && (
+                      <div className="flex space-x-2 mt-2">
+                        {review.isMustVisit && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                            Must Visit
+                          </span>
+                        )}
+                        {review.isHiddenGem && (
+                          <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                            Hidden Gem
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Display criteria ratings if available */}
+                {review.criteriaRatings && Object.keys(review.criteriaRatings).length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm text-muted-foreground mb-1">Detailed ratings:</p>
+                    {Object.entries(review.criteriaRatings).map(([criterionName, rating]) => (
+                      <div key={criterionName} className="flex items-center gap-2">
+                        <div className="text-xs w-24 truncate capitalize">{criterionName}</div>
+                        <Progress value={rating * 10} className="h-2 flex-1" />
+                        <div className="text-xs font-medium">{rating}/10</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {review.text && (
+                  <p className="mt-2 text-sm">{review.text}</p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default BusinessReviews;
