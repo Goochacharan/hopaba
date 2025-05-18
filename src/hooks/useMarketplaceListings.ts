@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -61,6 +62,7 @@ interface EnhancedSearchResult {
   seller_phone: string;
   seller_whatsapp: string;
   seller_instagram: string;
+  seller_role?: string; // Add this field as optional since it might not be returned
   seller_rating: number;
   review_count: number;
   images: string[];
@@ -151,6 +153,7 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
                     seller_phone: item.seller_phone || undefined,
                     seller_whatsapp: item.seller_whatsapp || undefined,
                     seller_instagram: item.seller_instagram || undefined,
+                    // Use a type guard to ensure seller_role is properly typed
                     seller_role: (item.seller_role === 'dealer' ? 'dealer' : 'owner'),
                     seller_rating: item.seller_rating || 0,
                     review_count: item.review_count || 0,
