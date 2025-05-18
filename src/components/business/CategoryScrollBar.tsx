@@ -95,9 +95,16 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   const { data: categoriesData, isLoading } = useCategories();
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [currentCategoryId, setCurrentCategoryId] = useState<string | undefined>();
+  const [showSubcategoryHint, setShowSubcategoryHint] = useState(false);
+  
+  // Normalize category name for consistent comparison
+  const normalizeCategory = (category: string): string => {
+    return category ? category.toLowerCase().trim() : '';
+  };
   
   useEffect(() => {
     console.log("Selected category in CategoryScrollBar:", selected);
+    console.log("Selected subcategory in CategoryScrollBar:", selectedSubcategory);
     
     // Use categories data from the hook, or fetch from service_providers as fallback
     if (categoriesData && categoriesData.length > 0) {
@@ -105,14 +112,31 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
       
       // Find the current category id if we have a selected category
       if (selected && selected !== "All") {
+        const normalizedSelected = normalizeCategory(selected);
+        console.log("Looking for category ID for:", normalizedSelected);
+        
         const selectedCategory = categoriesData.find(
-          cat => cat.name.toLowerCase() === selected.toLowerCase()
+          cat => normalizeCategory(cat.name) === normalizedSelected
         );
-        setCurrentCategoryId(selectedCategory?.id);
+        
+        console.log("Found category:", selectedCategory);
+        
+        if (selectedCategory) {
+          console.log("Setting current category ID to:", selectedCategory.id);
+          setCurrentCategoryId(selectedCategory.id);
+          
+          // Show subcategory hint briefly when category is selected
+          setShowSubcategoryHint(true);
+          setTimeout(() => setShowSubcategoryHint(false), 3000);
+        } else {
+          console.log("Category ID not found for:", selected);
+          setCurrentCategoryId(undefined);
+        }
       } else {
         setCurrentCategoryId(undefined);
       }
     } else {
+      console.log("No categories data yet, fetching from service_providers");
       fetchCategoriesFromServiceProviders();
     }
   }, [selected, categoriesData]);
@@ -142,9 +166,15 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   };
   
   const handleSubcategoryChange = (subcategory: string) => {
+    console.log("Subcategory selected:", subcategory);
     if (onSubcategorySelect) {
       onSubcategorySelect(subcategory);
     }
+  };
+
+  const handleCategorySelect = (cat: string) => {
+    console.log("Category selected:", cat);
+    onSelect(cat);
   };
   
   return (
@@ -168,14 +198,19 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
           const textColor = isVeryLight ? "text-[#555] font-bold" : categoryButtonText;
           
           // Fix the category comparison logic - make it case-insensitive
+          const normalizedCat = normalizeCategory(cat);
+          const normalizedSelected = normalizeCategory(selected);
+          
           const isSelected = isAll 
-            ? selected.toLowerCase() === "all" || !selected
-            : selected && cat.toLowerCase() === selected.toLowerCase();
+            ? normalizedSelected === "all" || !selected
+            : normalizedSelected === normalizedCat;
 
           // Find the category ID if this category is selected
           const categoryId = isSelected && !isAll && categoriesData 
-            ? categoriesData.find(c => c.name.toLowerCase() === cat.toLowerCase())?.id 
+            ? categoriesData.find(c => normalizeCategory(c.name) === normalizedCat)?.id 
             : undefined;
+            
+          console.log(`Category: ${cat}, isSelected: ${isSelected}, categoryId: ${categoryId}`);
           
           return (
             <div key={cat} className="relative">
@@ -190,7 +225,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   "break-words",
                   "justify-between"
                 )}
-                onClick={() => onSelect(cat)}
+                onClick={() => handleCategorySelect(cat)}
                 type="button"
                 aria-label={cat}
                 style={{
@@ -205,23 +240,32 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
               
               {/* Subcategory dropdown for selected category */}
               {isSelected && !isAll && onSubcategorySelect && categoryId && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button 
-                      className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-b-md px-2 py-1 text-xs border border-t-0"
-                    >
-                      {selectedSubcategory || "Select subcategory"} <ChevronDown className="inline h-3 w-3" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-2">
-                    <SubcategorySelector 
-                      categoryId={categoryId}
-                      value={selectedSubcategory}
-                      onChange={handleSubcategoryChange}
-                      className="w-full"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="mt-4 relative">
+                  {showSubcategoryHint && (
+                    <div className="absolute -top-9 left-0 right-0 bg-pink-100 text-xs p-1 rounded-md text-center border border-pink-300 animate-pulse">
+                      Select a subcategory ↓
+                    </div>
+                  )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button 
+                        className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white rounded-md px-3 py-1.5 text-sm font-medium border border-gray-300 shadow-md hover:bg-gray-50 transition-all flex items-center space-x-1"
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        <span>{selectedSubcategory || "Select subcategory"}</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-2">
+                      <SubcategorySelector 
+                        categoryId={categoryId}
+                        value={selectedSubcategory}
+                        onChange={handleSubcategoryChange}
+                        className="w-full"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               )}
             </div>
           );

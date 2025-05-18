@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import AnimatedLogo from '@/components/AnimatedLogo';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +40,12 @@ const Index = () => {
   const [isEnhancing, setIsEnhancing] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  
+  // Debug category and subcategory selection
+  useEffect(() => {
+    console.log("Home page - Selected Category:", selectedCategory);
+    console.log("Home page - Selected Subcategory:", selectedSubcategory);
+  }, [selectedCategory, selectedSubcategory]);
 
   const exampleQueries = [
     {
@@ -171,7 +176,11 @@ const Index = () => {
       try {
         const enhancedQuery = await enhanceSearchQuery(query);
 
-        const categoryHint = queryCategoryMap[query] || selectedCategory !== "all" ? selectedCategory : "";
+        // Get category hint from the map or use the selected category if it's not "all"
+        const categoryHint = queryCategoryMap[query] || 
+          (selectedCategory !== "all" ? selectedCategory : "");
+        
+        console.log("Search with category:", categoryHint, "subcategory:", selectedSubcategory);
 
         setTimeout(() => {
           const searchParams = new URLSearchParams();
@@ -192,15 +201,18 @@ const Index = () => {
   };
 
   const handleCategorySelect = (category: string) => {
+    console.log("Category selected:", category);
     setSelectedCategory(category);
     setSelectedSubcategory(""); // Reset subcategory when category changes
   };
 
   const handleSubcategorySelect = (subcategory: string) => {
+    console.log("Subcategory selected:", subcategory);
     setSelectedSubcategory(subcategory);
     
-    if (subcategory) {
+    if (subcategory && selectedCategory !== "all") {
       // Navigate immediately when a subcategory is selected
+      console.log("Navigating with category:", selectedCategory, "subcategory:", subcategory);
       const searchParams = new URLSearchParams();
       searchParams.set('category', selectedCategory);
       searchParams.set('subcategory', subcategory);
