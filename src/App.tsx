@@ -10,6 +10,7 @@ import React, { Suspense, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 // Lazy load route components with chunks named for better debugging
+const Index = React.lazy(() => import(/* webpackChunkName: "index" */ "./pages/Index"));
 const SearchResults = React.lazy(() => import(/* webpackChunkName: "search-results" */ "./pages/SearchResults"));
 const LocationDetails = React.lazy(() => import(/* webpackChunkName: "location-details" */ "./pages/LocationDetails"));
 const NotFound = React.lazy(() => import(/* webpackChunkName: "not-found" */ "./pages/NotFound"));
@@ -116,7 +117,7 @@ const App = () => (
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<SearchResults />} />
+                  <Route path="/" element={<Index />} />
                   <Route path="/search" element={<SearchResults />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
                   <Route path="/profile" element={<Profile />} />
