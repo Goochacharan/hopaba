@@ -49,7 +49,7 @@ const Shop = () => {
   // Handle category change
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    setSelectedSubcategory('');
+    // Don't reset subcategory here - the CategoryScrollBar component will handle it
   };
   
   // Handle subcategory change
@@ -155,7 +155,7 @@ const Shop = () => {
           </Button>
         </div>
         
-        {/* Categories */}
+        {/* Categories with improved subcategory selector */}
         <div className="mb-6">
           <CategoryScrollBar
             selected={selectedCategory}

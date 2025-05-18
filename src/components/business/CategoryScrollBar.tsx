@@ -95,7 +95,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   const { data: categoriesData, isLoading } = useCategories();
   const [categories, setCategories] = useState<string[]>(["All"]);
   const [currentCategoryId, setCurrentCategoryId] = useState<string | undefined>();
-  const [showSubcategoryHint, setShowSubcategoryHint] = useState(false);
+  const [isSubcategoryOpen, setIsSubcategoryOpen] = useState(false);
   
   // Normalize category name for consistent comparison
   const normalizeCategory = (category: string): string => {
@@ -124,10 +124,6 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
         if (selectedCategory) {
           console.log("Setting current category ID to:", selectedCategory.id);
           setCurrentCategoryId(selectedCategory.id);
-          
-          // Show subcategory hint briefly when category is selected
-          setShowSubcategoryHint(true);
-          setTimeout(() => setShowSubcategoryHint(false), 3000);
         } else {
           console.log("Category ID not found for:", selected);
           setCurrentCategoryId(undefined);
@@ -175,46 +171,47 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   const handleCategorySelect = (cat: string) => {
     console.log("Category selected:", cat);
     onSelect(cat);
+    
+    if (cat !== selected) {
+      // Reset subcategory when changing category
+      if (onSubcategorySelect) {
+        onSubcategorySelect('');
+      }
+    }
   };
   
   return (
-    <div
-      className={cn(
-        "w-full overflow-x-auto scrollbar-none flex gap-3 py-2 px-2",
-        className
-      )}
-      style={{ WebkitOverflowScrolling: "touch" }}
-    >
-      <div className="flex gap-3 min-w-max">
-        {categories.map((cat, idx) => {
-          // "All" button and color assignment for categories
-          const isAll = cat === "All";
-          const bgColor = isAll
-            ? allButtonBg
-            : categoryButtonColors[(idx - 1 + categoryButtonColors.length) % categoryButtonColors.length];
-          // Make font dark for very light backgrounds ("All" and "Other" buttons)
-          const isVeryLight =
-            (isAll || cat === "Other" || bgColor === "bg-[#f1f5f9]" || bgColor === "bg-[#fde68a]");
-          const textColor = isVeryLight ? "text-[#555] font-bold" : categoryButtonText;
-          
-          // Fix the category comparison logic - make it case-insensitive
-          const normalizedCat = normalizeCategory(cat);
-          const normalizedSelected = normalizeCategory(selected);
-          
-          const isSelected = isAll 
-            ? normalizedSelected === "all" || !selected
-            : normalizedSelected === normalizedCat;
-
-          // Find the category ID if this category is selected
-          const categoryId = isSelected && !isAll && categoriesData 
-            ? categoriesData.find(c => normalizeCategory(c.name) === normalizedCat)?.id 
-            : undefined;
+    <div className="space-y-4">
+      <div
+        className={cn(
+          "w-full overflow-x-auto scrollbar-none flex gap-3 py-2 px-2",
+          className
+        )}
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        <div className="flex gap-3 min-w-max">
+          {categories.map((cat, idx) => {
+            // "All" button and color assignment for categories
+            const isAll = cat === "All";
+            const bgColor = isAll
+              ? allButtonBg
+              : categoryButtonColors[(idx - 1 + categoryButtonColors.length) % categoryButtonColors.length];
+            // Make font dark for very light backgrounds ("All" and "Other" buttons)
+            const isVeryLight =
+              (isAll || cat === "Other" || bgColor === "bg-[#f1f5f9]" || bgColor === "bg-[#fde68a]");
+            const textColor = isVeryLight ? "text-[#555] font-bold" : categoryButtonText;
             
-          console.log(`Category: ${cat}, isSelected: ${isSelected}, categoryId: ${categoryId}`);
-          
-          return (
-            <div key={cat} className="relative">
+            // Fix the category comparison logic - make it case-insensitive
+            const normalizedCat = normalizeCategory(cat);
+            const normalizedSelected = normalizeCategory(selected);
+            
+            const isSelected = isAll 
+              ? normalizedSelected === "all" || !selected
+              : normalizedSelected === normalizedCat;
+
+            return (
               <button
+                key={cat}
                 className={cn(
                   buttonShapeStyles,
                   bgColor,
@@ -222,8 +219,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   textColor,
                   depthShadow,
                   isSelected ? selectedStyles : idleStyles,
-                  "break-words",
-                  "justify-between"
+                  "break-words justify-between"
                 )}
                 onClick={() => handleCategorySelect(cat)}
                 type="button"
@@ -237,40 +233,33 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   <ChevronDown className="ml-2 h-4 w-4 opacity-70" />
                 )}
               </button>
-              
-              {/* Subcategory dropdown for selected category */}
-              {isSelected && !isAll && onSubcategorySelect && categoryId && (
-                <div className="mt-4 relative">
-                  {showSubcategoryHint && (
-                    <div className="absolute -top-9 left-0 right-0 bg-pink-100 text-xs p-1 rounded-md text-center border border-pink-300 animate-pulse">
-                      Select a subcategory ↓
-                    </div>
-                  )}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button 
-                        className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white rounded-md px-3 py-1.5 text-sm font-medium border border-gray-300 shadow-md hover:bg-gray-50 transition-all flex items-center space-x-1"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <span>{selectedSubcategory || "Select subcategory"}</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-2">
-                      <SubcategorySelector 
-                        categoryId={categoryId}
-                        value={selectedSubcategory}
-                        onChange={handleSubcategoryChange}
-                        className="w-full"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
+      
+      {/* Subcategory selector - now more prominent */}
+      {selected !== 'All' && !!currentCategoryId && onSubcategorySelect && (
+        <div className="px-2 mt-2">
+          <div className="relative">
+            <div className="bg-white rounded-xl overflow-hidden">
+              <SubcategorySelector
+                categoryId={currentCategoryId}
+                value={selectedSubcategory}
+                onChange={handleSubcategoryChange}
+                className="w-full"
+              />
+            </div>
+            {selectedSubcategory && (
+              <div className="mt-2 flex items-center justify-center">
+                <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  Currently viewing: {selectedSubcategory}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

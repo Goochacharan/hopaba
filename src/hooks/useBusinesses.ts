@@ -74,6 +74,8 @@ export const useBusinessesBySubcategory = (category: string | null, subcategory:
   return useQuery({
     queryKey: ['businesses', 'category', category, 'subcategory', subcategory],
     queryFn: async (): Promise<Business[]> => {
+      console.log(`Fetching businesses with category: ${category}, subcategory: ${subcategory}`);
+      
       let query = supabase
         .from('service_providers')
         .select('*')
@@ -84,14 +86,20 @@ export const useBusinessesBySubcategory = (category: string | null, subcategory:
       }
       
       if (subcategory && subcategory !== "") {
+        console.log(`Filtering by subcategory: ${subcategory}`);
         query = query.eq('subcategory', subcategory);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
       
-      if (error) throw new Error(error.message);
-      return data;
+      if (error) {
+        console.error('Error fetching businesses by subcategory:', error);
+        throw new Error(error.message);
+      }
+      
+      console.log(`Found ${data?.length} businesses with subcategory: ${subcategory}`);
+      return data || [];
     },
-    enabled: !!category
+    enabled: true
   });
 };
