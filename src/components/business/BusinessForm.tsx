@@ -11,20 +11,20 @@ import BusinessFormContent from './BusinessFormContent';
 import SuccessDialog from '../business-form/SuccessDialog';
 
 export interface Business {
-  id: string;
+  id?: string;
   name: string;
   category: string;
-  subcategory: string;
+  subcategory?: string;
   description: string;
   area: string;
   city: string;
   address: string;
   website?: string;
-  approval_status: string;
+  approval_status?: string;
   instagram?: string;
   map_link?: string;
-  contact_phone?: string;
-  whatsapp?: string;
+  contact_phone: string;  // Changed from optional to required
+  whatsapp: string;  // Ensuring this is required too to match BusinessFormSimple
   contact_email?: string;
   tags?: string[];
   languages?: string[];
