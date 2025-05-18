@@ -19,6 +19,7 @@ const Signup = React.lazy(() => import(/* webpackChunkName: "signup" */ "./pages
 const SellerDetails = React.lazy(() => import(/* webpackChunkName: "seller-details" */ "./pages/SellerDetails"));
 const AdminPanel = React.lazy(() => import(/* webpackChunkName: "admin-panel" */ "./pages/AdminPanel"));
 const Settings = React.lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
+const Shop = React.lazy(() => import(/* webpackChunkName: "shop" */ "./pages/Shop"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -125,6 +126,7 @@ const App = () => (
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/seller/:id" element={<SellerDetails />} />
                   <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/shop" element={<Shop />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

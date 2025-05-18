@@ -3,7 +3,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { Home, User, LogIn } from 'lucide-react';
+import { Home, User, LogIn, Store } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +82,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 px-4 z-[60] py-px">
         <div className="max-w-5xl mx-auto flex justify-around">
           <NavButton to="/" icon={<Home className="h-5 w-5" />} label="Home" isActive={location.pathname === '/'} />
+          
+          <NavButton to="/shop" icon={<Store className="h-5 w-5" />} label="Shop" isActive={location.pathname === '/shop'} />
           
           <NavButton to={user ? "/profile" : "/login"} icon={<User className="h-5 w-5" />} label={user ? "Profile" : "Login"} isActive={location.pathname === '/profile' || location.pathname === '/login'} />
         </div>
