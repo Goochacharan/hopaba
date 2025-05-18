@@ -166,11 +166,11 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
-      // Pass an object with conversationId and senderType properties
-      markMessagesAsRead({
-        conversationId: id,
-        senderType: isProvider ? 'provider' : 'user'
-      });
+      // Fix: Call markMessagesAsRead with the correct parameters
+      markMessagesAsRead(
+        id,
+        isProvider ? 'provider' : 'user'
+      );
     }
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
