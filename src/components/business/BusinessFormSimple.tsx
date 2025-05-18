@@ -40,7 +40,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { TagsInput } from '@/components/ui/tags-input';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListFilter } from 'lucide-react';
+import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -51,13 +51,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useCategories, useSubcategories } from '@/hooks/useCategories';
 
 export interface BusinessFormValues {
   name: string;
   category: string;
-  subcategory: string;
   description: string;
   area: string;
   city: string;
@@ -86,7 +83,6 @@ export interface Business {
   id?: string;
   name: string;
   category: string;
-  subcategory: string;
   description: string;
   area: string;
   city: string;
@@ -119,7 +115,6 @@ export interface Business {
 const businessSchema = z.object({
   name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  subcategory: z.string().min(1, { message: "Please select a subcategory." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   area: z.string().min(2, { message: "Area must be at least 2 characters." }),
   city: z.string().min(2, { message: "City must be at least 2 characters." }),
@@ -263,26 +258,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  
-  // Fetch categories from the database
-  const { data: dbCategories, isLoading: categoriesLoading } = useCategories();
-  
-  // Fetch subcategories based on the selected category
-  const { data: subcategories, isLoading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
-  
-  // When the list of categories from the database changes, update the local state
-  useEffect(() => {
-    if (dbCategories) {
-      // Find category ID for initial subcategory loading if business exists
-      if (business?.category && !selectedCategoryId) {
-        const category = dbCategories.find(cat => cat.name === business.category);
-        if (category) {
-          setSelectedCategoryId(category.id);
-        }
-      }
-    }
-  }, [dbCategories, business, selectedCategoryId]);
   
   useEffect(() => {
     const savedCategories = localStorage.getItem('customCategories');
@@ -322,7 +297,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     defaultValues: {
       name: business?.name || "",
       category: business?.category || "",
-      subcategory: business?.subcategory || "",
       description: business?.description || "",
       area: business?.area || "",
       city: business?.city || "",
@@ -346,25 +320,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       images: business?.images || [],
     },
   });
-
-  // Watch category changes to update the selectedCategoryId
-  const selectedCategory = form.watch('category');
-  
-  // Update the selectedCategoryId when category changes
-  useEffect(() => {
-    if (dbCategories && selectedCategory) {
-      const category = dbCategories.find(cat => cat.name === selectedCategory);
-      if (category) {
-        setSelectedCategoryId(category.id);
-        // Reset subcategory when category changes
-        if (!business || business.category !== selectedCategory) {
-          form.setValue('subcategory', '');
-        }
-      } else {
-        setSelectedCategoryId(null);
-      }
-    }
-  }, [selectedCategory, dbCategories, form, business]);
 
   useEffect(() => {
     if (business?.availability_days && business.availability_days.length > 0) {
@@ -453,8 +408,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
   };
 
   const handleSubmit = async (data: BusinessFormValues) => {
-    console.log("Form submitted with data:", data);
-    
     if (!user) {
       toast({
         title: "Authentication required",
@@ -489,12 +442,11 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory, // Added subcategory to submission data
         description: data.description,
         area: data.area,
         city: data.city,
         address: data.address,
-        postal_code: data.postal_code,
+        postal_code: data.postal_code, // Ensure this is included
         contact_phone: data.contact_phone,
         whatsapp: data.whatsapp,
         contact_email: data.contact_email || null,
@@ -600,38 +552,30 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                       <FormItem>
                         <FormLabel>Category*</FormLabel>
                         <div className="flex gap-2">
-                          {categoriesLoading ? (
-                            <Skeleton className="h-10 w-full" />
-                          ) : (
-                            <Select value={field.value} onValueChange={(value) => {
-                              field.onChange(value);
-                              // Reset subcategory when category changes
-                              form.setValue('subcategory', '');
-                            }}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a category" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-[300px]">
-                                {dbCategories?.map(category => (
-                                  <SelectItem key={category.id} value={category.name}>
-                                    {category.name}
-                                  </SelectItem>
-                                ))}
-                                {isAdmin && (
-                                  <button 
-                                    className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
-                                    type="button"
-                                    onClick={() => setShowAddCategoryDialog(true)}
-                                  >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add New Category
-                                  </button>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          )}
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-[300px]">
+                              {categories.map(category => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                              {isAdmin && (
+                                <button 
+                                  className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
+                                  type="button"
+                                  onClick={() => setShowAddCategoryDialog(true)}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add New Category
+                                </button>
+                              )}
+                            </SelectContent>
+                          </Select>
                           {isAdmin && (
                             <Button 
                               type="button" 
@@ -644,47 +588,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                             </Button>
                           )}
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="subcategory"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <ListFilter className="h-4 w-4" /> 
-                          Subcategory*
-                        </FormLabel>
-                        {subcategoriesLoading || !selectedCategoryId ? (
-                          <Skeleton className="h-10 w-full" />
-                        ) : (
-                          <Select 
-                            value={field.value} 
-                            onValueChange={field.onChange}
-                            disabled={!selectedCategoryId || !subcategories || subcategories.length === 0}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder={!selectedCategoryId ? "Select category first" : (subcategories?.length === 0 ? "No subcategories available" : "Select subcategory")} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {subcategories?.map(subcategory => (
-                                <SelectItem key={subcategory.id} value={subcategory.name}>
-                                  {subcategory.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        {selectedCategoryId && subcategories?.length === 0 && (
-                          <FormDescription className="text-yellow-500">
-                            No subcategories available for this category. Please select a different category or contact admin.
-                          </FormDescription>
-                        )}
                         <FormMessage />
                       </FormItem>
                     )}

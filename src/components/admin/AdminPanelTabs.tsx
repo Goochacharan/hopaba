@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PendingServiceProviders } from './PendingServiceProviders';
 import { PendingMarketplaceListings } from './PendingMarketplaceListings';
@@ -18,9 +18,6 @@ const AdminPanelTabs = () => {
     refreshListings, 
     updateApprovalStatus 
   } = usePendingListings();
-
-  // Add active tab state to persist between renders
-  const [activeTab, setActiveTab] = useState("services");
 
   // Handler functions for approving/rejecting different types of content
   const handleApproveService = (id: string) => {
@@ -48,12 +45,7 @@ const AdminPanelTabs = () => {
   };
 
   return (
-    <Tabs 
-      defaultValue={activeTab} 
-      value={activeTab} 
-      onValueChange={setActiveTab} 
-      className="w-full space-y-6"
-    >
+    <Tabs defaultValue="services" className="w-full space-y-6">
       <TabsList className="grid grid-cols-3 md:grid-cols-6">
         <TabsTrigger value="services">Services</TabsTrigger>
         <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
