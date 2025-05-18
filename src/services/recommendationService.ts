@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Event, SupabaseEvent } from '@/hooks/types/recommendationTypes';
 import { toast } from '@/components/ui/use-toast';
@@ -35,10 +36,13 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
           
           // Apply subcategory filter if provided
           if (subcategoryFilter) {
-            // Check if the provider has a subcategory field before filtering
-            filteredProviders = filteredProviders.filter(provider => 
-              provider.subcategory && provider.subcategory.toLowerCase() === subcategoryFilter.toLowerCase()
-            );
+            // Safely check if the provider has a subcategory property
+            filteredProviders = filteredProviders.filter(provider => {
+              // Access the subcategory safely using any type assertion since it's not in the type definition
+              const providerSubcategory = (provider as any).subcategory;
+              return providerSubcategory && 
+                providerSubcategory.toLowerCase() === subcategoryFilter.toLowerCase();
+            });
           }
         }
         
@@ -46,11 +50,14 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
           // Extract coordinates from map_link if available
           const coordinates = extractCoordinatesFromMapLink(item.map_link);
           
+          // Safely retrieve the subcategory using type assertion
+          const subcategory = (item as any).subcategory || null;
+          
           return {
             id: item.id,
             name: item.name,
             category: item.category,
-            subcategory: item.subcategory || null, // Handle the subcategory field safely
+            subcategory: subcategory, // Safely assign the subcategory
             tags: item.tags || [],
             rating: 4.5,
             address: `${item.area}, ${item.city}`,
