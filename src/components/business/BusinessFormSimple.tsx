@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -40,7 +39,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { TagsInput } from '@/components/ui/tags-input';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus } from 'lucide-react';
+import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered, Category } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -51,10 +50,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
+import { useCategories, useSubcategories } from '@/hooks/useCategories';
 
 export interface BusinessFormValues {
   name: string;
   category: string;
+  subcategory: string;
   description: string;
   area: string;
   city: string;
@@ -83,6 +84,7 @@ export interface Business {
   id?: string;
   name: string;
   category: string;
+  subcategory?: string;
   description: string;
   area: string;
   city: string;
@@ -115,6 +117,7 @@ export interface Business {
 const businessSchema = z.object({
   name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
   category: z.string().min(1, { message: "Please select a category." }),
+  subcategory: z.string().min(1, { message: "Please select a subcategory." }),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   area: z.string().min(2, { message: "Area must be at least 2 characters." }),
   city: z.string().min(2, { message: "City must be at least 2 characters." }),
@@ -256,8 +259,17 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>(business?.availability_days || []);
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false);
   const [newCategory, setNewCategory] = useState("");
+  const [newSubcategory, setNewSubcategory] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  
+  // Fetch categories from database
+  const { data: dbCategories, isLoading: loadingCategories } = useCategories();
+  
+  // Fetch subcategories based on selected category
+  const { data: subcategories, isLoading: loadingSubcategories } = useSubcategories(selectedCategoryId);
   
   useEffect(() => {
     const savedCategories = localStorage.getItem('customCategories');
@@ -276,6 +288,16 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     
     setCategories(uniqueCategories);
   }, []);
+
+  // Finding category ID when form loads with existing category
+  useEffect(() => {
+    if (business?.category && dbCategories?.length) {
+      const categoryMatch = dbCategories.find(cat => cat.name === business.category);
+      if (categoryMatch) {
+        setSelectedCategoryId(categoryMatch.id);
+      }
+    }
+  }, [business?.category, dbCategories]);
 
   const parseHours = () => {
     if (business?.hours) {
@@ -297,10 +319,12 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     defaultValues: {
       name: business?.name || "",
       category: business?.category || "",
+      subcategory: business?.subcategory || "",
       description: business?.description || "",
       area: business?.area || "",
       city: business?.city || "",
       address: business?.address || "",
+      postal_code: business?.postal_code || "",
       contact_phone: business?.contact_phone || "+91",
       whatsapp: business?.whatsapp || "+91",
       contact_email: business?.contact_email || "",
@@ -320,6 +344,22 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       images: business?.images || [],
     },
   });
+
+  // Watch the category field to update the category ID when it changes
+  const selectedCategory = form.watch("category");
+  
+  useEffect(() => {
+    if (selectedCategory && dbCategories?.length) {
+      const categoryMatch = dbCategories.find(cat => cat.name === selectedCategory);
+      if (categoryMatch) {
+        setSelectedCategoryId(categoryMatch.id);
+        // Reset subcategory when category changes
+        form.setValue("subcategory", "");
+      } else {
+        setSelectedCategoryId(null);
+      }
+    }
+  }, [selectedCategory, dbCategories, form]);
 
   useEffect(() => {
     if (business?.availability_days && business.availability_days.length > 0) {
@@ -407,6 +447,58 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     }
   };
 
+  const handleAddSubcategory = async () => {
+    if (!selectedCategoryId) {
+      toast({
+        title: "No category selected",
+        description: "Please select a category first before adding a subcategory.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!newSubcategory) {
+      toast({
+        title: "Subcategory name required",
+        description: "Please enter a name for the subcategory.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Add to database
+      const { error } = await supabase
+        .from('subcategories')
+        .insert([
+          { 
+            name: newSubcategory, 
+            category_id: selectedCategoryId 
+          }
+        ]);
+        
+      if (error) throw error;
+      
+      // Set the current subcategory to the newly created one
+      form.setValue("subcategory", newSubcategory);
+      setNewSubcategory("");
+      setShowAddSubcategoryDialog(false);
+      
+      toast({
+        title: "Subcategory Added",
+        description: `${newSubcategory} has been added to the selected category.`
+      });
+      
+      // Refresh subcategories - query key will be invalidated due to the category ID
+    } catch (error: any) {
+      toast({
+        title: "Error adding subcategory",
+        description: error.message || "Failed to add subcategory.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSubmit = async (data: BusinessFormValues) => {
     if (!user) {
       toast({
@@ -442,11 +534,12 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       const businessData = {
         name: data.name,
         category: data.category,
+        subcategory: data.subcategory || null,
         description: data.description,
         area: data.area,
         city: data.city,
         address: data.address,
-        postal_code: data.postal_code, // Ensure this is included
+        postal_code: data.postal_code,
         contact_phone: data.contact_phone,
         whatsapp: data.whatsapp,
         contact_email: data.contact_email || null,
@@ -559,7 +652,15 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[300px]">
-                              {categories.map(category => (
+                              {loadingCategories ? (
+                                <div className="px-2 py-1.5 text-sm">Loading categories...</div>
+                              ) : dbCategories?.length ? (
+                                dbCategories.map(category => (
+                                  <SelectItem key={category.id} value={category.name}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))
+                              ) : categories.map(category => (
                                 <SelectItem key={category} value={category}>
                                   {category}
                                 </SelectItem>
@@ -588,6 +689,68 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                             </Button>
                           )}
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <ListOrdered className="h-4 w-4" />
+                          Subcategory*
+                        </FormLabel>
+                        <div className="flex gap-2">
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a subcategory" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-[300px]">
+                              {!selectedCategoryId ? (
+                                <div className="px-2 py-1.5 text-sm">Select a category first</div>
+                              ) : loadingSubcategories ? (
+                                <div className="px-2 py-1.5 text-sm">Loading subcategories...</div>
+                              ) : subcategories?.length ? (
+                                subcategories.map(subcategory => (
+                                  <SelectItem key={subcategory.id} value={subcategory.name}>
+                                    {subcategory.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-2 py-1.5 text-sm">No subcategories found</div>
+                              )}
+                              {isAdmin && selectedCategoryId && (
+                                <button 
+                                  className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
+                                  type="button"
+                                  onClick={() => setShowAddSubcategoryDialog(true)}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add New Subcategory
+                                </button>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {isAdmin && selectedCategoryId && (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="icon" 
+                              onClick={() => setShowAddSubcategoryDialog(true)}
+                              title="Add New Subcategory"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {!selectedCategoryId && (
+                          <FormDescription>Select a category first to see subcategories</FormDescription>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1056,6 +1219,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
         </form>
       </Form>
       
+      {/* Add Category Dialog */}
       <AlertDialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1075,6 +1239,30 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleAddCategory}>Add Category</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Add Subcategory Dialog */}
+      <AlertDialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add New Subcategory</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a new subcategory for {selectedCategory || "the selected category"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Subcategory name"
+              value={newSubcategory}
+              onChange={(e) => setNewSubcategory(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddSubcategory}>Add Subcategory</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
