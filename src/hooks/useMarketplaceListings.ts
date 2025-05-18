@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -61,7 +62,7 @@ interface EnhancedSearchResult {
   seller_phone: string;
   seller_whatsapp: string;
   seller_instagram: string;
-  seller_role: string; // Added this field which was missing
+  seller_role: string; // Added the missing seller_role field
   seller_rating: number;
   review_count: number;
   images: string[];
