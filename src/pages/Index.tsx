@@ -1,14 +1,15 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import AnimatedLogo from '@/components/AnimatedLogo';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 
 const queryCategoryMap = {
   "Find me a cozy café nearby": "cafes",
@@ -38,6 +39,36 @@ const Index = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isEnhancing, setIsEnhancing] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Get URL parameters for category and subcategory
+  const categoryParam = searchParams.get('category') || 'All';
+  const subcategoryParam = searchParams.get('subcategory') || '';
+  
+  // State for category and subcategory selection
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(subcategoryParam);
+
+  // Update URL when category or subcategory changes
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+    
+    if (selectedCategory !== 'All') newParams.set('category', selectedCategory);
+    if (selectedSubcategory) newParams.set('subcategory', selectedSubcategory);
+    
+    setSearchParams(newParams);
+  }, [selectedCategory, selectedSubcategory, setSearchParams]);
+
+  // Handle category change
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    // The subcategory will be reset by the CategoryScrollBar component
+  };
+
+  // Handle subcategory change
+  const handleSubcategoryChange = (subcategory: string) => {
+    setSelectedSubcategory(subcategory);
+  };
 
   const exampleQueries = [
     {
@@ -168,17 +199,26 @@ const Index = () => {
       try {
         const enhancedQuery = await enhanceSearchQuery(query);
 
-        // Get category hint from the map
-        const categoryHint = queryCategoryMap[query] || "";
+        // Get category hint from the map or use selected category
+        const categoryHint = queryCategoryMap[query] || selectedCategory !== 'All' ? selectedCategory : "";
         
         console.log("Search with category hint:", categoryHint);
 
         setTimeout(() => {
           const searchParams = new URLSearchParams();
           searchParams.set('q', enhancedQuery);
+          
+          // Add category and subcategory to search params if selected
           if (categoryHint) {
             searchParams.set('category', categoryHint);
+          } else if (selectedCategory !== 'All') {
+            searchParams.set('category', selectedCategory);
           }
+          
+          if (selectedSubcategory) {
+            searchParams.set('subcategory', selectedSubcategory);
+          }
+          
           navigate(`/search?${searchParams.toString()}`);
         }, 100);
       } catch (error) {
@@ -195,8 +235,19 @@ const Index = () => {
           <AnimatedLogo size="lg" className="mx-auto mb-1" />
           <h1 className="text-3xl sm:text-4xl font-medium tracking-tight">Hopaba</h1>
         </div>
+        
+        {/* Add CategoryScrollBar similar to the Shop page */}
+        <div className="w-full max-w-2xl mx-auto mb-4">
+          <CategoryScrollBar
+            selected={selectedCategory}
+            onSelect={handleCategoryChange}
+            selectedSubcategory={selectedSubcategory}
+            onSubcategorySelect={handleSubcategoryChange}
+          />
+        </div>
+        
         <div className="w-full max-w-2xl mx-auto">
-          <ScrollArea className="h-[calc(100vh-180px)] w-full px-1 pb-0">
+          <ScrollArea className="h-[calc(100vh-260px)] w-full px-1 pb-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 pr-4">
               {exampleQueries.map((example, idx) => (
                 <Button 
