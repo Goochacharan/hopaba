@@ -2,7 +2,7 @@
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Category } from 'lucide-react';
+import { Tag } from 'lucide-react';
 
 interface LocationAboutProps {
   name: string;
@@ -20,7 +20,7 @@ const LocationAbout = ({ name, description, tags, category, subcategory }: Locat
       {/* Category and subcategory display */}
       {(category || subcategory) && (
         <div className="flex items-center gap-2 mb-3">
-          <Category className="h-4 w-4 text-muted-foreground" />
+          <Tag className="h-4 w-4 text-muted-foreground" />
           <div className="flex flex-wrap gap-2">
             {category && (
               <Badge variant="outline" className="bg-secondary/50">

@@ -39,7 +39,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { TagsInput } from '@/components/ui/tags-input';
 import { ImageUpload } from '@/components/ui/image-upload';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered, Category } from 'lucide-react';
+import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered, CategoryIcon } from 'lucide-react';
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
