@@ -105,7 +105,7 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
             } else if (enhancedListings && enhancedListings.length > 0) {
               console.log(`Found ${enhancedListings.length} items through enhanced search`);
               
-              let filteredListings = enhancedListings;
+              let filteredListings = enhancedListings as EnhancedSearchResult[];
               
               // Apply category filter if provided
               if (category) {

@@ -1,14 +1,14 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PendingServiceProviders from './PendingServiceProviders';
-import PendingMarketplaceListings from './PendingMarketplaceListings';
-import PendingEvents from './PendingEvents';
+import { PendingServiceProviders } from './PendingServiceProviders';
+import { PendingMarketplaceListings } from './PendingMarketplaceListings';
+import { PendingEvents } from './PendingEvents';
 import SellerListingLimits from './SellerListingLimits';
 import HighLimitSellers from './HighLimitSellers';
 import CategoryManager from './CategoryManager';
 
-export default function AdminPanelTabs() {
+const AdminPanelTabs = () => {
   return (
     <Tabs defaultValue="services" className="w-full space-y-6">
       <TabsList className="grid grid-cols-3 md:grid-cols-6">
@@ -45,4 +45,8 @@ export default function AdminPanelTabs() {
       </TabsContent>
     </Tabs>
   );
-}
+};
+
+// Export both as default and named export to support both import styles
+export default AdminPanelTabs;
+export { AdminPanelTabs };

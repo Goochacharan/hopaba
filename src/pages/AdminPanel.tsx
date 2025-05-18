@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
-import { AdminPanelTabs } from '@/components/admin/AdminPanelTabs';
+import AdminPanelTabs from '@/components/admin/AdminPanelTabs';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, ShieldAlert } from 'lucide-react';
