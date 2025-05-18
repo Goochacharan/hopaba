@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -20,15 +21,16 @@ interface Business {
   subcategory: string;
   address: string;
   city: string;
-  country: string;
+  country?: string;
   contact_phone: string;
   website: string;
   images: string[];
   approval_status: string;
-  user_id: string;
-  postal_code: string;
-  hours_from: string;
-  hours_to: string;
+  user_id?: string;
+  postal_code?: string;
+  hours_from?: string;
+  hours_to?: string;
+  whatsapp?: string;
 }
 
 const BusinessDetails: React.FC = () => {
@@ -47,7 +49,8 @@ const BusinessDetails: React.FC = () => {
         throw new Error(error.message);
       }
 
-      return data as Business;
+      // Cast the data to match our Business interface
+      return data as unknown as Business;
     },
     enabled: !!id,
   });
@@ -111,16 +114,18 @@ const BusinessDetails: React.FC = () => {
                 <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
                 <div className="flex items-center gap-2 mb-1">
                   <MapPin className="h-4 w-4" />
-                  <span>{business.address}, {business.city} - {business.postal_code || 'N/A'}, {business.country}</span>
+                  <span>{business.address}, {business.city}{business.postal_code ? ` - ${business.postal_code}` : ''}{business.country ? `, ${business.country}` : ''}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-1">
                   <Phone className="h-4 w-4" />
                   <a href={`tel:${business.contact_phone}`}>{business.contact_phone}</a>
                 </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Globe className="h-4 w-4" />
-                  <a href={business.website} target="_blank" rel="noopener noreferrer">{business.website}</a>
-                </div>
+                {business.website && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className="h-4 w-4" />
+                    <a href={business.website} target="_blank" rel="noopener noreferrer">{business.website}</a>
+                  </div>
+                )}
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-2">Category</h3>
@@ -137,14 +142,16 @@ const BusinessDetails: React.FC = () => {
               </p>
             </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Images</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {business.images.map((image, index) => (
-                  <img key={index} src={image} alt={`Business ${index + 1}`} className="rounded-md" />
-                ))}
+            {business.images && business.images.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Images</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {business.images.map((image, index) => (
+                    <img key={index} src={image} alt={`Business ${index + 1}`} className="rounded-md" />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
         <div className="mt-4">
