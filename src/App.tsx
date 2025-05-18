@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,8 @@ const Signup = React.lazy(() => import(/* webpackChunkName: "signup" */ "./pages
 const SellerDetails = React.lazy(() => import(/* webpackChunkName: "seller-details" */ "./pages/SellerDetails"));
 const AdminPanel = React.lazy(() => import(/* webpackChunkName: "admin-panel" */ "./pages/AdminPanel"));
 const Settings = React.lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
+const Index = React.lazy(() => import(/* webpackChunkName: "index" */ "./pages/Index"));
+const Shop = React.lazy(() => import(/* webpackChunkName: "shop" */ "./pages/Shop"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -116,7 +117,7 @@ const App = () => (
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<SearchResults />} />
+                  <Route path="/" element={<Index />} />
                   <Route path="/search" element={<SearchResults />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
                   <Route path="/profile" element={<Profile />} />
@@ -125,6 +126,7 @@ const App = () => (
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/seller/:id" element={<SellerDetails />} />
                   <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/shop" element={<Shop />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

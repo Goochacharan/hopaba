@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import AnimatedLogo from '@/components/AnimatedLogo';
@@ -194,8 +193,24 @@ const Index = () => {
         <div className="text-center mb-1 animate-fade-in">
           <AnimatedLogo size="lg" className="mx-auto mb-1" />
           <h1 className="text-3xl sm:text-4xl font-medium tracking-tight">Hopaba</h1>
+          <div className="flex justify-center mt-3 space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/search')}
+              className="bg-muted hover:bg-muted/80"
+            >
+              Search
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/shop')}
+              className="bg-pink-300 hover:bg-pink-200 text-neutral-900"
+            >
+              Browse Shop
+            </Button>
+          </div>
         </div>
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full max-w-2xl mx-auto mt-6">
           <ScrollArea className="h-[calc(100vh-180px)] w-full px-1 pb-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 pr-4">
               {exampleQueries.map((example, idx) => (
