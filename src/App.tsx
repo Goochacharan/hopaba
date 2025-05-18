@@ -1,8 +1,9 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import { AuthProvider } from "./hooks/useAuth";
 import React, { Suspense, useEffect } from "react";
@@ -68,7 +69,7 @@ const RoutePrefetcher = () => {
   useEffect(() => {
     // Prefetch adjacent routes based on current location
     const prefetchRoutes = () => {
-      if (location.pathname === '/') {
+      if (location.pathname === '/shop') {
         import("./pages/SearchResults");
       } else if (location.pathname.startsWith('/location/')) {
         import("./pages/LocationDetails");
@@ -117,7 +118,8 @@ const App = () => (
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<SearchResults />} />
+                  {/* Redirect root to shop page */}
+                  <Route path="/" element={<Navigate to="/shop" replace />} />
                   <Route path="/search" element={<SearchResults />} />
                   <Route path="/location/:id" element={<LocationDetails />} />
                   <Route path="/profile" element={<Profile />} />

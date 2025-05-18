@@ -3,7 +3,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { Home, User, LogIn, Store } from 'lucide-react';
+import { User, Store } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,23 +32,27 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       navigate(`/search?q=${encodeURIComponent(query)}`);
     }
   };
-  const navigateToHome = () => {
-    navigate('/');
+  
+  const navigateToShop = () => {
+    navigate('/shop');
     window.scrollTo(0, 0);
-    console.log("Navigating to home page from: ", location.pathname);
+    console.log("Navigating to shop page from: ", location.pathname);
   };
+  
   const shouldShowSearchBar = () => {
     return !['/location', '/search'].some(path => location.pathname.startsWith(path));
   };
+  
   const getSearchPlaceholder = () => {
     return "What are you looking for today?";
   };
+  
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2" role="button" aria-label="Go to home page" onClick={e => {
+          <Link to="/shop" className="flex items-center gap-2" role="button" aria-label="Go to shop page" onClick={e => {
           e.preventDefault();
-          navigateToHome();
+          navigateToShop();
         }}>
             <AnimatedLogo size="sm" />
             <h1 className="text-xl font-medium tracking-tight">
@@ -81,8 +85,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 px-4 z-[60] py-px">
         <div className="max-w-5xl mx-auto flex justify-around">
-          <NavButton to="/" icon={<Home className="h-5 w-5" />} label="Home" isActive={location.pathname === '/'} />
-          
           <NavButton to="/shop" icon={<Store className="h-5 w-5" />} label="Shop" isActive={location.pathname === '/shop'} />
           
           <NavButton to={user ? "/profile" : "/login"} icon={<User className="h-5 w-5" />} label={user ? "Profile" : "Login"} isActive={location.pathname === '/profile' || location.pathname === '/login'} />
