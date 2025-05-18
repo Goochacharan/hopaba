@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Star, Award, Gem } from 'lucide-react';
 import { BusinessReview } from '@/hooks/useBusinessDetail';
+import RatingProgressBars from '@/components/RatingProgressBars';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BusinessReviewsProps {
   businessName: string;
@@ -20,6 +22,12 @@ interface BusinessReviewsProps {
     isHiddenGem?: boolean;
     criteriaRatings?: Record<string, number>;
   }) => Promise<void>;
+}
+
+interface ReviewCriterion {
+  id: string;
+  name: string;
+  category: string;
 }
 
 const BusinessReviews: React.FC<BusinessReviewsProps> = ({
@@ -36,6 +44,37 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
   const [reviewText, setReviewText] = useState('');
   const [isMustVisit, setIsMustVisit] = useState(false);
   const [isHiddenGem, setIsHiddenGem] = useState(false);
+  const [criteria, setCriteria] = useState<ReviewCriterion[]>([]);
+  const [criteriaRatings, setCriteriaRatings] = useState<Record<string, number>>({});
+  
+  // Fetch criteria based on business category
+  useEffect(() => {
+    const fetchCriteria = async () => {
+      if (!businessCategory) return;
+      
+      const { data, error } = await supabase
+        .from('review_criteria')
+        .select('*')
+        .eq('category', businessCategory);
+      
+      if (error) {
+        console.error('Error fetching criteria:', error);
+        return;
+      }
+      
+      setCriteria(data || []);
+      
+      // Initialize ratings for each criterion
+      const initialRatings: Record<string, number> = {};
+      data?.forEach(criterion => {
+        initialRatings[criterion.id] = 7; // Default to 7/10
+      });
+      
+      setCriteriaRatings(initialRatings);
+    };
+    
+    fetchCriteria();
+  }, [businessCategory]);
   
   // Calculate average rating
   const avgRating = reviews.length > 0
@@ -52,6 +91,38 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
         : 0
     };
   });
+
+  // Calculate aggregated criteria ratings from all reviews
+  const aggregatedCriteriaRatings = React.useMemo(() => {
+    const allRatings: Record<string, number[]> = {};
+    
+    reviews.forEach(review => {
+      if (review.criteriaRatings) {
+        Object.entries(review.criteriaRatings).forEach(([criterionId, rating]) => {
+          if (!allRatings[criterionId]) {
+            allRatings[criterionId] = [];
+          }
+          allRatings[criterionId].push(rating);
+        });
+      }
+    });
+    
+    // Calculate average for each criterion
+    const averageRatings: Record<string, number> = {};
+    Object.entries(allRatings).forEach(([criterionId, ratings]) => {
+      const sum = ratings.reduce((acc, val) => acc + val, 0);
+      averageRatings[criterionId] = sum / ratings.length;
+    });
+    
+    return averageRatings;
+  }, [reviews]);
+  
+  const handleCriteriaRatingChange = (criterionId: string, value: number) => {
+    setCriteriaRatings(prev => ({
+      ...prev,
+      [criterionId]: value
+    }));
+  };
   
   const handleAddReview = async () => {
     if (!user) {
@@ -78,7 +149,8 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
         rating,
         text: reviewText,
         isMustVisit,
-        isHiddenGem
+        isHiddenGem,
+        criteriaRatings
       });
       
       toast({
@@ -91,6 +163,12 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
       setReviewText('');
       setIsMustVisit(false);
       setIsHiddenGem(false);
+      // Reset criteria ratings
+      const resetRatings: Record<string, number> = {};
+      criteria.forEach(c => {
+        resetRatings[c.id] = 7;
+      });
+      setCriteriaRatings(resetRatings);
     } catch (error) {
       toast({
         title: "Error",
@@ -141,6 +219,30 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Criteria-based ratings */}
+              {criteria.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium mb-1">Rate specific aspects</p>
+                  
+                  {criteria.map(criterion => (
+                    <div key={criterion.id} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{criterion.name}</span>
+                        <span className="font-medium">{criteriaRatings[criterion.id] || 7}/10</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={criteriaRatings[criterion.id] || 7}
+                        onChange={(e) => handleCriteriaRatingChange(criterion.id, parseInt(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
               
               <div>
                 <p className="text-sm font-medium mb-2">Your experience</p>
@@ -210,6 +312,17 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Criteria ratings visualization */}
+        {businessCategory && Object.keys(aggregatedCriteriaRatings).length > 0 && (
+          <div className="mb-6">
+            <h4 className="font-medium text-sm mb-2">Detailed Ratings</h4>
+            <RatingProgressBars 
+              criteriaRatings={aggregatedCriteriaRatings}
+              locationId={businessCategory}
+            />
+          </div>
+        )}
         
         {/* Reviews list */}
         <div className="space-y-6">
@@ -263,13 +376,19 @@ const BusinessReviews: React.FC<BusinessReviewsProps> = ({
                 {review.criteriaRatings && Object.keys(review.criteriaRatings).length > 0 && (
                   <div className="mt-3 space-y-2">
                     <p className="text-sm text-muted-foreground mb-1">Detailed ratings:</p>
-                    {Object.entries(review.criteriaRatings).map(([criterionName, rating]) => (
-                      <div key={criterionName} className="flex items-center gap-2">
-                        <div className="text-xs w-24 truncate capitalize">{criterionName}</div>
-                        <Progress value={rating * 10} className="h-2 flex-1" />
-                        <div className="text-xs font-medium">{rating}/10</div>
-                      </div>
-                    ))}
+                    {Object.entries(review.criteriaRatings).map(([criterionId, rating]) => {
+                      // Find criterion name if available
+                      const criterion = criteria.find(c => c.id === criterionId);
+                      return (
+                        <div key={criterionId} className="flex items-center gap-2">
+                          <div className="text-xs w-24 truncate capitalize">
+                            {criterion?.name || criterionId}
+                          </div>
+                          <Progress value={rating * 10} className="h-2 flex-1" />
+                          <div className="text-xs font-medium">{rating}/10</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 

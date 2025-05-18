@@ -56,30 +56,8 @@ export const useBusinessDetail = (id: string | undefined) => {
 };
 
 export const useBusinessReviews = (businessId: string | undefined) => {
-  // Mock reviews for now - in a real app, we would fetch from Supabase
-  const [reviews, setReviews] = useState<BusinessReview[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      date: '2023-05-15',
-      rating: 4,
-      text: 'Excellent service, very professional and friendly.',
-      isMustVisit: true
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      date: '2023-04-22',
-      rating: 5,
-      text: 'The best in the area! Highly recommend their services.',
-      isHiddenGem: true,
-      criteriaRatings: {
-        'quality': 9,
-        'price': 7,
-        'service': 10
-      }
-    }
-  ]);
+  // Start with empty reviews array instead of dummy data
+  const [reviews, setReviews] = useState<BusinessReview[]>([]);
   
   // Function to add a review
   const addReview = (review: Omit<BusinessReview, 'id' | 'date' | 'name'> & { name: string }) => {
@@ -100,22 +78,8 @@ export const useBusinessReviews = (businessId: string | undefined) => {
 };
 
 export const useBusinessNotes = (businessId: string | undefined) => {
-  // Mock notes for now - in a real app, we would fetch from Supabase
-  const [notes, setNotes] = useState<BusinessNote[]>([
-    {
-      id: '1',
-      title: 'Great Experience',
-      content: {
-        text: 'I had a wonderful experience with this business. The staff was very helpful and knowledgeable.'
-      },
-      user_id: 'user1',
-      user_avatar_url: null,
-      user_display_name: 'Business Expert',
-      created_at: '2023-05-10T10:30:00Z',
-      thumbs_up: 5,
-      thumbs_up_users: ['user2', 'user3']
-    }
-  ]);
+  // Start with empty notes array instead of dummy data
+  const [notes, setNotes] = useState<BusinessNote[]>([]);
   
   // Function to add a note
   const addNote = (note: { title: string; content: { text: string; videoUrl?: string } }) => {
