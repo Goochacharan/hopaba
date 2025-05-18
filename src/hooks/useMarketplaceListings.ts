@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -62,7 +61,7 @@ interface EnhancedSearchResult {
   seller_phone: string;
   seller_whatsapp: string;
   seller_instagram: string;
-  seller_role: string; // Added the missing seller_role field
+  seller_role: string; // Explicitly adding the seller_role field to match the DB function return
   seller_rating: number;
   review_count: number;
   images: string[];
@@ -152,7 +151,7 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
                   seller_phone: item.seller_phone || undefined,
                   seller_whatsapp: item.seller_whatsapp || undefined,
                   seller_instagram: item.seller_instagram || undefined,
-                  // Now the seller_role property is properly handled since it's included in the interface
+                  // Now the seller_role is properly handled with type safety
                   seller_role: (item.seller_role === 'dealer' ? 'dealer' : 'owner') as 'owner' | 'dealer',
                   seller_rating: item.seller_rating || 0,
                   review_count: item.review_count || 0,
