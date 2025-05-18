@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -153,8 +152,9 @@ export const useMarketplaceListings = (options: MarketplaceListingsQueryOptions 
                     seller_phone: item.seller_phone || undefined,
                     seller_whatsapp: item.seller_whatsapp || undefined,
                     seller_instagram: item.seller_instagram || undefined,
-                    // Use a type guard to ensure seller_role is properly typed
-                    seller_role: (item.seller_role === 'dealer' ? 'dealer' : 'owner'),
+                    // Fix the seller_role property by using a conditional check
+                    seller_role: typeof item.seller_role === 'string' ? 
+                      (item.seller_role === 'dealer' ? 'dealer' : 'owner') : 'owner',
                     seller_rating: item.seller_rating || 0,
                     review_count: item.review_count || 0,
                     images: item.images || [],
