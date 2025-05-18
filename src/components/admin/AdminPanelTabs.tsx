@@ -7,8 +7,43 @@ import { PendingEvents } from './PendingEvents';
 import SellerListingLimits from './SellerListingLimits';
 import HighLimitSellers from './HighLimitSellers';
 import CategoryManager from './CategoryManager';
+import { usePendingListings } from '@/hooks/usePendingListings';
 
 const AdminPanelTabs = () => {
+  // Use the hook to get all the required data and functions for the pending items components
+  const { 
+    pendingListings, 
+    loading, 
+    error, 
+    refreshListings, 
+    updateApprovalStatus 
+  } = usePendingListings();
+
+  // Handler functions for approving/rejecting different types of content
+  const handleApproveService = (id: string) => {
+    updateApprovalStatus('services', id, 'approved');
+  };
+
+  const handleRejectService = (id: string) => {
+    updateApprovalStatus('services', id, 'rejected');
+  };
+
+  const handleApproveMarketplaceListing = (id: string) => {
+    updateApprovalStatus('marketplace', id, 'approved');
+  };
+
+  const handleRejectMarketplaceListing = (id: string) => {
+    updateApprovalStatus('marketplace', id, 'rejected');
+  };
+
+  const handleApproveEvent = (id: string) => {
+    updateApprovalStatus('events', id, 'approved');
+  };
+
+  const handleRejectEvent = (id: string) => {
+    updateApprovalStatus('events', id, 'rejected');
+  };
+
   return (
     <Tabs defaultValue="services" className="w-full space-y-6">
       <TabsList className="grid grid-cols-3 md:grid-cols-6">
@@ -21,15 +56,36 @@ const AdminPanelTabs = () => {
       </TabsList>
       
       <TabsContent value="services" className="space-y-4">
-        <PendingServiceProviders />
+        <PendingServiceProviders 
+          services={pendingListings.services}
+          loading={loading}
+          error={error}
+          onApprove={handleApproveService}
+          onReject={handleRejectService}
+          onRefresh={refreshListings}
+        />
       </TabsContent>
       
       <TabsContent value="marketplace" className="space-y-4">
-        <PendingMarketplaceListings />
+        <PendingMarketplaceListings 
+          listings={pendingListings.marketplace}
+          loading={loading}
+          error={error}
+          onApprove={handleApproveMarketplaceListing}
+          onReject={handleRejectMarketplaceListing}
+          onRefresh={refreshListings}
+        />
       </TabsContent>
       
       <TabsContent value="events" className="space-y-4">
-        <PendingEvents />
+        <PendingEvents 
+          events={pendingListings.events}
+          loading={loading}
+          error={error}
+          onApprove={handleApproveEvent}
+          onReject={handleRejectEvent}
+          onRefresh={refreshListings}
+        />
       </TabsContent>
       
       <TabsContent value="seller_limits" className="space-y-4">
