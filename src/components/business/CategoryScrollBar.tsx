@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,7 +163,9 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   const handleSubcategoryChange = (subcategory: string) => {
     console.log("Subcategory selected:", subcategory);
     if (onSubcategorySelect) {
-      onSubcategorySelect(subcategory);
+      // Convert 'all' value to empty string for consistent handling in parent components
+      const normalizedValue = subcategory === 'all' ? '' : subcategory;
+      onSubcategorySelect(normalizedValue);
     }
   };
 
@@ -238,19 +239,18 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
         </div>
       </div>
       
-      {/* Subcategory selector - now more prominent */}
+      {/* Enhanced Subcategory selector with better visibility */}
       {selected !== 'All' && !!currentCategoryId && onSubcategorySelect && (
-        <div className="px-2 mt-2">
+        <div className="px-2 animate-fadeIn">
           <div className="relative">
-            <div className="bg-white rounded-xl overflow-hidden">
-              <SubcategorySelector
-                categoryId={currentCategoryId}
-                value={selectedSubcategory}
-                onChange={handleSubcategoryChange}
-                className="w-full"
-              />
-            </div>
-            {selectedSubcategory && (
+            <SubcategorySelector
+              categoryId={currentCategoryId}
+              value={selectedSubcategory}
+              onChange={handleSubcategoryChange}
+              className="w-full"
+            />
+            
+            {selectedSubcategory && selectedSubcategory !== 'all' && (
               <div className="mt-2 flex items-center justify-center">
                 <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
                   Currently viewing: {selectedSubcategory}
