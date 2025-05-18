@@ -3,12 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Mail, Globe, MapPin, Instagram, Clock, Languages, Star } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Clock, Languages, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 import { supabase } from '@/integrations/supabase/client';
 import RatingProgressBars from '@/components/RatingProgressBars';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
+import { BusinessReview } from '@/hooks/useBusinessDetail';
 
 interface BusinessCardPublicProps {
   business: Business;
@@ -22,44 +23,73 @@ interface CriteriaRating {
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
   const navigate = useNavigate();
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating>({});
+  const [overallRating, setOverallRating] = useState<number>(business.rating || 0);
   
-  // Fetch criteria ratings for this business
+  // Load reviews and calculate actual ratings
   useEffect(() => {
-    const fetchCriteriaRatings = async () => {
-      if (!business.id || !business.category) return;
+    const loadReviewsFromStorage = () => {
+      if (!business.id) return;
       
       try {
-        // This would ideally come from an API call to get aggregated ratings
-        // For now, we're using mock data based on the business's overall rating
-        const mockRatings: CriteriaRating = {};
+        // Get reviews from localStorage
+        const savedReviews = localStorage.getItem(`reviews_${business.id}`);
+        const reviews: BusinessReview[] = savedReviews ? JSON.parse(savedReviews) : [];
         
-        // Fetch criteria for this business category
-        const { data: criteria, error } = await supabase
+        if (reviews.length > 0) {
+          // Calculate overall rating from reviews
+          const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+          setOverallRating(avgRating);
+          
+          // Calculate criteria ratings
+          const allCriteriaRatings: Record<string, number[]> = {};
+          
+          reviews.forEach(review => {
+            if (review.criteriaRatings) {
+              Object.entries(review.criteriaRatings).forEach(([criterionId, rating]) => {
+                if (!allCriteriaRatings[criterionId]) {
+                  allCriteriaRatings[criterionId] = [];
+                }
+                allCriteriaRatings[criterionId].push(rating);
+              });
+            }
+          });
+          
+          // Calculate average for each criterion
+          const averageRatings: Record<string, number> = {};
+          Object.entries(allCriteriaRatings).forEach(([criterionId, ratings]) => {
+            const sum = ratings.reduce((acc, val) => acc + val, 0);
+            averageRatings[criterionId] = sum / ratings.length;
+          });
+          
+          setCriteriaRatings(averageRatings);
+        }
+      } catch (err) {
+        console.error('Error loading reviews from localStorage:', err);
+      }
+    };
+    
+    loadReviewsFromStorage();
+    
+    // Fetch criteria for this business category
+    const fetchCriteria = async () => {
+      if (!business.category) return;
+      
+      try {
+        const { data, error } = await supabase
           .from('review_criteria')
           .select('id, name')
           .eq('category', business.category);
           
         if (error) {
           console.error('Error fetching criteria:', error);
-          return;
         }
-        
-        // Create mock ratings for each criterion
-        criteria?.forEach(criterion => {
-          // Base rating on business.rating with some random variation
-          const baseRating = business.rating || 7;
-          const variation = Math.random() * 2 - 1; // Random number between -1 and 1
-          mockRatings[criterion.id] = Math.min(Math.max(baseRating + variation, 5), 10);
-        });
-        
-        setCriteriaRatings(mockRatings);
       } catch (err) {
-        console.error('Error setting up criteria ratings:', err);
+        console.error('Error fetching criteria:', err);
       }
     };
     
-    fetchCriteriaRatings();
-  }, [business.id, business.category, business.rating]);
+    fetchCriteria();
+  }, [business.id, business.category]);
   
   // Map days numbers to actual day names
   const dayMap: Record<string, string> = {
@@ -90,8 +120,8 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
   };
 
   const renderRating = () => {
-    const rating = business.rating || 0;
-    const ratingColor = getRatingColor(rating * 10); // Convert to scale of 100
+    // Scale rating to be out of 100 for color display
+    const ratingColor = getRatingColor(Math.round(overallRating * 10));
     
     return (
       <div className="flex items-center gap-2">
@@ -106,7 +136,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
             boxShadow: '0 0 3px 0 rgba(0,0,0,0.05)'
           }}
         >
-          {Math.round(rating * 10)}
+          {Math.round(overallRating * 10)}
         </div>
       </div>
     );
@@ -167,12 +197,12 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           </p>
         )}
         
-        {/* Criteria Rating Progress Bars */}
+        {/* Real Criteria Rating Progress Bars from localStorage */}
         {Object.keys(criteriaRatings).length > 0 && (
           <div className="mt-2 mb-2">
             <RatingProgressBars 
               criteriaRatings={criteriaRatings}
-              locationId={business.category}
+              locationId={business.id}
             />
           </div>
         )}

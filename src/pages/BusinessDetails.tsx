@@ -1,44 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
-import { useBusinessDetail, useBusinessReviews, useBusinessNotes } from '@/hooks/useBusinessDetail';
+import { useBusinessDetail, useBusinessReviews } from '@/hooks/useBusinessDetail';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, Mail, Globe, MapPin, Instagram, Clock, Languages, IndianRupee, ArrowLeft, Building, User } from 'lucide-react';
+import { ArrowLeft, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import BusinessReviews from '@/components/business/BusinessReviews';
-import BusinessCommunityNotes from '@/components/business/BusinessCommunityNotes';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 
 const BusinessDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { data: business, isLoading, error } = useBusinessDetail(id);
   const { reviews, addReview } = useBusinessReviews(id);
-  const { notes, addNote } = useBusinessNotes(id);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('about');
-  
-  // Format days for display
-  const formatDays = (days: string[] | undefined) => {
-    if (!days || days.length === 0) return 'Not specified';
-    
-    const dayMap: Record<string, string> = {
-      '0': 'Sunday',
-      '1': 'Monday',
-      '2': 'Tuesday',
-      '3': 'Wednesday',
-      '4': 'Thursday',
-      '5': 'Friday',
-      '6': 'Saturday'
-    };
-    
-    return days.map(day => dayMap[day] || day).join(', ');
-  };
   
   if (isLoading) {
     return (
@@ -124,157 +102,31 @@ const BusinessDetails = () => {
               )}
             </div>
             
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 mb-8">
-                <TabsTrigger value="about">About</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews</TabsTrigger>
-                <TabsTrigger value="notes">Community Notes</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="about" className="space-y-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <h2 className="text-xl font-semibold mb-4">About the Business</h2>
-                    <p className="whitespace-pre-line text-base">{business.description}</p>
-                    
-                    {business.tags && business.tags.length > 0 && (
-                      <div className="mt-4">
-                        <h3 className="text-lg font-medium mb-2">Popular Services/Products:</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {business.tags.map((tag, index) => (
-                            <Badge key={index} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="pt-6">
-                    <h2 className="text-xl font-semibold mb-4">Business Details</h2>
-                    
-                    <div className="grid gap-4">
-                      {/* Price */}
-                      {(business.price_range_min || business.price_range_max) && (
-                        <div className="flex items-start gap-3">
-                          <IndianRupee className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <h3 className="font-medium">Pricing</h3>
-                            <p>
-                              {business.price_range_min && business.price_range_max
-                                ? `₹${business.price_range_min} - ₹${business.price_range_max}`
-                                : business.price_range_min
-                                ? `From ₹${business.price_range_min}`
-                                : `Up to ₹${business.price_range_max}`
-                              }
-                              {business.price_unit ? ` ${business.price_unit}` : ''}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Availability */}
-                      {business.availability_days && (
-                        <div className="flex items-start gap-3">
-                          <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <h3 className="font-medium">Availability</h3>
-                            <p>{formatDays(business.availability_days)}</p>
-                            {business.availability_start_time && business.availability_end_time && (
-                              <p className="text-muted-foreground">
-                                {business.availability_start_time} - {business.availability_end_time}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Languages */}
-                      {business.languages && business.languages.length > 0 && (
-                        <div className="flex items-start gap-3">
-                          <Languages className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <h3 className="font-medium">Languages</h3>
-                            <p>{business.languages.join(', ')}</p>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Experience */}
-                      {business.experience && (
-                        <div className="flex items-start gap-3">
-                          <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <h3 className="font-medium">Experience</h3>
-                            <p>{business.experience}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Separator className="my-6" />
-                    
-                    {/* Location */}
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <h3 className="font-medium">Location</h3>
-                        <p>{business.address || `${business.area}, ${business.city}`}</p>
-                        {business.map_link && (
-                          <a 
-                            href={business.map_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline text-sm"
-                          >
-                            View on map
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="reviews">
-                <BusinessReviews 
-                  businessName={business.name}
-                  businessCategory={business.category}
-                  reviews={reviews}
-                  onAddReview={async (reviewData) => {
-                    try {
-                      await addReview({
-                        ...reviewData,
-                        name: 'You' // In a real app, this would be the user's name
-                      });
-                      return Promise.resolve();
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to submit your review",
-                        variant: "destructive"
-                      });
-                      return Promise.reject(error);
-                    }
-                  }}
-                />
-              </TabsContent>
-              
-              <TabsContent value="notes">
-                <BusinessCommunityNotes 
-                  businessId={business.id}
-                  notes={notes}
-                  onAddNote={addNote}
-                />
-              </TabsContent>
-            </Tabs>
+            {/* Reviews Section - Now the only section */}
+            <BusinessReviews 
+              businessName={business.name}
+              businessCategory={business.category}
+              reviews={reviews}
+              onAddReview={async (reviewData) => {
+                try {
+                  await addReview({
+                    ...reviewData,
+                    name: 'You' // In a real app, this would be the user's name
+                  });
+                  return Promise.resolve();
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to submit your review",
+                    variant: "destructive"
+                  });
+                  return Promise.reject(error);
+                }
+              }}
+            />
           </div>
           
-          {/* Right column - Remove contact info section and only keep owner/rep card */}
+          {/* Right column - Keep only owner/rep card */}
           <div className="space-y-6">
             {/* Owner/Representative Card */}
             <Card>
