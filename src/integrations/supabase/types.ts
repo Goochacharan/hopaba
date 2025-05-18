@@ -87,6 +87,51 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          provider_id: string
+          request_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          provider_id: string
+          request_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          provider_id?: string
+          request_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           approval_status: string
@@ -236,6 +281,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      messages: {
+        Row: {
+          attachments: string[] | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          quotation_price: number | null
+          read: boolean
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          attachments?: string[] | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          quotation_price?: number | null
+          read?: boolean
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          attachments?: string[] | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          quotation_price?: number | null
+          read?: boolean
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       note_comments: {
         Row: {
@@ -566,6 +655,63 @@ export type Database = {
         }
         Relationships: []
       }
+      service_requests: {
+        Row: {
+          area: string
+          budget: number | null
+          category: string
+          city: string
+          contact_phone: string
+          created_at: string
+          date_range_end: string | null
+          date_range_start: string | null
+          description: string
+          id: string
+          images: string[] | null
+          postal_code: string
+          status: string
+          subcategory: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          area: string
+          budget?: number | null
+          category: string
+          city: string
+          contact_phone: string
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          description: string
+          id?: string
+          images?: string[] | null
+          postal_code: string
+          status?: string
+          subcategory?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          area?: string
+          budget?: number | null
+          category?: string
+          city?: string
+          contact_phone?: string
+          created_at?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          description?: string
+          id?: string
+          images?: string[] | null
+          postal_code?: string
+          status?: string
+          subcategory?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subcategories: {
         Row: {
           category_id: string
@@ -623,6 +769,20 @@ export type Database = {
           seller_phones: string[]
           current_listing_count: number
         }[]
+      }
+      get_matching_providers_for_request: {
+        Args: { request_id: string }
+        Returns: {
+          provider_id: string
+          provider_name: string
+          provider_category: string
+          provider_subcategory: string
+          user_id: string
+        }[]
+      }
+      get_unread_message_count: {
+        Args: { user_uuid: string }
+        Returns: number
       }
       is_admin: {
         Args: Record<PropertyKey, never>

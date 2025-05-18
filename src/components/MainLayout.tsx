@@ -3,10 +3,11 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { User, Store } from 'lucide-react';
+import { User, Store, MessageSquare, Plus } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useConversations } from '@/hooks/useConversations';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   const {
     user
   } = useAuth();
+  
+  const { unreadCount } = useConversations();
+  
   const onSearch = (query: string) => {
     console.log("MainLayout search triggered with:", query);
     if (!user) {
@@ -40,11 +44,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   };
   
   const shouldShowSearchBar = () => {
-    return !['/location', '/search'].some(path => location.pathname.startsWith(path));
+    return !['/location', '/search', '/post-request'].some(path => location.pathname.startsWith(path));
   };
   
   const getSearchPlaceholder = () => {
     return "What are you looking for today?";
+  };
+  
+  const handlePostRequest = () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    navigate('/post-request');
   };
   
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
@@ -84,10 +96,50 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         </div>}
       
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border/50 px-4 z-[60] py-px">
-        <div className="max-w-5xl mx-auto flex justify-around">
-          <NavButton to="/shop" icon={<Store className="h-5 w-5" />} label="Shop" isActive={location.pathname === '/shop'} />
+        <div className="max-w-5xl mx-auto flex justify-around items-center">
+          <NavButton 
+            to="/shop" 
+            icon={<Store className="h-5 w-5" />} 
+            label="Shop" 
+            isActive={location.pathname === '/shop'} 
+          />
           
-          <NavButton to={user ? "/profile" : "/login"} icon={<User className="h-5 w-5" />} label={user ? "Profile" : "Login"} isActive={location.pathname === '/profile' || location.pathname === '/login'} />
+          {/* Post Request Button (middle) */}
+          <div className="relative flex flex-col items-center">
+            <button 
+              onClick={handlePostRequest}
+              className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-14 h-14 shadow-lg relative bottom-6"
+              aria-label="Post a request"
+            >
+              <Plus className="h-7 w-7" />
+            </button>
+            <span className="text-xs font-medium mt-0.5">Post Request</span>
+          </div>
+          
+          {/* Messages Button */}
+          <NavButton 
+            to={user ? "/messages" : "/login"}
+            icon={(
+              <div className="relative">
+                <MessageSquare className="h-5 w-5" />
+                {user && unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            )}
+            label="Messages" 
+            isActive={location.pathname.startsWith('/message')} 
+          />
+          
+          {/* Profile Button */}
+          <NavButton 
+            to={user ? "/profile" : "/login"} 
+            icon={<User className="h-5 w-5" />} 
+            label={user ? "Profile" : "Login"} 
+            isActive={location.pathname === '/profile' || location.pathname === '/login'} 
+          />
         </div>
       </div>
     </div>;

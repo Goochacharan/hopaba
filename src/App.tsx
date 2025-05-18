@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,12 @@ const AdminPanel = React.lazy(() => import(/* webpackChunkName: "admin-panel" */
 const Settings = React.lazy(() => import(/* webpackChunkName: "settings" */ "./pages/Settings"));
 const Shop = React.lazy(() => import(/* webpackChunkName: "shop" */ "./pages/Shop"));
 const BusinessDetails = React.lazy(() => import(/* webpackChunkName: "business-details" */ "./pages/BusinessDetails"));
+const PostRequestForm = React.lazy(() => import(/* webpackChunkName: "post-request-form" */ "./components/request/PostRequestForm"));
+const PostRequest = React.lazy(() => import(/* webpackChunkName: "post-request" */ "./pages/PostRequest"));
+const Requests = React.lazy(() => import(/* webpackChunkName: "requests" */ "./pages/Requests"));
+const RequestDetail = React.lazy(() => import(/* webpackChunkName: "request-detail" */ "./pages/RequestDetail"));
+const MessagesListing = React.lazy(() => import(/* webpackChunkName: "messages-listing" */ "./pages/MessagesListing"));
+const Messages = React.lazy(() => import(/* webpackChunkName: "messages" */ "./pages/Messages"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -130,6 +135,14 @@ const App = () => (
                   <Route path="/admin" element={<AdminPanel />} />
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/business/:id" element={<BusinessDetails />} />
+                  
+                  {/* New routes for Service Requests system */}
+                  <Route path="/post-request" element={<PostRequest />} />
+                  <Route path="/requests" element={<Requests />} />
+                  <Route path="/request/:id" element={<RequestDetail />} />
+                  <Route path="/messages" element={<MessagesListing />} />
+                  <Route path="/messages/:id" element={<Messages />} />
+                  
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
