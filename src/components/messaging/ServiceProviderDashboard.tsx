@@ -19,6 +19,32 @@ import {
   SelectValue
 } from '@/components/ui/select';
 
+// Update the interface for service requests with conversations
+interface ServiceRequestWithConversation extends ServiceRequest {
+  conversation_id?: string;
+}
+
+// For the requests that come with conversations
+interface ServiceRequestWithConversations {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  budget?: number;
+  date_range_start?: string;
+  date_range_end?: string;
+  city: string;
+  area: string;
+  postal_code: string;
+  contact_phone: string;
+  images: string[];
+  created_at: string;
+  status: string;
+  conversation_id: string;
+}
+
 // Get service requests that match a provider's category and subcategory
 const getMatchingRequests = async (providerId: string) => {
   // First get the provider's details to know their category and subcategory
@@ -48,7 +74,7 @@ const getMatchingRequests = async (providerId: string) => {
     ? data.filter(req => req.subcategory === provider.subcategory || !req.subcategory)
     : data;
     
-  return filteredRequests;
+  return filteredRequests as ServiceRequestWithConversation[];
 };
 
 // Get service requests that a provider has already responded to
@@ -67,7 +93,7 @@ const getRespondedRequests = async (providerId: string) => {
   return data.map(item => ({
     ...item.service_requests,
     conversation_id: item.id
-  })) as (ServiceRequest & { conversation_id: string })[];
+  })) as ServiceRequestWithConversation[];
 };
 
 const ServiceProviderDashboard: React.FC = () => {
@@ -109,12 +135,12 @@ const ServiceProviderDashboard: React.FC = () => {
   
   // Process and filter the requests based on current filter and search
   const getFilteredRequests = () => {
-    if (!matchingRequests || !respondedRequests) return [];
+    if (!matchingRequests || !respondedRequests) return [] as ServiceRequestWithConversation[];
     
     // Get the responded request IDs for easy lookup
     const respondedIds = new Set(respondedRequests.map(r => r.id));
     
-    let filteredRequests: (ServiceRequest & { conversation_id?: string })[] = [];
+    let filteredRequests: ServiceRequestWithConversation[] = [];
     
     if (filter === 'all' || filter === 'new') {
       // For 'all' or 'new', include matching requests that haven't been responded to

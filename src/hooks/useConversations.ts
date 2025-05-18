@@ -6,6 +6,12 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './useAuth';
 import { useEffect } from 'react';
 
+// Add this interface for the mark messages as read params
+interface MarkMessagesAsReadParams {
+  conversationId: string;
+  senderType: 'user' | 'provider';
+}
+
 export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -184,11 +190,11 @@ export const useConversations = () => {
     return data[0] as Message;
   };
 
-  // Mark messages as read
-  const markMessagesAsRead = async (
-    conversationId: string,
-    senderType: 'user' | 'provider'
-  ) => {
+  // Mark messages as read - updated to use the new params interface
+  const markMessagesAsRead = async ({
+    conversationId,
+    senderType
+  }: MarkMessagesAsReadParams) => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -335,6 +341,11 @@ export const useConversations = () => {
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
-    markMessagesAsRead
+    markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider') => {
+      return markMessagesAsReadMutation.mutate({
+        conversationId,
+        senderType
+      });
+    }
   };
 };
