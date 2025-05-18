@@ -1,4 +1,3 @@
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
@@ -23,7 +22,8 @@ export const useCategories = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
-  const { data: dbCategories, isLoading: loadingCategories } = useQuery({
+  // Use the same query name to keep compatibility with other components
+  const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -63,19 +63,27 @@ export const useCategories = () => {
   };
 
   const getCategoryIdByName = (categoryName: string): string | null => {
-    if (!dbCategories) return null;
+    if (!categoriesQuery.data) return null;
     
-    const category = dbCategories.find(cat => cat.name === categoryName);
+    const category = categoriesQuery.data.find(cat => cat.name === categoryName);
     return category ? category.id : null;
   };
 
+  // To support both patterns of API usage, we'll return both the raw query result
+  // and the specific properties that some components are expecting
   return {
-    dbCategories,
-    loadingCategories,
+    // Pattern 1: Properties expected by existing code
+    dbCategories: categoriesQuery.data || [],
+    loadingCategories: categoriesQuery.isLoading,
     subcategories,
     loadingSubcategories,
     getSubcategoriesByCategoryName,
-    getCategoryIdByName
+    getCategoryIdByName,
+    
+    // Pattern 2: Raw query result expected by components using react-query pattern
+    data: categoriesQuery.data || [],
+    isLoading: categoriesQuery.isLoading,
+    refetch: categoriesQuery.refetch
   };
 };
 

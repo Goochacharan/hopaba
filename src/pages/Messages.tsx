@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -167,6 +166,7 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
+      // Fix: Pass an object instead of a string
       markMessagesAsRead({
         conversationId: id,
         senderType: isProvider ? 'provider' : 'user'
