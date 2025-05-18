@@ -4,9 +4,9 @@ import { Event, SupabaseEvent } from '@/hooks/types/recommendationTypes';
 import { toast } from '@/components/ui/use-toast';
 import { extractCoordinatesFromMapLink } from '@/lib/locationUtils';
 
-export const fetchServiceProviders = async (searchTerm: string, categoryFilter: string) => {
+export const fetchServiceProviders = async (searchTerm: string, categoryFilter: string, subcategoryFilter?: string) => {
   try {
-    console.log(`Fetching service providers with search term: "${searchTerm}" and category: "${categoryFilter}"`);
+    console.log(`Fetching service providers with search term: "${searchTerm}", category: "${categoryFilter}", subcategory: "${subcategoryFilter}"`);
     
     // Normalize the search term to handle multi-line input
     const normalizedSearchTerm = searchTerm.replace(/\s+/g, ' ').trim();
@@ -26,11 +26,20 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
         console.log(`Fetched ${enhancedProviders?.length || 0} enhanced service providers`);
         
         let filteredProviders = enhancedProviders || [];
+        
+        // Apply category and subcategory filters
         if (categoryFilter !== 'all') {
           const dbCategory = categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
           filteredProviders = filteredProviders.filter(provider => 
             provider.category.toLowerCase() === dbCategory.toLowerCase()
           );
+          
+          // Apply subcategory filter if provided
+          if (subcategoryFilter) {
+            filteredProviders = filteredProviders.filter(provider => 
+              provider.subcategory?.toLowerCase() === subcategoryFilter.toLowerCase()
+            );
+          }
         }
         
         return filteredProviders.map(item => {
@@ -41,6 +50,7 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
             id: item.id,
             name: item.name,
             category: item.category,
+            subcategory: item.subcategory || null,
             tags: item.tags || [],
             rating: 4.5,
             address: `${item.area}, ${item.city}`,
@@ -80,9 +90,15 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
       .select('*')
       .eq('approval_status', 'approved');
     
+    // Apply category filter
     if (categoryFilter !== 'all') {
       const dbCategory = categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
       query = query.eq('category', dbCategory);
+      
+      // Apply subcategory filter if provided
+      if (subcategoryFilter) {
+        query = query.eq('subcategory', subcategoryFilter);
+      }
     }
     
     if (normalizedSearchTerm && normalizedSearchTerm.trim() !== '') {
@@ -107,6 +123,7 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
           id: item.id,
           name: item.name,
           category: item.category,
+          subcategory: item.subcategory || null,
           tags: item.tags || [],
           rating: 4.5,
           address: `${item.area}, ${item.city}`,

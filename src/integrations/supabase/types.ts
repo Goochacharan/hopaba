@@ -460,6 +460,7 @@ export type Database = {
       }
       service_providers: {
         Row: {
+          address: string
           approval_status: string | null
           area: string
           availability: string | null
@@ -494,6 +495,7 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
+          address?: string
           approval_status?: string | null
           area: string
           availability?: string | null
@@ -528,6 +530,7 @@ export type Database = {
           whatsapp: string
         }
         Update: {
+          address?: string
           approval_status?: string | null
           area?: string
           availability?: string | null

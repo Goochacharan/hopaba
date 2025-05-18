@@ -9,10 +9,12 @@ import { Recommendation } from '@/lib/mockData';
 const useRecommendations = ({ 
   initialQuery = '', 
   initialCategory = 'all',
+  initialSubcategory = '',
   loadDefaultResults = false
 }: UseRecommendationsProps = {}) => {
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<CategoryType>(initialCategory);
+  const [subcategory, setSubcategory] = useState<string>(initialSubcategory || '');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,13 @@ const useRecommendations = ({
 
   const handleCategoryChange = (newCategory: CategoryType) => {
     setCategory(newCategory);
+    setSubcategory(''); // Reset subcategory when category changes
     console.log("useRecommendations - handleCategoryChange called with:", newCategory);
+  };
+
+  const handleSubcategoryChange = (newSubcategory: string) => {
+    setSubcategory(newSubcategory);
+    console.log("useRecommendations - handleSubcategoryChange called with:", newSubcategory);
   };
 
   useEffect(() => {
@@ -66,17 +74,17 @@ const useRecommendations = ({
       
       try {
         if (query) {
-          console.log("useRecommendations - Fetching with query:", query);
+          console.log("useRecommendations - Fetching with query:", query, "category:", category, "subcategory:", subcategory);
           const { processedQuery, inferredCategory } = processNaturalLanguageQuery(query.toLowerCase(), category);
           const effectiveCategory = inferredCategory;
-          const serviceProviders = await fetchServiceProviders(processedQuery, effectiveCategory);
+          const serviceProviders = await fetchServiceProviders(processedQuery, effectiveCategory, subcategory);
           setRecommendations(serviceProviders);
           const eventsData = await fetchEvents(processedQuery);
           setEvents(eventsData);
         } 
         else if (loadDefaultResults) {
-          console.log("useRecommendations - Loading default results for category:", category);
-          const serviceProviders = await fetchServiceProviders('', category);
+          console.log("useRecommendations - Loading default results for category:", category, "subcategory:", subcategory);
+          const serviceProviders = await fetchServiceProviders('', category, subcategory);
           setRecommendations(serviceProviders);
           const eventsData = await fetchEvents('');
           setEvents(eventsData);
@@ -91,20 +99,23 @@ const useRecommendations = ({
     };
 
     fetchRecommendations();
-  }, [query, category, loadDefaultResults]);
+  }, [query, category, subcategory, loadDefaultResults]);
 
   return {
     query,
     setQuery,
     category,
     setCategory,
+    subcategory,
+    setSubcategory,
     recommendations,
     events,
     loading,
     error,
     filterRecommendations,
     handleSearch,
-    handleCategoryChange
+    handleCategoryChange,
+    handleSubcategoryChange
   };
 };
 

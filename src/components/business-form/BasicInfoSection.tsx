@@ -1,55 +1,57 @@
 
 import React, { useState, useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
-} from '@/components/ui/form';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { TagsInput } from '@/components/ui/tags-input';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BusinessFormValues } from '../AddBusinessForm';
-import { Tag, ListFilter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
+import ImageUploadSection from '@/components/business-form/ImageUploadSection';
 import { useCategories, useSubcategories } from '@/hooks/useCategories';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface BasicInfoSectionProps {
   maxImages?: number;
 }
 
-export default function BasicInfoSection({ maxImages = 10 }: BasicInfoSectionProps) {
-  const { control, setValue, getValues, watch } = useFormContext<BusinessFormValues>();
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+const BasicInfoSection = ({ maxImages = 5 }: BasicInfoSectionProps) => {
+  const { control, watch, setValue } = useFormContext();
+  const [tagInput, setTagInput] = useState('');
+  const tags = watch('tags') || [];
+  const category = watch('category');
   
-  // Watch for category changes
-  const selectedCategory = watch('category');
+  const { data: categories } = useCategories();
+  const { data: subcategories } = useSubcategories(
+    categories?.find(cat => cat.name === category)?.id
+  );
   
-  // Fetch categories
-  const { data: categories, isLoading: categoriesLoading } = useCategories();
-  
-  // Fetch subcategories based on selected category
-  const { data: subcategories, isLoading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
-  
-  // Find category ID when category name changes
-  useEffect(() => {
-    if (categories && selectedCategory) {
-      const category = categories.find(cat => cat.name === selectedCategory);
-      if (category) {
-        setSelectedCategoryId(category.id);
-      }
+  const handleAddTag = () => {
+    if (tagInput.trim() !== '' && !tags.includes(tagInput.trim())) {
+      setValue('tags', [...tags, tagInput.trim()]);
+      setTagInput('');
     }
-  }, [selectedCategory, categories]);
+  };
+
+  const handleRemoveTag = (index: number) => {
+    setValue('tags', tags.filter((_: string, i: number) => i !== index));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
   
+  // Clear subcategory when category changes
+  useEffect(() => {
+    setValue('subcategory', '');
+  }, [category, setValue]);
+
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium">Basic Information</h3>
-      
+    <div className="space-y-6 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+      <h2 className="text-xl font-semibold">Basic Information</h2>
       <FormField
         control={control}
         name="name"
@@ -57,85 +59,73 @@ export default function BasicInfoSection({ maxImages = 10 }: BasicInfoSectionPro
           <FormItem>
             <FormLabel>Business Name*</FormLabel>
             <FormControl>
-              <Input placeholder="Your business name" {...field} />
+              <Input placeholder="Enter business name" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={control}
         name="category"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Category*</FormLabel>
-            {categoriesLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  // Reset subcategory when category changes
-                  setValue('subcategory', '');
-                }}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categories?.map(category => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select 
+              onValueChange={field.onChange} 
+              defaultValue={field.value}
+              value={field.value}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {categories?.map(category => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={control}
         name="subcategory"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="flex items-center gap-2">
-              <ListFilter className="h-4 w-4" /> 
-              Subcategory*
-            </FormLabel>
-            {subcategoriesLoading || !selectedCategoryId ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select 
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-                disabled={!selectedCategoryId}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={!selectedCategoryId ? "Select category first" : "Select subcategory"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {subcategories?.map(subcategory => (
-                    <SelectItem key={subcategory.id} value={subcategory.name}>
-                      {subcategory.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <FormLabel>Subcategory</FormLabel>
+            <Select 
+              onValueChange={field.onChange} 
+              defaultValue={field.value}
+              value={field.value}
+              disabled={!category || !subcategories?.length}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder={category ? "Select subcategory" : "Select a category first"} />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {subcategories?.map(subcategory => (
+                  <SelectItem key={subcategory.id} value={subcategory.name}>
+                    {subcategory.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}
       />
-      
+
       <FormField
         control={control}
         name="description"
@@ -143,59 +133,53 @@ export default function BasicInfoSection({ maxImages = 10 }: BasicInfoSectionPro
           <FormItem>
             <FormLabel>Description*</FormLabel>
             <FormControl>
-              <Textarea placeholder="Describe your business or service" className="min-h-[120px]" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      
-      <FormField
-        control={control}
-        name="tags"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>
-              <div className="flex items-center gap-1.5">
-                <Tag className="h-4 w-4" /> 
-                Tags* (at least 3)
-              </div>
-            </FormLabel>
-            <FormControl>
-              <TagsInput
-                placeholder="Type and press enter to add tags"
-                tags={field.value || []}
-                setTags={(tags) => setValue('tags', tags)}
+              <Textarea 
+                placeholder="Describe your business, services offered, and any other important information"
+                className="min-h-[120px]"
+                {...field} 
               />
             </FormControl>
-            <FormDescription>
-              Keywords that describe your services or products
-            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
+
+      <div>
+        <FormLabel>Tags (at least 3)*</FormLabel>
+        <div className="flex mt-2">
+          <Input
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add tags (press Enter)"
+            className="mr-2"
+          />
+          <Button type="button" onClick={handleAddTag}>Add</Button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {tags.map((tag: string, index: number) => (
+            <Badge key={index} variant="secondary" className="px-2 py-1">
+              {tag}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-1 h-4 w-4 p-0 text-muted-foreground"
+                onClick={() => handleRemoveTag(index)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+        {tags.length < 3 && (
+          <p className="text-sm text-amber-600 mt-2">Please add at least 3 tags to describe your business</p>
+        )}
+      </div>
       
-      <FormField
-        control={control}
-        name="images"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Business Photos</FormLabel>
-            <FormControl>
-              <ImageUpload
-                images={field.value || []}
-                onImagesChange={(images) => setValue('images', images, { shouldValidate: true })}
-                maxImages={maxImages}
-              />
-            </FormControl>
-            <FormDescription>
-              Upload up to {maxImages} photos of your business or service
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <ImageUploadSection maxImages={maxImages} />
     </div>
   );
-}
+};
+
+export default BasicInfoSection;

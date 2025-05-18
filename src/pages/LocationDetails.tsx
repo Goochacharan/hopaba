@@ -15,6 +15,7 @@ import ReviewsSection from '@/components/location/ReviewsSection';
 import CommunityNoteForm from '@/components/location/CommunityNoteForm';
 import CommunityNotesList from '@/components/location/CommunityNotesList';
 import { Input } from '@/components/ui/input';
+import { Category } from '@/hooks/useCategories';
 
 const getStoredReviews = (locationId: string): Review[] => {
   try {
@@ -99,6 +100,8 @@ const LocationDetails = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -293,12 +296,12 @@ const LocationDetails = () => {
     setCommunityNotesRefreshTrigger(prev => prev + 1);
   };
 
-  // New function to handle search
+  // New function to handle search with categories and subcategories
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && selectedCategory === 'all' && !selectedSubcategory) {
       toast({
         title: "Empty search",
-        description: "Please enter a search term",
+        description: "Please enter a search term or select a category",
         variant: "destructive"
       });
       return;
@@ -308,12 +311,28 @@ const LocationDetails = () => {
     setSearchResults([]);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('service_providers')
         .select('*')
-        .eq('approval_status', 'approved')
-        .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,area.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`)
-        .order('created_at', { ascending: false });
+        .eq('approval_status', 'approved');
+      
+      // Apply search term if provided
+      if (searchQuery.trim()) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,area.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`);
+      }
+      
+      // Apply category filter
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory);
+      }
+      
+      // Apply subcategory filter
+      if (selectedSubcategory) {
+        query = query.eq('subcategory', selectedSubcategory);
+      }
+      
+      // Get results
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) {
         console.error("Error searching service providers:", error);
@@ -336,6 +355,17 @@ const LocationDetails = () => {
     } finally {
       setSearchLoading(false);
     }
+  };
+
+  // Handler for category change
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory('');
+  };
+  
+  // Handler for subcategory change
+  const handleSubcategoryChange = (subcategory: string) => {
+    setSelectedSubcategory(subcategory);
   };
 
   const allReviews = [...userReviews];
@@ -374,9 +404,22 @@ const LocationDetails = () => {
           Back to results
         </Button>
         
-        {/* New Search Bar Section */}
+        {/* New Search Bar Section with Category and Subcategory */}
         <div className="mb-6 p-4 bg-accent/30 rounded-lg">
           <h3 className="text-lg font-semibold mb-3">Search Service Providers</h3>
+          
+          {/* Category Selector */}
+          <div className="mb-4">
+            import React from './CategoryScrollBar';
+            import { CategoryScrollBar } from '@/components/business/CategoryScrollBar';
+            <CategoryScrollBar
+              selected={selectedCategory}
+              onSelect={handleCategoryChange}
+              selectedSubcategory={selectedSubcategory}
+              onSubcategorySelect={handleSubcategoryChange}
+            />
+          </div>
+          
           <div className="flex gap-2">
             <Input
               placeholder="Search for businesses, services..."
@@ -413,6 +456,8 @@ const LocationDetails = () => {
               name={location.name}
               description={location.description}
               tags={location.tags || []}
+              category={location.category}
+              subcategory={location.subcategory}
             />
             
             <ReviewsSection
