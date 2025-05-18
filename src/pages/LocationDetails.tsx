@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MainLayout from '@/components/MainLayout';
-import { ArrowLeft, Search, Loader } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { getRecommendationById, mockRecommendations } from '@/lib/mockData';
 import { supabase } from '@/integrations/supabase/client';
 import ImageViewer from '@/components/ImageViewer';
@@ -14,9 +15,6 @@ import LocationAbout from '@/components/location/LocationAbout';
 import ReviewsSection from '@/components/location/ReviewsSection';
 import CommunityNoteForm from '@/components/location/CommunityNoteForm';
 import CommunityNotesList from '@/components/location/CommunityNotesList';
-import { Input } from '@/components/ui/input';
-import { Category } from '@/hooks/useCategories';
-import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 
 const getStoredReviews = (locationId: string): Review[] => {
   try {
@@ -43,47 +41,6 @@ const calculateAverageRating = (reviews: Review[]): number => {
   return sum / reviews.length;
 };
 
-// New component for search results
-const ServiceProviderSearchResults = ({ providers }: { providers: any[] }) => {
-  const navigate = useNavigate();
-
-  if (!providers || providers.length === 0) {
-    return (
-      <div className="text-center py-4 text-muted-foreground">
-        <p>No service providers found matching your search.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-4 mt-4">
-      {providers.map((provider) => (
-        <div 
-          key={provider.id} 
-          className="border rounded-lg p-4 hover:bg-accent cursor-pointer"
-          onClick={() => navigate(`/location/${provider.id}`)}
-        >
-          <h3 className="text-lg font-semibold">{provider.name}</h3>
-          <p className="text-sm text-muted-foreground mb-2">{provider.category}</p>
-          
-          <div className="flex items-center gap-1">
-            <span className="text-amber-500">★</span>
-            <span>4.5</span>
-          </div>
-          
-          <p className="mt-2 line-clamp-2">{provider.description}</p>
-          
-          {provider.area && (
-            <div className="mt-2 text-sm text-muted-foreground">
-              {provider.area}, {provider.city}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
 const LocationDetails = () => {
   const { id } = useParams<{ id: string; }>();
   const navigate = useNavigate();
@@ -96,13 +53,6 @@ const LocationDetails = () => {
   const [user, setUser] = useState<any>(null);
   const [averageRating, setAverageRating] = useState<number>(0);
   const [communityNotesRefreshTrigger, setCommunityNotesRefreshTrigger] = useState(0);
-  
-  // New state for search functionality
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -297,78 +247,6 @@ const LocationDetails = () => {
     setCommunityNotesRefreshTrigger(prev => prev + 1);
   };
 
-  // New function to handle search with categories and subcategories
-  const handleSearch = async () => {
-    if (!searchQuery.trim() && selectedCategory === 'all' && !selectedSubcategory) {
-      toast({
-        title: "Empty search",
-        description: "Please enter a search term or select a category",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setSearchLoading(true);
-    setSearchResults([]);
-
-    try {
-      let query = supabase
-        .from('service_providers')
-        .select('*')
-        .eq('approval_status', 'approved');
-      
-      // Apply search term if provided
-      if (searchQuery.trim()) {
-        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%,area.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%`);
-      }
-      
-      // Apply category filter
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-      
-      // Apply subcategory filter
-      if (selectedSubcategory) {
-        query = query.eq('subcategory', selectedSubcategory);
-      }
-      
-      // Get results
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error searching service providers:", error);
-        toast({
-          title: "Search error",
-          description: "Failed to search service providers",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      setSearchResults(data || []);
-    } catch (err) {
-      console.error("Exception during search:", err);
-      toast({
-        title: "Search error",
-        description: "Something went wrong while searching",
-        variant: "destructive"
-      });
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  // Handler for category change
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    setSelectedSubcategory('');
-  };
-  
-  // Handler for subcategory change
-  const handleSubcategoryChange = (subcategory: string) => {
-    setSelectedSubcategory(subcategory);
-  };
-
   const allReviews = [...userReviews];
   const locationImages = location?.images && location.images.length > 0 ? location.images : [location?.image];
   const reviewCount = userReviews.length;
@@ -404,42 +282,6 @@ const LocationDetails = () => {
           <ArrowLeft className="mr-1 h-4 w-4" />
           Back to results
         </Button>
-        
-        {/* New Search Bar Section with Category and Subcategory */}
-        <div className="mb-6 p-4 bg-accent/30 rounded-lg">
-          <h3 className="text-lg font-semibold mb-3">Search Service Providers</h3>
-          
-          {/* Category Selector */}
-          <div className="mb-4">
-            <CategoryScrollBar
-              selected={selectedCategory}
-              onSelect={handleCategoryChange}
-              selectedSubcategory={selectedSubcategory}
-              onSubcategorySelect={handleSubcategoryChange}
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <Input
-              placeholder="Search for businesses, services..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1"
-            />
-            <Button onClick={handleSearch} disabled={searchLoading}>
-              {searchLoading ? <Loader className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              Search
-            </Button>
-          </div>
-          
-          {/* Search Results Section */}
-          {searchResults.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-medium mb-2">Search Results ({searchResults.length})</h4>
-              <ServiceProviderSearchResults providers={searchResults} />
-            </div>
-          )}
-        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import AnimatedLogo from '@/components/AnimatedLogo';
@@ -39,6 +40,7 @@ const Index = () => {
   const { user } = useAuth();
   const [isEnhancing, setIsEnhancing] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
 
   const exampleQueries = [
     {
@@ -177,6 +179,9 @@ const Index = () => {
           if (categoryHint) {
             searchParams.set('category', categoryHint);
           }
+          if (selectedSubcategory) {
+            searchParams.set('subcategory', selectedSubcategory);
+          }
           navigate(`/search?${searchParams.toString()}`);
         }, 100);
       } catch (error) {
@@ -188,10 +193,17 @@ const Index = () => {
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
+    setSelectedSubcategory(""); // Reset subcategory when category changes
+  };
 
-    if (category !== "All" && category !== "Other") {
+  const handleSubcategorySelect = (subcategory: string) => {
+    setSelectedSubcategory(subcategory);
+    
+    if (subcategory) {
+      // Navigate immediately when a subcategory is selected
       const searchParams = new URLSearchParams();
-      searchParams.set('category', category);
+      searchParams.set('category', selectedCategory);
+      searchParams.set('subcategory', subcategory);
       navigate(`/search?${searchParams.toString()}`);
     }
   };
@@ -209,6 +221,8 @@ const Index = () => {
               selected={selectedCategory}
               onSelect={handleCategorySelect}
               className="mb-2"
+              selectedSubcategory={selectedSubcategory}
+              onSubcategorySelect={handleSubcategorySelect}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2 pr-4">
