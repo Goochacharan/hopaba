@@ -16,6 +16,7 @@ import CommunityNoteForm from '@/components/location/CommunityNoteForm';
 import CommunityNotesList from '@/components/location/CommunityNotesList';
 import { Input } from '@/components/ui/input';
 import { Category } from '@/hooks/useCategories';
+import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 
 const getStoredReviews = (locationId: string): Review[] => {
   try {
@@ -410,8 +411,6 @@ const LocationDetails = () => {
           
           {/* Category Selector */}
           <div className="mb-4">
-            import React from './CategoryScrollBar';
-            import { CategoryScrollBar } from '@/components/business/CategoryScrollBar';
             <CategoryScrollBar
               selected={selectedCategory}
               onSelect={handleCategoryChange}

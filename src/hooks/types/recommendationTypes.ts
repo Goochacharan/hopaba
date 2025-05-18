@@ -23,6 +23,7 @@ export interface Event {
 export interface UseRecommendationsProps {
   initialQuery?: string;
   initialCategory?: CategoryType;
+  initialSubcategory?: string;
   loadDefaultResults?: boolean;
 }
 

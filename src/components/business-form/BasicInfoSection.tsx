@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
-import ImageUploadSection from '@/components/business-form/ImageUploadSection';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { useCategories, useSubcategories } from '@/hooks/useCategories';
 
 interface BasicInfoSectionProps {
@@ -177,7 +177,23 @@ const BasicInfoSection = ({ maxImages = 5 }: BasicInfoSectionProps) => {
         )}
       </div>
       
-      <ImageUploadSection maxImages={maxImages} />
+      <FormField
+        control={control}
+        name="images"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Business Images*</FormLabel>
+            <FormControl>
+              <ImageUpload
+                images={field.value || []}
+                onImagesChange={field.onChange}
+                maxImages={maxImages}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   );
 };
