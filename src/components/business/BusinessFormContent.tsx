@@ -14,21 +14,22 @@ import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, S
 import { Button } from '@/components/ui/button';
 
 interface BusinessFormContentProps {
-  form: UseFormReturn<BusinessFormValues>;
-  handlePhoneInput: (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => void;
-  handleDayToggle: (day: string, checked: boolean) => void;
-  selectedDays: string[];
-  loadingCategories: boolean;
-  dbCategories: any[] | undefined;
-  categories: string[];
-  isAdmin: boolean;
-  setShowAddCategoryDialog: (show: boolean) => void;
-  selectedCategoryId: string | null;
-  loadingSubcategories: boolean;
-  subcategories: any[] | undefined;
-  setShowAddSubcategoryDialog: (show: boolean) => void;
+  form?: UseFormReturn<BusinessFormValues>;
+  handlePhoneInput?: (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => void;
+  handleDayToggle?: (day: string, checked: boolean) => void;
+  selectedDays?: string[];
+  loadingCategories?: boolean;
+  dbCategories?: any[] | undefined;
+  categories?: string[];
+  isAdmin?: boolean;
+  setShowAddCategoryDialog?: (show: boolean) => void;
+  selectedCategoryId?: string | null;
+  loadingSubcategories?: boolean;
+  subcategories?: any[] | undefined;
+  setShowAddSubcategoryDialog?: (show: boolean) => void;
   isSubmitting: boolean;
   business?: Business;
+  onCancel?: () => void; // Added this property to fix the error
 }
 
 const DAYS_OF_WEEK = [
