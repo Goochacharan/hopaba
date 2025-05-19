@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Loader2, ArrowUpDown, Search } from 'lucide-react';
+import { Calendar, Loader2, ArrowUpDown, Search, MessageSquare } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { Button } from '@/components/ui/button';
@@ -201,6 +202,29 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
     return request?.conversation_id;
   };
   
+  // Create a new conversation for a request
+  const handleCreateConversation = async (request: ServiceRequestWithConversation) => {
+    if (!providerData || !user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          request_id: request.id,
+          provider_id: providerData.id,
+          user_id: request.user_id,
+        })
+        .select();
+      
+      if (error) throw error;
+      
+      // Navigate to the new conversation
+      navigate(`/messages/${data[0].id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
+  };
+  
   const isLoading = isLoadingProvider || isLoadingMatching || isLoadingResponded;
   const filteredRequests = getFilteredRequests();
   
@@ -330,12 +354,17 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
                   </Button>
                   
                   {responded && conversationId ? (
-                    <Button onClick={() => navigate(`/messages/${conversationId}`)}>
+                    <Button onClick={() => navigate(`/messages/${conversationId}`)} className="flex items-center gap-1">
+                      <MessageSquare className="h-4 w-4 mr-1" />
                       Continue Conversation
                     </Button>
                   ) : (
-                    <Button onClick={() => navigate(`/request/${request.id}?respond=true`)}>
-                      Respond to Request
+                    <Button 
+                      onClick={() => handleCreateConversation(request)}
+                      className="flex items-center gap-1"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Respond with Quote
                     </Button>
                   )}
                 </div>

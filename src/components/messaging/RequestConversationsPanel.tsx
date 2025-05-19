@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useConversations } from '@/hooks/useConversations';
-import { Loader2, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, Calendar, MessageSquare } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -58,8 +58,65 @@ const QuotationSummary: React.FC<QuotationSummaryProps> = ({
   );
 };
 
+// Conversation card component for showing all conversations
+interface ConversationCardProps {
+  conversation: any;
+  onViewClick: () => void;
+  isProvider: boolean;
+}
+
+const ConversationCard: React.FC<ConversationCardProps> = ({
+  conversation,
+  onViewClick,
+  isProvider
+}) => {
+  // Determine if this is a service request conversation
+  const isServiceRequest = !!conversation.service_requests;
+  const name = isProvider ? "Requester" : conversation.service_providers?.name || "Provider";
+  
+  return (
+    <Card className="hover:bg-accent/10 transition-colors">
+      <div className="p-3 flex items-center gap-3">
+        <Avatar className="h-8 w-8">
+          <AvatarFallback>{name.substring(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h5 className="font-medium">{name}</h5>
+            {isServiceRequest && (
+              <Badge variant="outline">
+                {conversation.service_requests.title}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            {conversation.latest_quotation && (
+              <Badge variant="secondary" className="bg-green-50 text-green-700">
+                Quoted: ₹{conversation.latest_quotation}
+              </Badge>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {formatDistanceToNow(parseISO(conversation.last_message_at), { addSuffix: true })}
+            </p>
+          </div>
+        </div>
+        
+        <Button size="sm" variant="outline" onClick={onViewClick}>
+          <MessageSquare className="h-4 w-4 mr-1" />
+          View
+        </Button>
+      </div>
+    </Card>
+  );
+};
+
 // Enhanced RequestConversationsPanel with sorting and expanded quotation view
-const RequestConversationsPanel: React.FC = () => {
+interface RequestConversationsPanelProps {
+  showAllConversations?: boolean;
+}
+
+const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({ showAllConversations = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
@@ -107,6 +164,51 @@ const RequestConversationsPanel: React.FC = () => {
     );
   };
   
+  // Check if the current user is a provider
+  const isProvider = (conversation: any) => {
+    return conversation.service_providers?.user_id === user?.id;
+  };
+  
+  // Render all conversations view
+  if (showAllConversations) {
+    if (isLoadingConversations) {
+      return (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+    
+    if (!conversations || conversations.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+          <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
+          <p className="text-muted-foreground mb-6">
+            Your conversations with service providers will appear here.
+          </p>
+        </div>
+      );
+    }
+    
+    return (
+      <div>
+        <h2 className="text-lg font-medium mb-4">All Conversations</h2>
+        <div className="space-y-3">
+          {conversations.map(conversation => (
+            <ConversationCard
+              key={conversation.id}
+              conversation={conversation}
+              onViewClick={() => navigate(`/messages/${conversation.id}`)}
+              isProvider={isProvider(conversation)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  
+  // Original requests view
   if (isLoadingUserRequests || isLoadingConversations) {
     return (
       <div className="flex justify-center py-8">

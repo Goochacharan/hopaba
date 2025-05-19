@@ -7,7 +7,7 @@ import { useConversations } from '@/hooks/useConversations';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Calendar, MessageSquare } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
@@ -44,7 +44,7 @@ const Messages: React.FC = () => {
       if (!user) return null;
       const { data } = await supabase
         .from('service_providers')
-        .select('id')
+        .select('id, category, subcategory')
         .eq('user_id', user.id)
         .maybeSingle();
       return data;
@@ -78,10 +78,10 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
-      markMessagesAsRead(
-        id,
-        isProvider ? 'provider' : 'user'
-      );
+      markMessagesAsRead({
+        conversationId: id,
+        senderType: isProvider ? 'provider' : 'user'
+      });
     }
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
@@ -123,7 +123,10 @@ const Messages: React.FC = () => {
               <TabsTrigger value="requests">My Requests</TabsTrigger>
               <TabsTrigger value="conversations">All Conversations</TabsTrigger>
               {isServiceProvider && (
-                <TabsTrigger value="provider">Provider Dashboard</TabsTrigger>
+                <TabsTrigger value="provider">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Service Requests
+                </TabsTrigger>
               )}
             </TabsList>
             
@@ -133,16 +136,19 @@ const Messages: React.FC = () => {
             
             <TabsContent value="conversations">
               <div className="space-y-4">
-                {/* Show the existing conversations list component */}
-                <Button onClick={() => navigate('/messages')}>
-                  View All Conversations
-                </Button>
+                <RequestConversationsPanel showAllConversations />
               </div>
             </TabsContent>
             
             {isServiceProvider && (
               <TabsContent value="provider">
-                <ServiceProviderDashboard />
+                {providerData && (
+                  <ServiceProviderDashboard 
+                    providerId={providerData.id}
+                    category={providerData.category}
+                    subcategory={providerData.subcategory}
+                  />
+                )}
               </TabsContent>
             )}
           </Tabs>
@@ -179,6 +185,7 @@ const Messages: React.FC = () => {
             <ConversationHeader 
               otherPartyName={otherPartyName}
               conversation={conversationData.conversation}
+              requestInfo={conversationData.conversation.service_requests}
             />
             
             {/* Messages Container */}
@@ -214,6 +221,7 @@ const Messages: React.FC = () => {
               handleSendMessage={handleSendMessage}
               isSendingMessage={isSendingMessage}
               isProvider={isProvider}
+              requestDetails={conversationData.conversation.service_requests}
             />
           </>
         ) : null}
