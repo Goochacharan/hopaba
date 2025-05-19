@@ -78,10 +78,8 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
-      markMessagesAsRead({
-        conversationId: id,
-        senderType: isProvider ? 'provider' : 'user'
-      });
+      // Fix: Pass both arguments as required
+      markMessagesAsRead(id, isProvider ? 'provider' : 'user');
     }
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   

@@ -341,6 +341,7 @@ export const useConversations = () => {
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
+    // Updated to ensure consistent function signature
     markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider') => {
       return markMessagesAsReadMutation.mutate({
         conversationId,
