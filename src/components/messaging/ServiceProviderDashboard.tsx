@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,6 +42,13 @@ interface ServiceRequestWithConversations {
   created_at: string;
   status: string;
   conversation_id: string;
+}
+
+// Add props interface for the component
+interface ServiceProviderDashboardProps {
+  providerId?: string;
+  category?: string;
+  subcategory?: string;
 }
 
 // Get service requests that match a provider's category and subcategory
@@ -96,17 +102,24 @@ const getRespondedRequests = async (providerId: string) => {
   })) as ServiceRequestWithConversation[];
 };
 
-const ServiceProviderDashboard: React.FC = () => {
+// Update the component declaration with props
+const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ providerId, category, subcategory }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'new' | 'responded'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
   
-  // Get the provider ID for the current user
+  // Get the provider ID for the current user if not provided as prop
   const { data: providerData, isLoading: isLoadingProvider } = useQuery({
-    queryKey: ['provider', user?.id],
+    queryKey: ['provider', user?.id, providerId],
     queryFn: async () => {
+      // If providerId is passed as a prop, use it directly
+      if (providerId) {
+        return { id: providerId };
+      }
+      
+      // Otherwise, fetch the provider ID for the current user
       const { data, error } = await supabase
         .from('service_providers')
         .select('id')
@@ -116,7 +129,7 @@ const ServiceProviderDashboard: React.FC = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user
+    enabled: !!user || !!providerId
   });
   
   // Get matching requests based on provider's category
