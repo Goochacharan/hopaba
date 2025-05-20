@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,7 +53,6 @@ interface ServiceProviderDashboardProps {
 }
 
 // Get service requests that match a provider's category and subcategory
-// FIXED: Removed inner join with conversations to show all matching requests, not just those with conversations
 const getMatchingRequests = async (providerId: string) => {
   // First get the provider's details to know their category and subcategory
   const { data: provider, error: providerError } = await supabase
@@ -63,10 +63,13 @@ const getMatchingRequests = async (providerId: string) => {
     
   if (providerError) throw providerError;
   
-  // Then find all matching open requests without requiring conversations
+  // Then find all matching open requests
   const { data, error } = await supabase
     .from('service_requests')
-    .select('*')
+    .select(`
+      *,
+      conversations!inner(provider_id)
+    `)
     .eq('category', provider.category)
     .eq('status', 'open')
     .order('created_at', { ascending: false });
