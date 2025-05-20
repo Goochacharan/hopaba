@@ -12,6 +12,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { MapPin, Link2 } from 'lucide-react';
 import { BusinessFormValues } from '../AddBusinessForm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Added list of major Indian cities
+const INDIAN_CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
+  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
+  "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"
+];
 
 const LocationSection = () => {
   const form = useFormContext<BusinessFormValues>();
@@ -86,7 +94,22 @@ const LocationSection = () => {
           <FormItem>
             <FormLabel>City*</FormLabel>
             <FormControl>
-              <Input placeholder="Enter city" {...field} />
+              <Select 
+                value={field.value} 
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDIAN_CITIES.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FormControl>
             <FormMessage />
           </FormItem>
