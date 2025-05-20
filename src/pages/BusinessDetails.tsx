@@ -112,7 +112,7 @@ const BusinessDetails: React.FC = () => {
           <CardHeader>
             <div className="flex flex-col">
               <CardTitle className="text-2xl font-bold">{business.name}</CardTitle>
-              <CardDescription>{business.description}</CardDescription>
+              
               
               <div className="flex items-center mt-2">
                 <Badge variant="secondary">
