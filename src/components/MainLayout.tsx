@@ -3,11 +3,13 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { User, Store, MessageSquare, Plus } from 'lucide-react';
+import { User, Store, MessageSquare, Plus, Briefcase } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -25,6 +27,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   } = useAuth();
   
   const { unreadCount } = useConversations();
+  
+  // Check if user is a service provider
+  const { data: isServiceProvider } = useQuery({
+    queryKey: ['isServiceProvider', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('service_providers')
+        .select('id')
+        .eq('user_id', user.id);
+      return data && data.length > 0;
+    },
+    enabled: !!user
+  });
   
   const onSearch = (query: string) => {
     console.log("MainLayout search triggered with:", query);
@@ -132,6 +148,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             label="Messages" 
             isActive={location.pathname.startsWith('/message')} 
           />
+          
+          {/* Service Requests Button - only show for service providers */}
+          {isServiceProvider && (
+            <NavButton 
+              to="/service-requests" 
+              icon={<Briefcase className="h-5 w-5" />} 
+              label="Service Requests" 
+              isActive={location.pathname === '/service-requests'} 
+            />
+          )}
           
           {/* Profile Button */}
           <NavButton 

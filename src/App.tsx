@@ -27,6 +27,7 @@ const RequestDetail = React.lazy(() => import(/* webpackChunkName: "request-deta
 const MessagesListing = React.lazy(() => import(/* webpackChunkName: "messages-listing" */ "./pages/MessagesListing"));
 const Messages = React.lazy(() => import(/* webpackChunkName: "messages" */ "./pages/Messages"));
 const ProviderRequests = React.lazy(() => import(/* webpackChunkName: "provider-requests" */ "./pages/ProviderRequests"));
+const ServiceRequests = React.lazy(() => import(/* webpackChunkName: "service-requests" */ "./pages/ServiceRequests"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -144,8 +145,11 @@ const App = () => (
                   <Route path="/messages" element={<MessagesListing />} />
                   <Route path="/messages/:id" element={<Messages />} />
                   
-                  {/* New route for provider requests */}
+                  {/* Provider routes */}
                   <Route path="/provider-requests" element={<ProviderRequests />} />
+                  
+                  {/* New dedicated Service Requests page */}
+                  <Route path="/service-requests" element={<ServiceRequests />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
