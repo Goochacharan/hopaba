@@ -6,12 +6,6 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './useAuth';
 import { useEffect } from 'react';
 
-// Add this interface for the mark messages as read params
-interface MarkMessagesAsReadParams {
-  conversationId: string;
-  senderType: 'user' | 'provider';
-}
-
 export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -71,6 +65,31 @@ export const useConversations = () => {
     providerId: string;
     userId: string;
   }) => {
+    console.log('Creating conversation with params:', { requestId, providerId, userId });
+    
+    if (!user) throw new Error('User not authenticated');
+    
+    // Verify the provider belongs to the current user if the request is coming from a provider
+    const { data: providerData, error: providerError } = await supabase
+      .from('service_providers')
+      .select('user_id')
+      .eq('id', providerId)
+      .single();
+      
+    if (providerError) {
+      console.error('Error verifying provider:', providerError);
+      throw new Error('Could not verify service provider');
+    }
+    
+    // Check if we're creating as a provider and if we have permission
+    if (providerData.user_id === user.id) {
+      console.log('Creating conversation as provider - verified ownership');
+    } else if (userId === user.id) {
+      console.log('Creating conversation as requester - verified ownership');
+    } else {
+      throw new Error('You do not have permission to create this conversation');
+    }
+    
     const { data, error } = await supabase
       .from('conversations')
       .insert({
@@ -80,7 +99,15 @@ export const useConversations = () => {
       })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      throw new Error('No conversation data returned');
+    }
+    
     return data[0] as Conversation;
   };
 
@@ -159,7 +186,7 @@ export const useConversations = () => {
   };
 
   // Send a message in a conversation
-  const sendMessage = async ({
+  const sendMessageFn = async ({
     conversationId,
     content,
     senderType,
@@ -173,6 +200,47 @@ export const useConversations = () => {
     quotationPrice?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
+    
+    console.log('Sending message with params:', { 
+      conversationId, 
+      content, 
+      senderType, 
+      userId: user.id 
+    });
+    
+    // First, verify this user can send a message in this conversation
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select(`
+        user_id,
+        provider_id,
+        service_providers (user_id)
+      `)
+      .eq('id', conversationId)
+      .single();
+      
+    if (conversationError) {
+      console.error('Error verifying conversation permissions:', conversationError);
+      throw new Error('Could not verify conversation permissions');
+    }
+    
+    // Check that the user has permission to send a message as this sender type
+    const isRequesterAndAuthorized = senderType === 'user' && conversation.user_id === user.id;
+    const isProviderAndAuthorized = senderType === 'provider' && 
+      conversation.service_providers && 
+      conversation.service_providers.user_id === user.id;
+      
+    if (!isRequesterAndAuthorized && !isProviderAndAuthorized) {
+      console.error('User not authorized to send message:', {
+        userId: user.id,
+        senderType,
+        conversationUserId: conversation.user_id,
+        providerUserId: conversation.service_providers?.user_id
+      });
+      throw new Error('You are not authorized to send this message');
+    }
+    
+    console.log('Authorization check passed, sending message');
 
     const { data, error } = await supabase
       .from('messages')
@@ -186,15 +254,23 @@ export const useConversations = () => {
       })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      throw new Error('No message data returned');
+    }
+    
     return data[0] as Message;
   };
 
-  // Mark messages as read - updated to use the new params interface
-  const markMessagesAsRead = async ({
-    conversationId,
-    senderType
-  }: MarkMessagesAsReadParams) => {
+  // Mark messages as read
+  const markMessagesAsReadFn = async (
+    conversationId: string, 
+    senderType: 'user' | 'provider'
+  ) => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -246,15 +322,16 @@ export const useConversations = () => {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: sendMessage,
+    mutationFn: sendMessageFn,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Error sending message:', error);
       toast({
         title: 'Error',
-        description: `Failed to send message: ${error.message}`,
+        description: `Failed to send message: ${error.message || 'Unknown error'}`,
         variant: 'destructive',
       });
     }
@@ -269,19 +346,20 @@ export const useConversations = () => {
         description: 'You have started a new conversation.',
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Error creating conversation:', error);
       toast({
         title: 'Error',
-        description: `Failed to start conversation: ${error.message}`,
+        description: `Failed to start conversation: ${error.message || 'Unknown error'}`,
         variant: 'destructive',
       });
     }
   });
 
   const markMessagesAsReadMutation = useMutation({
-    mutationFn: markMessagesAsRead,
+    mutationFn: markMessagesAsReadFn,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     }
   });
@@ -329,24 +407,14 @@ export const useConversations = () => {
     refetchConversations,
     unreadCount,
     refetchUnreadCount,
-    createConversation: (requestId: string, providerId: string, userId: string, options?: any) => {
-      return createConversationMutation.mutate({
-        requestId,
-        providerId,
-        userId
-      }, options);
-    },
+    createConversation: createConversationMutation.mutate,
     isCreatingConversation: createConversationMutation.isPending,
     sendMessage: sendMessageMutation.mutate,
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
-    // Updated to ensure consistent function signature
     markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider') => {
-      return markMessagesAsReadMutation.mutate({
-        conversationId,
-        senderType
-      });
+      return markMessagesAsReadMutation.mutate(conversationId, senderType);
     }
   };
 };

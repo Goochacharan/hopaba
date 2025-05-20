@@ -54,7 +54,6 @@ interface ServiceProviderDashboardProps {
 }
 
 // Get service requests that match a provider's category and subcategory
-// FIXED: Removed inner join with conversations to show all matching requests, not just those with conversations
 const getMatchingRequests = async (providerId: string) => {
   console.log('Getting matching requests for provider:', providerId);
   
@@ -232,9 +231,51 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
   
   // Create a new conversation for a request
   const handleCreateConversation = async (request: ServiceRequestWithConversation) => {
-    if (!providerData || !user) return;
+    if (!providerData || !user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to respond to service requests",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
+      // Add debug logging for the user and provider relationship
+      console.log('Creating conversation with:', {
+        currentUserId: user.id,
+        providerId: providerData.id,
+        requestId: request.id,
+        requestUserId: request.user_id
+      });
+      
+      // First, verify the service provider belongs to the current user
+      const { data: verifyProvider, error: verifyError } = await supabase
+        .from('service_providers')
+        .select('user_id')
+        .eq('id', providerData.id)
+        .single();
+        
+      if (verifyError) {
+        console.error('Error verifying provider:', verifyError);
+        toast({
+          title: "Error",
+          description: "Could not verify your service provider account",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (verifyProvider.user_id !== user.id) {
+        toast({
+          title: "Error",
+          description: "You don't have permission to respond as this service provider",
+          variant: "destructive",
+        });
+        return;
+      }
+        
+      // Create the conversation
       const { data, error } = await supabase
         .from('conversations')
         .insert({
@@ -244,7 +285,14 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         })
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating conversation:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('No conversation data returned');
+      }
       
       // Show success message
       toast({
@@ -254,11 +302,11 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
       
       // Navigate to the new conversation
       navigate(`/messages/${data[0].id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating conversation:', error);
       toast({
         title: "Error",
-        description: "Failed to create conversation. Please try again.",
+        description: `Failed to create conversation: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -333,6 +381,8 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
       <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
         <p>Found {matchingRequests?.length || 0} matching requests and {respondedRequests?.length || 0} responded requests</p>
         <p>Currently showing {filteredRequests.length} requests with filter: {filter}</p>
+        {user && <p>Current user ID: {user.id}</p>}
+        {providerData && <p>Current provider ID: {providerData.id}</p>}
       </div>
       
       {/* Requests list */}
