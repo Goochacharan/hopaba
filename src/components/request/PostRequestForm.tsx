@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -21,12 +21,21 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { useCategories } from '@/hooks/useCategories';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mic, Image as ImageIcon } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
+import { useVoiceSearch } from '@/hooks/useVoiceSearch';
+import { toast } from '@/components/ui/use-toast';
+
+// List of major Indian cities
+const INDIAN_CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
+  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
+  "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"
+];
 
 const requestFormSchema = z.object({
   title: z.string().min(5, {
@@ -43,7 +52,7 @@ const requestFormSchema = z.object({
   date_range_start: z.date().optional(),
   date_range_end: z.date().optional(),
   city: z.string().min(1, {
-    message: "Please enter a city.",
+    message: "Please select a city.",
   }),
   area: z.string().min(1, {
     message: "Please enter an area.",
@@ -53,8 +62,8 @@ const requestFormSchema = z.object({
   }).max(6, {
     message: "Postal code must not exceed 6 characters."
   }),
-  contact_phone: z.string().min(10, {
-    message: "Please enter a valid phone number.",
+  contact_phone: z.string().regex(/^\d{10}$/, {
+    message: "Please enter a valid 10-digit phone number.",
   }),
   images: z.array(z.string()).optional(),
 });
@@ -73,6 +82,8 @@ const PostRequestForm: React.FC = () => {
     getSubcategoriesByCategoryName
   } = useCategories();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [isImageUploadOpen, setIsImageUploadOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
@@ -90,6 +101,13 @@ const PostRequestForm: React.FC = () => {
       contact_phone: "",
       images: [],
     },
+  });
+
+  const { isListening, startSpeechRecognition } = useVoiceSearch({
+    onTranscript: (transcript) => {
+      const currentDescription = form.getValues("description");
+      form.setValue("description", currentDescription ? `${currentDescription} ${transcript}` : transcript);
+    }
   });
 
   const onSubmit = (values: RequestFormValues) => {
@@ -126,15 +144,15 @@ const PostRequestForm: React.FC = () => {
     }
   };
 
-  return (
-    <div className="w-full max-w-3xl mx-auto p-4">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">Post a Service Request</h2>
-        <p className="text-muted-foreground">
-          Describe what service you need and get quotes from local providers
-        </p>
-      </div>
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 10) {
+      form.setValue("contact_phone", value);
+    }
+  };
 
+  return (
+    <div className="w-full max-w-3xl mx-auto">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -146,9 +164,6 @@ const PostRequestForm: React.FC = () => {
                 <FormControl>
                   <Input placeholder="e.g., Need a caterer for birthday party" {...field} />
                 </FormControl>
-                <FormDescription>
-                  A short title describing what you need
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -160,20 +175,61 @@ const PostRequestForm: React.FC = () => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Description*</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Describe your requirements in detail..." 
-                    className="min-h-[120px]" 
-                    {...field} 
-                  />
-                </FormControl>
-                <FormDescription>
-                  Provide details about what you need, when you need it, and any other relevant information
-                </FormDescription>
+                <div className="relative">
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Describe your requirements in detail..." 
+                      className="min-h-[120px] pr-20" 
+                      {...field}
+                      ref={textareaRef}
+                    />
+                  </FormControl>
+                  <div className="absolute bottom-2 right-2 flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      className={cn("rounded-full", isListening && "bg-red-100 text-red-500")}
+                      onClick={startSpeechRecognition}
+                      title="Use voice input"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      className={cn("rounded-full", isImageUploadOpen && "bg-primary/10 text-primary")}
+                      onClick={() => setIsImageUploadOpen(!isImageUploadOpen)}
+                      title="Add images"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          {isImageUploadOpen && (
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <ImageUpload 
+                      images={field.value || []} 
+                      onImagesChange={(images) => form.setValue('images', images)}
+                      maxImages={5}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -258,9 +314,6 @@ const PostRequestForm: React.FC = () => {
                     onChange={e => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                   />
                 </FormControl>
-                <FormDescription>
-                  Enter your approximate budget (optional)
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -359,7 +412,21 @@ const PostRequestForm: React.FC = () => {
                 <FormItem>
                   <FormLabel>City*</FormLabel>
                   <FormControl>
-                    <Input placeholder="City" {...field} />
+                    <Select 
+                      value={field.value} 
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select city" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INDIAN_CITIES.map((city) => (
+                          <SelectItem key={city} value={city}>
+                            {city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -402,32 +469,18 @@ const PostRequestForm: React.FC = () => {
               <FormItem>
                 <FormLabel>Contact Phone*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Your phone number" {...field} />
+                  <div className="flex">
+                    <div className="bg-muted flex items-center px-3 rounded-l-md border border-r-0 border-input">
+                      +91
+                    </div>
+                    <Input 
+                      placeholder="10-digit phone number" 
+                      value={field.value} 
+                      onChange={handlePhoneInput}
+                      className="rounded-l-none"
+                    />
+                  </div>
                 </FormControl>
-                <FormDescription>
-                  Service providers will contact you on this number
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="images"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Images</FormLabel>
-                <FormControl>
-                  <ImageUpload 
-                    images={field.value || []} 
-                    onImagesChange={(images) => form.setValue('images', images)}
-                    maxImages={5}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Upload images to better illustrate your requirements (optional)
-                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
