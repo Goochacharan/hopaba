@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -174,39 +173,38 @@ const PostRequestForm: React.FC = () => {
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description*</FormLabel>
-                <div className="relative">
-                  <FormControl>
+                <FormControl>
+                  <div className="relative">
                     <Textarea 
                       placeholder="Describe your requirements in detail..." 
                       className="min-h-[120px] pr-20" 
                       {...field}
                       ref={textareaRef}
                     />
-                  </FormControl>
-                  <div className="absolute bottom-2 right-2 flex gap-2">
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon"
-                      className={cn("rounded-full", isListening && "bg-red-100 text-red-500")}
-                      onClick={startSpeechRecognition}
-                      title="Use voice input"
-                    >
-                      <Mic className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon"
-                      className={cn("rounded-full", isImageUploadOpen && "bg-primary/10 text-primary")}
-                      onClick={() => setIsImageUploadOpen(!isImageUploadOpen)}
-                      title="Add images"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        className={cn("rounded-full", isListening && "bg-red-100 text-red-500")}
+                        onClick={startSpeechRecognition}
+                        title="Use voice input"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon"
+                        className={cn("rounded-full", isImageUploadOpen && "bg-primary/10 text-primary")}
+                        onClick={() => setIsImageUploadOpen(!isImageUploadOpen)}
+                        title="Add images"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -237,7 +235,6 @@ const PostRequestForm: React.FC = () => {
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category*</FormLabel>
                   <Select 
                     value={field.value} 
                     onValueChange={handleCategoryChange}
@@ -267,7 +264,6 @@ const PostRequestForm: React.FC = () => {
               name="subcategory"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subcategory</FormLabel>
                   <Select 
                     value={field.value} 
                     onValueChange={field.onChange}
@@ -305,11 +301,10 @@ const PostRequestForm: React.FC = () => {
             name="budget"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Budget (₹)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Your estimated budget"
+                    placeholder="Your estimated budget (₹)"
                     {...field}
                     onChange={e => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                   />
@@ -325,7 +320,6 @@ const PostRequestForm: React.FC = () => {
               name="date_range_start"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>From Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -339,7 +333,7 @@ const PostRequestForm: React.FC = () => {
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>Pick a date</span>
+                            <span>From date</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -364,7 +358,6 @@ const PostRequestForm: React.FC = () => {
               name="date_range_end"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>To Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -378,7 +371,7 @@ const PostRequestForm: React.FC = () => {
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>Pick a date</span>
+                            <span>To date</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -410,7 +403,6 @@ const PostRequestForm: React.FC = () => {
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>City*</FormLabel>
                   <FormControl>
                     <Select 
                       value={field.value} 
@@ -438,7 +430,6 @@ const PostRequestForm: React.FC = () => {
               name="area"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Area*</FormLabel>
                   <FormControl>
                     <Input placeholder="Area/Neighborhood" {...field} />
                   </FormControl>
@@ -452,7 +443,6 @@ const PostRequestForm: React.FC = () => {
               name="postal_code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Postal Code*</FormLabel>
                   <FormControl>
                     <Input placeholder="6-digit postal code" maxLength={6} {...field} />
                   </FormControl>
@@ -467,7 +457,6 @@ const PostRequestForm: React.FC = () => {
             name="contact_phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Contact Phone*</FormLabel>
                 <FormControl>
                   <div className="flex">
                     <div className="bg-muted flex items-center px-3 rounded-l-md border border-r-0 border-input">
