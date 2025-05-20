@@ -78,7 +78,7 @@ const ProviderRequests: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6 px-4">
         <div className="flex items-center justify-between max-w-3xl mx-auto mb-6">
-          <h1 className="text-2xl font-bold">Service Provider Dashboard</h1>
+          <h1 className="text-2xl font-bold">Service Provider</h1>
           <Button 
             variant="outline"
             onClick={() => navigate(-1)}
@@ -96,8 +96,7 @@ const ProviderRequests: React.FC = () => {
             
             <TabsContent value="requests">
               {providerData?.map((provider) => (
-                <div key={provider.id} className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4">Requests for {provider.name}</h2>
+                <div key={provider.id}>
                   <ServiceProviderDashboard 
                     providerId={provider.id}
                     category={provider.category}
@@ -109,7 +108,7 @@ const ProviderRequests: React.FC = () => {
             
             <TabsContent value="conversations">
               <p className="text-center py-8 text-muted-foreground">
-                Your active conversations with requesters will appear here.
+                Your active conversations will appear here.
               </p>
             </TabsContent>
           </Tabs>

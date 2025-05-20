@@ -77,13 +77,12 @@ const ServiceRequests: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6 px-4">
         <div className="flex items-center justify-between max-w-3xl mx-auto mb-6">
-          <h1 className="text-2xl font-bold">Service Requests Dashboard</h1>
+          <h1 className="text-2xl font-bold">Service Requests</h1>
         </div>
         
         <div className="max-w-3xl mx-auto">
           {providerData?.map((provider) => (
             <div key={provider.id} className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Requests for {provider.name}</h2>
               <ServiceProviderDashboard 
                 providerId={provider.id}
                 category={provider.category}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -174,7 +173,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
     
     // Get the responded request IDs for easy lookup
     const respondedIds = new Set(respondedRequests.map(r => r.id));
-    console.log('Responded IDs set size:', respondedIds.size);
     
     let filteredRequests: ServiceRequestWithConversation[] = [];
     
@@ -184,17 +182,13 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         .filter(req => filter === 'all' || !respondedIds.has(req.id))
         .map(req => ({ ...req }));
       
-      console.log(`Adding ${newRequests.length} new requests to filtered list`);
       filteredRequests = [...filteredRequests, ...newRequests];
     }
     
     if (filter === 'all' || filter === 'responded') {
       // For 'all' or 'responded', include requests that have been responded to
-      console.log(`Adding ${respondedRequests.length} responded requests to filtered list`);
       filteredRequests = [...filteredRequests, ...respondedRequests];
     }
-    
-    console.log('Total filtered requests before search:', filteredRequests.length);
     
     // Apply search filter if there's a search term
     if (searchTerm) {
@@ -205,7 +199,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         req.area.toLowerCase().includes(term) ||
         req.city.toLowerCase().includes(term)
       );
-      console.log('After search filtering:', filteredRequests.length);
     }
     
     // Apply sorting
@@ -472,10 +465,10 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
           <h3 className="text-lg font-medium mb-1">No matching requests found</h3>
           <p className="text-muted-foreground">
             {filter === 'new' ? 
-              "There are no new service requests matching your category" : 
+              "No new service requests matching your category" : 
               filter === 'responded' ? 
-              "You haven't responded to any service requests yet" : 
-              "No service requests match your search criteria"}
+              "No responded service requests" : 
+              "No matching requests"}
           </p>
         </div>
       )}
