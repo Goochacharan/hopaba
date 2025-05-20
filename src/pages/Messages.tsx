@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/MainLayout';
 import { useConversations } from '@/hooks/useConversations';
@@ -23,12 +23,22 @@ import ServiceProviderDashboard from '@/components/messaging/ServiceProviderDash
 const Messages: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   
   const [message, setMessage] = useState('');
   const [quotationMode, setQuotationMode] = useState(false);
   const [quotationPrice, setQuotationPrice] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('requests');
+  
+  // Set the default active tab based on URL parameters or provider status
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    // Check if there's a tab parameter in the URL
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam) return tabParam;
+    // Default tab
+    return "requests";
+  });
   
   const { 
     getConversationWithMessages,
@@ -66,6 +76,15 @@ const Messages: React.FC = () => {
     queryFn: () => getConversationWithMessages(id!),
     enabled: !!id && !!user
   });
+  
+  // Update the URL when tab changes without a full page reload
+  useEffect(() => {
+    if (!id) {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('tab', activeTab);
+      navigate({ search: searchParams.toString() }, { replace: true });
+    }
+  }, [activeTab, id, navigate, location.search]);
   
   // Determine if current user is the service provider or the requester
   const isProvider = conversationData?.conversation?.service_providers?.user_id === user?.id;
