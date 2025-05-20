@@ -38,7 +38,7 @@ const Messages: React.FC = () => {
   } = useConversations();
 
   // Fetch user's role (whether they're a service provider or not)
-  const { data: providerData } = useQuery({
+  const { data: providerData, isLoading: isLoadingProviderData } = useQuery({
     queryKey: ['provider-role', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -47,13 +47,22 @@ const Messages: React.FC = () => {
         .select('id, category, subcategory')
         .eq('user_id', user.id)
         .maybeSingle();
+      
+      console.log('Provider data fetched:', data);
       return data;
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 60000 // Cache for 1 minute to prevent frequent refetching
   });
   
   // User is a service provider if they have a provider record
   const isServiceProvider = !!providerData;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('User is service provider:', isServiceProvider);
+    console.log('Provider data:', providerData);
+  }, [isServiceProvider, providerData]);
   
   // Fetch conversation with messages when in single conversation view
   const { 
@@ -78,7 +87,7 @@ const Messages: React.FC = () => {
   // Mark messages as read when viewing the conversation
   useEffect(() => {
     if (id && user && conversationData) {
-      // Fix: Pass both arguments as required
+      console.log('Marking messages as read:', { id, isProvider });
       markMessagesAsRead(id, isProvider ? 'provider' : 'user');
     }
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
@@ -86,20 +95,33 @@ const Messages: React.FC = () => {
   const handleSendMessage = () => {
     if (!id || !user || !message.trim()) return;
     
+    console.log('Sending message:', { 
+      conversationId: id,
+      senderType: isProvider ? 'provider' : 'user',
+      hasQuotation: quotationMode && !!quotationPrice
+    });
+    
     const messageContent = quotationMode 
       ? `Quotation: ${quotationPrice ? `₹${quotationPrice}` : 'Price not specified'} - ${message}`
       : message;
     
-    sendMessage({
-      conversationId: id,
-      content: messageContent,
-      senderType: isProvider ? 'provider' : 'user',
-      quotationPrice: quotationMode ? Number(quotationPrice) : undefined
-    });
-    
-    setMessage('');
-    setQuotationMode(false);
-    setQuotationPrice('');
+    try {
+      sendMessage({
+        conversationId: id,
+        content: messageContent,
+        senderType: isProvider ? 'provider' : 'user',
+        quotationPrice: quotationMode ? Number(quotationPrice) : undefined
+      });
+      
+      setMessage('');
+      setQuotationMode(false);
+      setQuotationPrice('');
+      
+      // Force refetch conversation after sending a message
+      setTimeout(() => refetch(), 500);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
   
   // If we're not viewing a specific conversation, show the list of requests and conversations

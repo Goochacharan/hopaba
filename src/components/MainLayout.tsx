@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
@@ -28,19 +28,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   
   const { unreadCount } = useConversations();
   
-  // Check if user is a service provider
-  const { data: isServiceProvider } = useQuery({
+  // Check if user is a service provider with longer cache time to prevent refetching
+  const { data: isServiceProvider, isLoading: isLoadingProvider } = useQuery({
     queryKey: ['isServiceProvider', user?.id],
     queryFn: async () => {
       if (!user) return false;
+      console.log('Checking if user is service provider:', user.id);
       const { data } = await supabase
         .from('service_providers')
         .select('id')
         .eq('user_id', user.id);
-      return data && data.length > 0;
+      
+      const result = data && data.length > 0;
+      console.log('Is service provider result:', result);
+      return result;
     },
-    enabled: !!user
+    enabled: !!user,
+    staleTime: 300000, // Cache for 5 minutes
+    cacheTime: 600000   // Keep in cache for 10 minutes
   });
+  
+  useEffect(() => {
+    console.log('MainLayout - isServiceProvider:', isServiceProvider);
+  }, [isServiceProvider]);
   
   const onSearch = (query: string) => {
     console.log("MainLayout search triggered with:", query);

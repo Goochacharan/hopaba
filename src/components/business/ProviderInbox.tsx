@@ -64,7 +64,13 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   // Handle creating a new conversation
   const handleContactRequester = (request: ServiceRequest) => {
     if (!user) return;
+    console.log('Creating conversation:', {
+      requestId: request.id,
+      providerId,
+      userId: request.user_id
+    });
     
+    // Call the createConversation with the updated signature
     createConversation(request.id, providerId, request.user_id);
   };
   

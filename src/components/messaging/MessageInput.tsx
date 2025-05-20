@@ -109,12 +109,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
               size="icon" 
               onClick={() => setQuotationMode(true)}
               title="Send price quote"
+              type="button"
             >
               <DollarSign className="h-4 w-4" />
             </Button>
           )}
           <Button 
-            onClick={handleSendMessage} 
+            onClick={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            type="button"
             disabled={isSendingMessage || (!message.trim() && (!quotationMode || !quotationPrice))}
           >
             {isSendingMessage ? (
