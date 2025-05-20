@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 
 // Import refactored components
 import MessagesList from '@/components/messaging/MessagesList';
@@ -93,7 +93,19 @@ const Messages: React.FC = () => {
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
   const handleSendMessage = () => {
-    if (!id || !user || !message.trim()) return;
+    if (!id || !user) {
+      console.error('Cannot send message: Missing conversation ID or user');
+      return;
+    }
+    
+    if (quotationMode && (!quotationPrice.trim() || isNaN(parseFloat(quotationPrice)))) {
+      toast({
+        title: "Invalid price",
+        description: "Please enter a valid price for your quotation.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     console.log('Sending message:', { 
       conversationId: id,
@@ -101,26 +113,40 @@ const Messages: React.FC = () => {
       hasQuotation: quotationMode && !!quotationPrice
     });
     
-    const messageContent = quotationMode 
-      ? `Quotation: ${quotationPrice ? `₹${quotationPrice}` : 'Price not specified'} - ${message}`
-      : message;
+    const messageContent = message.trim();
+    let parsedQuotationPrice: number | undefined = undefined;
+    
+    if (quotationMode && quotationPrice.trim()) {
+      parsedQuotationPrice = parseFloat(quotationPrice);
+      if (isNaN(parsedQuotationPrice)) {
+        console.error('Invalid quotation price:', quotationPrice);
+        return;
+      }
+    }
     
     try {
       sendMessage({
         conversationId: id,
         content: messageContent,
         senderType: isProvider ? 'provider' : 'user',
-        quotationPrice: quotationMode ? Number(quotationPrice) : undefined
+        quotationPrice: parsedQuotationPrice
       });
       
       setMessage('');
-      setQuotationMode(false);
-      setQuotationPrice('');
+      if (quotationMode && parsedQuotationPrice !== undefined) {
+        setQuotationMode(false);
+        setQuotationPrice('');
+      }
       
       // Force refetch conversation after sending a message
       setTimeout(() => refetch(), 500);
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   

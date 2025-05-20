@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message } from '@/types/serviceRequestTypes';
@@ -201,6 +200,18 @@ export const useConversations = () => {
   }) => {
     if (!user) throw new Error('User not authenticated');
     
+    // Validate content and quotation price
+    if (!content.trim() && !quotationPrice) {
+      throw new Error('Message content cannot be empty');
+    }
+    
+    // Ensure quotation price is a valid number if provided
+    if (quotationPrice !== undefined) {
+      if (isNaN(quotationPrice) || quotationPrice <= 0) {
+        throw new Error('Quotation price must be a positive number');
+      }
+    }
+    
     console.log('Sending message with params:', { 
       conversationId, 
       content, 
@@ -266,16 +277,19 @@ export const useConversations = () => {
       
       console.log('Authorization check passed, sending message');
 
+      // Prepare message data with validated quotation price
+      const messageData = {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        sender_type: senderType,
+        content: content.trim(),
+        attachments,
+        quotation_price: quotationPrice
+      };
+
       const { data, error } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          sender_type: senderType,
-          content,
-          attachments,
-          quotation_price: quotationPrice
-        })
+        .insert(messageData)
         .select();
 
       if (error) {
@@ -352,17 +366,25 @@ export const useConversations = () => {
     enabled: !!user
   });
 
+  // Update sendMessageMutation to improve error handling
   const sendMessageMutation = useMutation({
     mutationFn: sendMessageFn,
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      
+      if (variables.quotationPrice) {
+        toast({
+          title: "Quotation Sent",
+          description: `Your price quote of ₹${variables.quotationPrice} has been sent.`,
+        });
+      }
     },
     onError: (error: any) => {
       console.error('Error sending message:', error);
       toast({
-        title: 'Error',
-        description: `Failed to send message: ${error.message || 'Unknown error'}`,
+        title: 'Error Sending Message',
+        description: error.message || 'An unexpected error occurred while sending your message.',
         variant: 'destructive',
       });
     }

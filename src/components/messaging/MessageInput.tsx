@@ -64,6 +64,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setQuotationPrice(newValue);
   };
   
+  // Check if the send button should be enabled
+  const isButtonDisabled = () => {
+    if (isSendingMessage) return true;
+    
+    if (quotationMode) {
+      // In quotation mode, require a valid price (not empty and is a number)
+      const priceIsValid = quotationPrice.trim() !== '' && !isNaN(parseFloat(quotationPrice));
+      return !priceIsValid;
+    }
+    
+    // In regular mode, require a non-empty message
+    return !message.trim();
+  };
+  
   return (
     <div className="border-t p-4">
       {quotationMode && isProvider && (
@@ -105,7 +119,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 onChange={handlePriceChange}
               />
             </div>
-            <Button variant="outline" onClick={() => setQuotationMode(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setQuotationMode(false)}
+              type="button" // Explicitly set type to button
+            >
               Cancel
             </Button>
           </div>
@@ -128,7 +146,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <Button 
               variant="outline" 
               size="icon" 
-              onClick={() => setQuotationMode(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                setQuotationMode(true);
+              }}
               title="Send price quote"
               type="button"
             >
@@ -138,10 +159,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <Button 
             onClick={(e) => {
               e.preventDefault();
-              handleSendMessage();
+              if (!isButtonDisabled()) {
+                handleSendMessage();
+              }
             }}
             type="button"
-            disabled={isSendingMessage || (!message.trim() && (!quotationMode || !quotationPrice))}
+            disabled={isButtonDisabled()}
           >
             {isSendingMessage ? (
               <Loader2 className="h-4 w-4 animate-spin" />
