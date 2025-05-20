@@ -13,27 +13,6 @@ import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessReviewForm from '@/components/business/BusinessReviewForm';
 import { useAuth } from '@/hooks/useAuth';
 
-interface Business {
-  id: string;
-  created_at: string;
-  name: string;
-  description: string;
-  category: string;
-  subcategory: string;
-  address: string;
-  city: string;
-  country?: string;
-  contact_phone: string;
-  website: string;
-  images: string[];
-  approval_status: string;
-  user_id?: string;
-  postal_code?: string;
-  hours_from?: string;
-  hours_to?: string;
-  whatsapp?: string;
-}
-
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -173,7 +152,12 @@ const BusinessDetails: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 mt-1 shrink-0" />
-                    <span>{business.address}, {business.city}{business.postal_code ? ` - ${business.postal_code}` : ''}{business.country ? `, ${business.country}` : ''}</span>
+                    <span>
+                      {business.address}, {business.city}
+                      {/* Handle optional fields safely with optional chaining */}
+                      {(business as any).postal_code ? ` - ${(business as any).postal_code}` : ''}
+                      {(business as any).country ? `, ${(business as any).country}` : ''}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 shrink-0" />
@@ -187,10 +171,10 @@ const BusinessDetails: React.FC = () => {
                   )}
                 </div>
                 
-                {(business.hours_from || business.hours_to) && (
+                {((business as any).hours_from || (business as any).hours_to) && (
                   <div className="mt-4">
                     <h4 className="font-medium text-sm mb-2">Business Hours</h4>
-                    <p>{business.hours_from || 'N/A'} - {business.hours_to || 'N/A'}</p>
+                    <p>{(business as any).hours_from || 'N/A'} - {(business as any).hours_to || 'N/A'}</p>
                   </div>
                 )}
               </div>
