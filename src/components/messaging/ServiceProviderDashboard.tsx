@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -18,7 +17,6 @@ import {
   SelectTrigger, 
   SelectValue
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
 
 // Update the interface for service requests with conversations
 interface ServiceRequestWithConversation extends ServiceRequest {
@@ -56,8 +54,6 @@ interface ServiceProviderDashboardProps {
 // Get service requests that match a provider's category and subcategory
 // FIXED: Removed inner join with conversations to show all matching requests, not just those with conversations
 const getMatchingRequests = async (providerId: string) => {
-  console.log('Getting matching requests for provider:', providerId);
-  
   // First get the provider's details to know their category and subcategory
   const { data: provider, error: providerError } = await supabase
     .from('service_providers')
@@ -66,8 +62,6 @@ const getMatchingRequests = async (providerId: string) => {
     .single();
     
   if (providerError) throw providerError;
-  
-  console.log('Provider details:', provider);
   
   // Then find all matching open requests without requiring conversations
   const { data, error } = await supabase
@@ -79,22 +73,16 @@ const getMatchingRequests = async (providerId: string) => {
   
   if (error) throw error;
   
-  console.log('Found matching requests:', data.length);
-  
   // Filter by subcategory if the provider has one
   const filteredRequests = provider.subcategory 
-    ? data.filter(req => !req.subcategory || req.subcategory === provider.subcategory)
+    ? data.filter(req => req.subcategory === provider.subcategory || !req.subcategory)
     : data;
-    
-  console.log('After subcategory filtering:', filteredRequests.length, 'requests remain');
     
   return filteredRequests as ServiceRequestWithConversation[];
 };
 
 // Get service requests that a provider has already responded to
 const getRespondedRequests = async (providerId: string) => {
-  console.log('Getting responded requests for provider:', providerId);
-
   const { data, error } = await supabase
     .from('conversations')
     .select(`
@@ -104,8 +92,6 @@ const getRespondedRequests = async (providerId: string) => {
     .eq('provider_id', providerId);
     
   if (error) throw error;
-  
-  console.log('Found responded requests:', data.length);
   
   // Extract the actual request data and add the conversation ID
   return data.map(item => ({
@@ -158,24 +144,12 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
     enabled: !!providerData?.id
   });
   
-  // Log data for debugging
-  useEffect(() => {
-    if (matchingRequests) {
-      console.log('Matching requests loaded:', matchingRequests.length);
-    }
-    if (respondedRequests) {
-      console.log('Responded requests loaded:', respondedRequests.length);
-      console.log('Responded request IDs:', respondedRequests.map(req => req.id));
-    }
-  }, [matchingRequests, respondedRequests]);
-  
   // Process and filter the requests based on current filter and search
   const getFilteredRequests = () => {
     if (!matchingRequests || !respondedRequests) return [] as ServiceRequestWithConversation[];
     
     // Get the responded request IDs for easy lookup
     const respondedIds = new Set(respondedRequests.map(r => r.id));
-    console.log('Responded IDs set size:', respondedIds.size);
     
     let filteredRequests: ServiceRequestWithConversation[] = [];
     
@@ -185,17 +159,13 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         .filter(req => filter === 'all' || !respondedIds.has(req.id))
         .map(req => ({ ...req }));
       
-      console.log(`Adding ${newRequests.length} new requests to filtered list`);
       filteredRequests = [...filteredRequests, ...newRequests];
     }
     
     if (filter === 'all' || filter === 'responded') {
       // For 'all' or 'responded', include requests that have been responded to
-      console.log(`Adding ${respondedRequests.length} responded requests to filtered list`);
       filteredRequests = [...filteredRequests, ...respondedRequests];
     }
-    
-    console.log('Total filtered requests before search:', filteredRequests.length);
     
     // Apply search filter if there's a search term
     if (searchTerm) {
@@ -206,7 +176,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         req.area.toLowerCase().includes(term) ||
         req.city.toLowerCase().includes(term)
       );
-      console.log('After search filtering:', filteredRequests.length);
     }
     
     // Apply sorting
@@ -246,21 +215,10 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
       
       if (error) throw error;
       
-      // Show success message
-      toast({
-        title: "Conversation created",
-        description: "You've started a new conversation with this requester",
-      });
-      
       // Navigate to the new conversation
       navigate(`/messages/${data[0].id}`);
     } catch (error) {
       console.error('Error creating conversation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation. Please try again.",
-        variant: "destructive",
-      });
     }
   };
   
@@ -327,12 +285,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
             {sort === 'newest' ? 'Newest' : 'Oldest'}
           </Button>
         </div>
-      </div>
-      
-      {/* Debug info */}
-      <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-        <p>Found {matchingRequests?.length || 0} matching requests and {respondedRequests?.length || 0} responded requests</p>
-        <p>Currently showing {filteredRequests.length} requests with filter: {filter}</p>
       </div>
       
       {/* Requests list */}
