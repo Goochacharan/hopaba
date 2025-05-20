@@ -205,65 +205,93 @@ export const useConversations = () => {
       conversationId, 
       content, 
       senderType, 
-      userId: user.id 
+      userId: user.id,
+      quotationPrice
     });
     
-    // First, verify this user can send a message in this conversation
-    const { data: conversation, error: conversationError } = await supabase
-      .from('conversations')
-      .select(`
-        user_id,
-        provider_id,
-        service_providers (user_id)
-      `)
-      .eq('id', conversationId)
-      .single();
+    try {
+      // First, verify this user can send a message in this conversation
+      const { data: conversation, error: conversationError } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          user_id,
+          provider_id,
+          service_providers (id, user_id)
+        `)
+        .eq('id', conversationId)
+        .single();
+        
+      if (conversationError) {
+        console.error('Error verifying conversation permissions:', conversationError);
+        throw new Error('Could not verify conversation permissions');
+      }
       
-    if (conversationError) {
-      console.error('Error verifying conversation permissions:', conversationError);
-      throw new Error('Could not verify conversation permissions');
-    }
-    
-    // Check that the user has permission to send a message as this sender type
-    const isRequesterAndAuthorized = senderType === 'user' && conversation.user_id === user.id;
-    const isProviderAndAuthorized = senderType === 'provider' && 
-      conversation.service_providers && 
-      conversation.service_providers.user_id === user.id;
-      
-    if (!isRequesterAndAuthorized && !isProviderAndAuthorized) {
-      console.error('User not authorized to send message:', {
-        userId: user.id,
-        senderType,
+      // Log more details about the conversation for debugging
+      console.log('Conversation details:', {
+        conversationId: conversation.id,
         conversationUserId: conversation.user_id,
-        providerUserId: conversation.service_providers?.user_id
+        providerUserId: conversation.service_providers?.user_id,
+        currentUserId: user.id,
+        attemptingToSendAs: senderType
       });
-      throw new Error('You are not authorized to send this message');
-    }
-    
-    console.log('Authorization check passed, sending message');
+      
+      // Check that the user has permission to send a message as this sender type
+      const isRequester = conversation.user_id === user.id;
+      const isProvider = conversation.service_providers && 
+                         conversation.service_providers.user_id === user.id;
+      
+      const isRequesterAndAuthorized = senderType === 'user' && isRequester;
+      const isProviderAndAuthorized = senderType === 'provider' && isProvider;
+      
+      if (!isRequesterAndAuthorized && !isProviderAndAuthorized) {
+        console.error('User not authorized to send message:', {
+          userId: user.id,
+          senderType,
+          conversationUserId: conversation.user_id,
+          providerUserId: conversation.service_providers?.user_id,
+          isRequester,
+          isProvider
+        });
+        
+        // Better error message depending on the case
+        if (isRequester && senderType === 'provider') {
+          throw new Error('You cannot send messages as a provider in this conversation');
+        } else if (isProvider && senderType === 'user') {
+          throw new Error('You cannot send messages as a requester in this conversation');
+        } else {
+          throw new Error('You are not authorized to send messages in this conversation');
+        }
+      }
+      
+      console.log('Authorization check passed, sending message');
 
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: user.id,
-        sender_type: senderType,
-        content,
-        attachments,
-        quotation_price: quotationPrice
-      })
-      .select();
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: user.id,
+          sender_type: senderType,
+          content,
+          attachments,
+          quotation_price: quotationPrice
+        })
+        .select();
 
-    if (error) {
-      console.error('Error sending message:', error);
+      if (error) {
+        console.error('Error sending message:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('No message data returned');
+      }
+      
+      return data[0] as Message;
+    } catch (error) {
+      console.error('Error in sendMessageFn:', error);
       throw error;
     }
-    
-    if (!data || data.length === 0) {
-      throw new Error('No message data returned');
-    }
-    
-    return data[0] as Message;
   };
 
   // Mark messages as read

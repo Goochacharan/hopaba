@@ -44,6 +44,26 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
   
+  // Validate the price is a positive number
+  const validatePrice = (value: string) => {
+    // Remove non-numeric characters except for the decimal point
+    const sanitizedValue = value.replace(/[^0-9.]/g, '');
+    
+    // Ensure only one decimal point
+    const parts = sanitizedValue.split('.');
+    if (parts.length > 2) {
+      return parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    return sanitizedValue;
+  };
+  
+  // Handle price input changes
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = validatePrice(e.target.value);
+    setQuotationPrice(newValue);
+  };
+  
   return (
     <div className="border-t p-4">
       {quotationMode && isProvider && (
@@ -77,11 +97,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <div className="flex items-center flex-1">
               <span className="px-3 bg-background border rounded-l-md h-10 flex items-center">₹</span>
               <Input 
-                type="number" 
+                type="text" 
+                inputMode="decimal"
                 placeholder="Amount"
                 className="rounded-l-none"
                 value={quotationPrice}
-                onChange={(e) => setQuotationPrice(e.target.value)}
+                onChange={handlePriceChange}
               />
             </div>
             <Button variant="outline" onClick={() => setQuotationMode(false)}>
