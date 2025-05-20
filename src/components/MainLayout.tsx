@@ -45,7 +45,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     },
     enabled: !!user,
     staleTime: 300000, // Cache for 5 minutes
-    cacheTime: 600000   // Keep in cache for 10 minutes
+    gcTime: 600000   // Keep in cache for 10 minutes (changed from cacheTime to gcTime)
   });
   
   useEffect(() => {
