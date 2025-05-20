@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import StarRating from '@/components/marketplace/StarRating';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RatingDistribution {
   rating: number;
@@ -23,6 +24,65 @@ const BusinessRatingOverview: React.FC<BusinessRatingOverviewProps> = ({
   ratingDistribution,
   criteriaRatings = {}
 }) => {
+  const [criteriaNames, setCriteriaNames] = useState<{[key: string]: string}>({});
+  
+  // Fetch criteria names on component mount
+  useEffect(() => {
+    const fetchCriteriaNames = async () => {
+      const criterionIds = Object.keys(criteriaRatings);
+      if (criterionIds.length === 0) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('review_criteria')
+          .select('id, name')
+          .in('id', criterionIds);
+        
+        if (error) {
+          throw error;
+        }
+        
+        const namesMap: {[key: string]: string} = {};
+        data?.forEach(criterion => {
+          namesMap[criterion.id] = criterion.name;
+        });
+        
+        // For any criteria without names in the database, use fallback names
+        criterionIds.forEach(id => {
+          if (!namesMap[id]) {
+            namesMap[id] = getFallbackName(id);
+          }
+        });
+        
+        setCriteriaNames(namesMap);
+      } catch (err) {
+        console.error('Error fetching criteria names:', err);
+        
+        // If fetching fails, set fallback names for all criteria
+        const fallbackNames: {[key: string]: string} = {};
+        Object.keys(criteriaRatings).forEach(id => {
+          fallbackNames[id] = getFallbackName(id);
+        });
+        setCriteriaNames(fallbackNames);
+      }
+    };
+    
+    fetchCriteriaNames();
+  }, [criteriaRatings]);
+  
+  // Helper function to get fallback name for criterion ID
+  const getFallbackName = (criterionId: string): string => {
+    const id = criterionId.toLowerCase();
+    if (id.includes('amb')) return 'Ambience';
+    if (id.includes('tast') || id.includes('food')) return 'Taste';
+    if (id.includes('price') || id.includes('val')) return 'Price';
+    if (id.includes('hyg') || id.includes('clean')) return 'Hygiene';
+    if (id.includes('serv')) return 'Service';
+    return criterionId.replace(/_/g, ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -56,7 +116,9 @@ const BusinessRatingOverview: React.FC<BusinessRatingOverviewProps> = ({
           {Object.entries(criteriaRatings).map(([criterionId, rating]) => (
             <div key={criterionId} className="space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="capitalize">{criterionId.replace(/_/g, ' ')}</span>
+                <span className="capitalize">
+                  {criteriaNames[criterionId] || getFallbackName(criterionId)}
+                </span>
                 <span className="font-medium">{rating.toFixed(1)}/10</span>
               </div>
               <Progress 

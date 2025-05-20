@@ -37,7 +37,6 @@ const getStoredCriteriaRatings = (locationId: string) => {
   }
 };
 
-// Predefined fallback names for common criteria types
 const getFallbackName = (criterionId: string): string => {
   const id = criterionId.toLowerCase();
   if (id.includes('amb')) return 'Ambience';
@@ -45,7 +44,9 @@ const getFallbackName = (criterionId: string): string => {
   if (id.includes('price') || id.includes('val')) return 'Price';
   if (id.includes('hyg') || id.includes('clean')) return 'Hygiene';
   if (id.includes('serv')) return 'Service';
-  return 'Rating';
+  return criterionId.replace(/_/g, ' ').split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 };
 
 const getRatingLabel = (rating: number): string => {
