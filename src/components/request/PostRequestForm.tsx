@@ -26,6 +26,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ServiceRequest } from '@/types/serviceRequestTypes';
 
 const requestFormSchema = z.object({
   title: z.string().min(5, {
@@ -92,16 +93,23 @@ const PostRequestForm: React.FC = () => {
   });
 
   const onSubmit = (values: RequestFormValues) => {
-    createRequest({
-      ...values,
-      images: values.images || [],
+    const requestData: Omit<ServiceRequest, 'id' | 'user_id' | 'created_at' | 'status'> = {
+      title: values.title,
+      description: values.description,
+      category: values.category,
+      subcategory: values.subcategory,
+      budget: values.budget,
       date_range_start: values.date_range_start ? format(values.date_range_start, 'yyyy-MM-dd') : undefined,
-      date_range_end: values.date_range_end ? format(values.date_range_end, 'yyyy-MM-dd') : undefined
-    }, {
-      onSuccess: () => {
-        navigate('/requests');
-      }
-    });
+      date_range_end: values.date_range_end ? format(values.date_range_end, 'yyyy-MM-dd') : undefined,
+      city: values.city,
+      area: values.area,
+      postal_code: values.postal_code,
+      contact_phone: values.contact_phone,
+      images: values.images || []
+    };
+    
+    createRequest(requestData);
+    navigate('/requests');
   };
 
   const handleCategoryChange = (categoryName: string) => {

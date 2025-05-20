@@ -28,6 +28,15 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ServiceProvider, ServiceRequest } from '@/types/serviceRequestTypes';
 
+// Define the shape of the data returned from the database function
+interface MatchingProvider {
+  provider_id: string;
+  provider_name: string;
+  provider_category: string;
+  provider_subcategory: string;
+  user_id: string;
+}
+
 const RequestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -74,7 +83,7 @@ const RequestDetail: React.FC = () => {
         .select();
       
       if (error) throw error;
-      return data as ServiceProvider[];
+      return data as MatchingProvider[];
     },
     enabled: !!id && !!request
   });
@@ -92,11 +101,7 @@ const RequestDetail: React.FC = () => {
   const handleDelete = () => {
     if (!id) return;
     
-    deleteRequest(id, {
-      onSuccess: () => {
-        navigate('/requests');
-      }
-    });
+    deleteRequest(id);
     setIsDeleteDialogOpen(false);
   };
   
@@ -108,22 +113,15 @@ const RequestDetail: React.FC = () => {
     updateRequest({
       id: request.id,
       status: newStatus
-    }, {
-      onSuccess: () => {
-        setIsClosingRequest(false);
-      }
     });
+    setIsClosingRequest(false);
   };
   
   // Handle contact provider
-  const handleContactProvider = (provider: ServiceProvider) => {
+  const handleContactProvider = (provider: MatchingProvider) => {
     if (!request || !user) return;
     
-    createConversation(request.id, provider.id, user.id, {
-      onSuccess: (conversation) => {
-        navigate(`/messages/${conversation.id}`);
-      }
-    });
+    createConversation(request.id, provider.provider_id, user.id);
   };
   
   // Format date range if available
@@ -148,7 +146,7 @@ const RequestDetail: React.FC = () => {
     
     // Filter out providers that already have conversations
     return matchingProviders.filter(provider => 
-      !requestConversations.some(conv => conv.provider_id === provider.id)
+      !requestConversations.some(conv => conv.provider_id === provider.provider_id)
     );
   }, [matchingProviders, requestConversations]);
   
@@ -353,7 +351,7 @@ const RequestDetail: React.FC = () => {
                   ) : (
                     <div className="space-y-4">
                       {availableProviders.map((provider) => (
-                        <Card key={provider.id} className="overflow-hidden">
+                        <Card key={provider.provider_id} className="overflow-hidden">
                           <div className="flex items-center p-4 gap-4">
                             <Avatar>
                               <AvatarFallback>
@@ -368,13 +366,13 @@ const RequestDetail: React.FC = () => {
                               </p>
                             </div>
                             <Button 
-                              disabled={isCreatingConversation && selectedProviderId === provider.id}
+                              disabled={isCreatingConversation && selectedProviderId === provider.provider_id}
                               onClick={() => {
-                                setSelectedProviderId(provider.id);
+                                setSelectedProviderId(provider.provider_id);
                                 handleContactProvider(provider);
                               }}
                             >
-                              {isCreatingConversation && selectedProviderId === provider.id ? (
+                              {isCreatingConversation && selectedProviderId === provider.provider_id ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               ) : (
                                 <MessageSquare className="h-4 w-4 mr-2" />
