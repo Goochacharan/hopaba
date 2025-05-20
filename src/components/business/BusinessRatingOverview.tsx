@@ -88,7 +88,7 @@ const BusinessRatingOverview: React.FC<BusinessRatingOverviewProps> = ({
       <div className="flex items-center gap-3">
         <div className="flex">
           <StarRating 
-            rating={avgRating} 
+            rating={Math.min(5, avgRating)} 
             count={totalReviews} 
             showCount={true} 
             size="large"

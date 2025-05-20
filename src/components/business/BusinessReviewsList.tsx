@@ -96,7 +96,7 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
             <div>
               <h4 className="font-semibold">{review.name}</h4>
               <div className="flex items-center mt-1">
-                <StarRating rating={review.rating} showCount={false} className="mr-2" />
+                <StarRating rating={Math.min(5, review.rating)} showCount={false} className="mr-2" />
                 <span className="text-muted-foreground text-xs">{review.date}</span>
               </div>
               

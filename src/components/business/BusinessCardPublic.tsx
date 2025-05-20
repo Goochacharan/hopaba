@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail } from 'lucide-react';
+import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 import { supabase } from '@/integrations/supabase/client';
 import RatingProgressBars from '@/components/RatingProgressBars';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import { BusinessReview } from '@/hooks/useBusinessDetail';
+import StarRating from '@/components/marketplace/StarRating';
+import { isYouTubeUrl, isVimeoUrl } from '@/utils/videoUtils';
 
 interface BusinessCardPublicProps {
   business: Business;
@@ -23,6 +26,16 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
   const navigate = useNavigate();
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating>({});
   const [overallRating, setOverallRating] = useState<number>(business.rating || 0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
+  const [hasVideo, setHasVideo] = useState<boolean>(false);
+  
+  useEffect(() => {
+    // Check if the business has a video URL in Instagram
+    if (business.instagram) {
+      const isVideo = isYouTubeUrl(business.instagram) || isVimeoUrl(business.instagram);
+      setHasVideo(isVideo);
+    }
+  }, [business.instagram]);
   
   // Load reviews and calculate actual ratings
   useEffect(() => {
@@ -35,6 +48,9 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         const reviews: BusinessReview[] = savedReviews ? JSON.parse(savedReviews) : [];
         
         if (reviews.length > 0) {
+          // Set review count
+          setReviewCount(reviews.length);
+          
           // Calculate overall rating from reviews
           const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
           setOverallRating(avgRating);
@@ -118,37 +134,6 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     return 'Not specified';
   };
 
-  const renderRating = () => {
-    // Scale rating to be out of 100 for color display
-    const ratingColor = getRatingColor(Math.round(overallRating * 10));
-    
-    return (
-      <div className="flex items-center gap-2">
-        <div 
-          className="flex items-center justify-center rounded-full font-bold text-base border-2"
-          style={{ 
-            width: 42, 
-            height: 42, 
-            borderColor: ratingColor,
-            color: ratingColor,
-            background: '#fff',
-            boxShadow: '0 0 3px 0 rgba(0,0,0,0.05)'
-          }}
-        >
-          {Math.round(overallRating * 10)}
-        </div>
-      </div>
-    );
-  };
-
-  const getRatingColor = (ratingNum: number) => {
-    if (ratingNum <= 30) return '#ea384c'; // dark red
-    if (ratingNum <= 50) return '#F97316'; // orange
-    if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
-    if (ratingNum <= 85) return '#68cd77'; // light green
-    return '#00ee24'; // bright green for highest rating
-  };
-
   const handleCardClick = () => {
     navigate(`/business/${business.id}`);
   };
@@ -187,13 +172,38 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
       <CardContent className="p-5 space-y-3">
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-lg line-clamp-2">{business.name}</h3>
-          {renderRating()}
+          <div className="flex items-center">
+            <StarRating 
+              rating={Math.min(5, overallRating)} 
+              showCount={true} 
+              count={reviewCount} 
+              size="medium" 
+            />
+          </div>
         </div>
         
         {business.description && (
           <p className="text-muted-foreground text-sm line-clamp-2">
             {business.description}
           </p>
+        )}
+        
+        {/* Service Tags/Popular Items */}
+        {business.tags && business.tags.length > 0 && (
+          <div className="mt-2 mb-3">
+            <div className="flex flex-wrap gap-1.5">
+              {business.tags.slice(0, 3).map((tag, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+              {business.tags.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{business.tags.length - 3} more
+                </Badge>
+              )}
+            </div>
+          </div>
         )}
         
         {/* Real Criteria Rating Progress Bars from localStorage */}
@@ -217,14 +227,17 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           )}
           
           {business.availability_days && business.availability_days.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-1">
-                {formatAvailabilityDays(business.availability_days)}
-                {business.availability_start_time && business.availability_end_time && 
-                  ` (${business.availability_start_time} - ${business.availability_end_time})`
-                }
-              </span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium">Working Hours:</span>
+              </div>
+              <div className="pl-6">
+                <div>Days: {formatAvailabilityDays(business.availability_days)}</div>
+                {business.availability_start_time && business.availability_end_time && (
+                  <div>Time: {business.availability_start_time} - {business.availability_end_time}</div>
+                )}
+              </div>
             </div>
           )}
           
@@ -241,6 +254,17 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
               <span className="line-clamp-1">{business.languages.join(', ')}</span>
             </div>
           )}
+          
+          {/* Instagram with video icon if applicable */}
+          {business.instagram && hasVideo && (
+            <div className="flex items-center gap-2 mt-1">
+              <Instagram className="h-4 w-4 text-pink-500" />
+              <span className="line-clamp-1 flex items-center gap-1">
+                {business.instagram.replace(/^https?:\/\/(www\.)?/, '')}
+                <Video className="h-4 w-4 text-pink-500" />
+              </span>
+            </div>
+          )}
         </div>
         
         {/* Action Buttons */}
@@ -252,6 +276,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           instagram={business.instagram}
           location={[business.area, business.city].filter(Boolean).join(', ')}
           mapLink={business.map_link}
+          hasVideo={hasVideo}
         />
         
         {/* Hide the website, Instagram and email buttons */}
