@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, DollarSign, MapPin, Message } from 'lucide-react';
+import { Loader2, Calendar, DollarSign, MapPin, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
@@ -65,11 +65,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const handleContactRequester = (request: ServiceRequest) => {
     if (!user) return;
     
-    createConversation(request.id, providerId, request.user_id, {
-      onSuccess: (conversation) => {
-        navigate(`/messages/${conversation.id}`);
-      }
-    });
+    createConversation(request.id, providerId, request.user_id);
   };
   
   if (isLoading) {
@@ -93,7 +89,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   if (!matchingRequests || matchingRequests.length === 0) {
     return (
       <div className="text-center py-6">
-        <Message className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+        <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
         <h3 className="text-lg font-medium mb-1">No matching requests</h3>
         <p className="text-sm text-muted-foreground">
           There are no open service requests matching your business category.
@@ -152,7 +148,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
               size="sm"
               onClick={() => handleContactRequester(request)}
             >
-              <Message className="h-4 w-4 mr-2" />
+              <MessageSquare className="h-4 w-4 mr-2" />
               Send Quotation
             </Button>
           </CardFooter>
