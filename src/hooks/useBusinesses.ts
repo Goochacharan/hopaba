@@ -30,6 +30,7 @@ export interface Business {
   created_at: string;
   updated_at: string;
   rating?: number;
+  postal_code?: string; // Add the postal_code property
 }
 
 export const useBusinesses = () => {
