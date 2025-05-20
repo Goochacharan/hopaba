@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/MainLayout';
 import { Loader2 } from 'lucide-react';
-import { MapPin, Phone, Globe, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Phone, Globe } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
+import { useBusinessDetail, useBusinessReviews } from '@/hooks/useBusinessDetail';
+import BusinessRatingOverview from '@/components/business/BusinessRatingOverview';
+import BusinessReviewsList from '@/components/business/BusinessReviewsList';
+import BusinessReviewForm from '@/components/business/BusinessReviewForm';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Business {
   id: string;
@@ -35,25 +36,72 @@ interface Business {
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-
-  const { data: business, isLoading, error } = useQuery({
-    queryKey: ['business', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_providers')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Cast the data to match our Business interface
-      return data as unknown as Business;
-    },
-    enabled: !!id,
+  const { user } = useAuth();
+  
+  // Use our custom hook to fetch business details
+  const { data: business, isLoading, error } = useBusinessDetail(id);
+  
+  // Use our custom hook to fetch and manage business reviews
+  const { reviews, addReview } = useBusinessReviews(id);
+  
+  // Calculate average rating from reviews
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+    : 0;
+    
+  // Count reviews by rating
+  const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
+    return {
+      rating,
+      count: reviews.filter(r => r.rating === rating).length,
+      percentage: reviews.length > 0 
+        ? (reviews.filter(r => r.rating === rating).length / reviews.length) * 100
+        : 0
+    };
   });
+
+  // Aggregate criteria ratings from all reviews
+  const aggregatedCriteriaRatings = React.useMemo(() => {
+    const allRatings: Record<string, number[]> = {};
+    
+    reviews.forEach(review => {
+      if (review.criteriaRatings) {
+        Object.entries(review.criteriaRatings).forEach(([criterionId, rating]) => {
+          if (!allRatings[criterionId]) {
+            allRatings[criterionId] = [];
+          }
+          allRatings[criterionId].push(rating);
+        });
+      }
+    });
+    
+    // Calculate average for each criterion
+    const averageRatings: Record<string, number> = {};
+    Object.entries(allRatings).forEach(([criterionId, ratings]) => {
+      const sum = ratings.reduce((acc, val) => acc + val, 0);
+      averageRatings[criterionId] = sum / ratings.length;
+    });
+    
+    return averageRatings;
+  }, [reviews]);
+
+  const handleSubmitReview = async (review: {
+    rating: number;
+    text: string;
+    isMustVisit?: boolean;
+    isHiddenGem?: boolean;
+    criteriaRatings?: Record<string, number>;
+  }) => {
+    if (!user) return Promise.reject(new Error("User not authenticated"));
+    
+    const userName = user.user_metadata?.full_name || user.email || user.id;
+    
+    return addReview({
+      ...review,
+      name: userName,
+      userId: user.id
+    });
+  };
 
   if (isLoading) {
     return (
@@ -92,76 +140,96 @@ const BusinessDetails: React.FC = () => {
       <div className="container mx-auto mt-8 p-4">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col">
               <CardTitle className="text-2xl font-bold">{business.name}</CardTitle>
-              {business.approval_status === 'approved' ? (
-                <Badge variant="outline">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approved
+              <CardDescription>{business.description}</CardDescription>
+              
+              <div className="flex items-center mt-2">
+                <Badge variant="secondary">
+                  {business.category}
+                  {business.subcategory ? ` / ${business.subcategory}` : ''}
                 </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Pending
-                </Badge>
-              )}
+              </div>
             </div>
-            <CardDescription>{business.description}</CardDescription>
           </CardHeader>
+          
+          {/* Images section at the top */}
           <CardContent className="grid gap-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
-                <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{business.address}, {business.city}{business.postal_code ? ` - ${business.postal_code}` : ''}{business.country ? `, ${business.country}` : ''}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Phone className="h-4 w-4" />
-                  <a href={`tel:${business.contact_phone}`}>{business.contact_phone}</a>
-                </div>
-                {business.website && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <Globe className="h-4 w-4" />
-                    <a href={business.website} target="_blank" rel="noopener noreferrer">{business.website}</a>
-                  </div>
-                )}
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Category</h3>
-                <p>Category: {business.category}</p>
-                <p>Subcategory: {business.subcategory}</p>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Business Hours</h3>
-              <p>
-                <Calendar className="h-4 w-4 inline-block mr-1" />
-                {business.hours_from || 'N/A'} - {business.hours_to || 'N/A'}
-              </p>
-            </div>
-
             {business.images && business.images.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-2">Images</h3>
                 <div className="grid grid-cols-3 gap-4">
                   {business.images.map((image, index) => (
-                    <img key={index} src={image} alt={`Business ${index + 1}`} className="rounded-md" />
+                    <img key={index} src={image} alt={`Business ${index + 1}`} className="rounded-md object-cover h-48 w-full" />
                   ))}
                 </div>
               </div>
             )}
+            
+            <Separator />
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 mt-1 shrink-0" />
+                    <span>{business.address}, {business.city}{business.postal_code ? ` - ${business.postal_code}` : ''}{business.country ? `, ${business.country}` : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 shrink-0" />
+                    <a href={`tel:${business.contact_phone}`}>{business.contact_phone}</a>
+                  </div>
+                  {business.website && (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 shrink-0" />
+                      <a href={business.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{business.website}</a>
+                    </div>
+                  )}
+                </div>
+                
+                {(business.hours_from || business.hours_to) && (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-sm mb-2">Business Hours</h4>
+                    <p>{business.hours_from || 'N/A'} - {business.hours_to || 'N/A'}</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Rating & Reviews</h3>
+                <BusinessRatingOverview 
+                  avgRating={avgRating} 
+                  totalReviews={reviews.length} 
+                  ratingDistribution={ratingDistribution}
+                  criteriaRatings={aggregatedCriteriaRatings}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <div className="mt-4">
-          {business.user_id ? (
-            <Link to={`/user/${business.user_id}`}>
-              <Button variant="secondary">View User Profile</Button>
-            </Link>
-          ) : (
-            <p>User profile not available.</p>
-          )}
+        
+        {/* Review Form */}
+        {business.id && (
+          <div className="mt-6">
+            <BusinessReviewForm 
+              businessId={business.id}
+              businessName={business.name}
+              businessCategory={business.category}
+              onReviewSubmit={handleSubmitReview}
+            />
+          </div>
+        )}
+        
+        {/* Reviews section */}
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Reviews ({reviews.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BusinessReviewsList reviews={reviews} />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>
