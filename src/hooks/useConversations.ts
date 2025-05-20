@@ -6,12 +6,6 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './useAuth';
 import { useEffect } from 'react';
 
-// Add this interface for the mark messages as read params
-interface MarkMessagesAsReadParams {
-  conversationId: string;
-  senderType: 'user' | 'provider';
-}
-
 export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -25,52 +19,24 @@ export const useConversations = () => {
       .select(`
         *,
         service_requests (id, title, category, subcategory),
-        service_providers (id, name, user_id)
+        service_providers (id, name)
       `)
       .or(`user_id.eq.${user.id},service_providers.user_id.eq.${user.id}`)
       .order('last_message_at', { ascending: false });
 
     if (error) throw error;
-    
-    // Get latest quotations for each conversation
-    const conversationsWithQuotations = await Promise.all(
-      data.map(async (conversation) => {
-        const { data: quotationMessage } = await supabase
-          .from('messages')
-          .select('quotation_price')
-          .eq('conversation_id', conversation.id)
-          .not('quotation_price', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        const latestQuotation = quotationMessage && quotationMessage.length > 0 
-          ? quotationMessage[0].quotation_price 
-          : undefined;
-          
-        return {
-          ...conversation,
-          latest_quotation: latestQuotation
-        };
-      })
-    );
-
-    return conversationsWithQuotations as (Conversation & {
+    return data as (Conversation & {
       service_requests: { id: string; title: string; category: string; subcategory?: string };
-      service_providers: { id: string; name: string; user_id: string };
-      latest_quotation?: number;
+      service_providers: { id: string; name: string };
     })[];
   };
 
   // Create a new conversation
-  const createConversationFn = async ({
-    requestId,
-    providerId,
-    userId
-  }: {
-    requestId: string;
-    providerId: string;
-    userId: string;
-  }) => {
+  const createConversation = async (
+    requestId: string,
+    providerId: string,
+    userId: string
+  ) => {
     const { data, error } = await supabase
       .from('conversations')
       .insert({
@@ -98,32 +64,8 @@ export const useConversations = () => {
       .order('last_message_at', { ascending: false });
 
     if (error) throw error;
-    
-    // Get latest quotations for each conversation
-    const conversationsWithQuotations = await Promise.all(
-      data.map(async (conversation) => {
-        const { data: quotationMessage } = await supabase
-          .from('messages')
-          .select('quotation_price')
-          .eq('conversation_id', conversation.id)
-          .not('quotation_price', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        const latestQuotation = quotationMessage && quotationMessage.length > 0 
-          ? quotationMessage[0].quotation_price 
-          : undefined;
-          
-        return {
-          ...conversation,
-          latest_quotation: latestQuotation
-        };
-      })
-    );
-
-    return conversationsWithQuotations as (Conversation & {
+    return data as (Conversation & {
       service_providers: { id: string; name: string; user_id: string };
-      latest_quotation?: number;
     })[];
   };
 
@@ -134,7 +76,7 @@ export const useConversations = () => {
       .select(`
         *,
         service_requests (id, title, category, subcategory),
-        service_providers (id, name, user_id)
+        service_providers (id, name)
       `)
       .eq('id', conversationId)
       .single();
@@ -152,7 +94,7 @@ export const useConversations = () => {
     return {
       conversation: conversation as (Conversation & {
         service_requests: { id: string; title: string; category: string; subcategory?: string };
-        service_providers: { id: string; name: string; user_id: string };
+        service_providers: { id: string; name: string };
       }),
       messages: messages as Message[]
     };
@@ -190,11 +132,8 @@ export const useConversations = () => {
     return data[0] as Message;
   };
 
-  // Mark messages as read - updated to use the new params interface
-  const markMessagesAsRead = async ({
-    conversationId,
-    senderType
-  }: MarkMessagesAsReadParams) => {
+  // Mark messages as read
+  const markMessagesAsRead = async (conversationId: string, senderType: 'user' | 'provider') => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -261,7 +200,7 @@ export const useConversations = () => {
   });
 
   const createConversationMutation = useMutation({
-    mutationFn: createConversationFn,
+    mutationFn: createConversation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
@@ -281,7 +220,7 @@ export const useConversations = () => {
   const markMessagesAsReadMutation = useMutation({
     mutationFn: markMessagesAsRead,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables[0]] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     }
   });
@@ -329,23 +268,12 @@ export const useConversations = () => {
     refetchConversations,
     unreadCount,
     refetchUnreadCount,
-    createConversation: (requestId: string, providerId: string, userId: string, options?: any) => {
-      return createConversationMutation.mutate({
-        requestId,
-        providerId,
-        userId
-      }, options);
-    },
+    createConversation: createConversationMutation.mutate,
     isCreatingConversation: createConversationMutation.isPending,
     sendMessage: sendMessageMutation.mutate,
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
-    markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider') => {
-      return markMessagesAsReadMutation.mutate({
-        conversationId,
-        senderType
-      });
-    }
+    markMessagesAsRead: markMessagesAsReadMutation.mutate
   };
 };
