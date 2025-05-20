@@ -130,7 +130,7 @@ const Shop = () => {
   return <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
         
-        <p className="text-muted-foreground mb-6">Discover local businesses and service providers</p>
+        
         
         {/* Search Bar */}
         <div className="relative mb-6 flex gap-2">
