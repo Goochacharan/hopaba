@@ -116,7 +116,13 @@ export const useServiceRequests = () => {
   const createRequestMutation = useMutation({
     mutationFn: createRequest,
     onSuccess: () => {
+      // Invalidate user's service requests
       queryClient.invalidateQueries({ queryKey: ['serviceRequests'] });
+      
+      // Also invalidate matching requests for service providers
+      // This ensures that when a new request is created, service providers see it
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
+      
       toast({
         title: 'Request Created',
         description: 'Your service request has been created successfully!',
@@ -135,6 +141,9 @@ export const useServiceRequests = () => {
     mutationFn: updateRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['serviceRequests'] });
+      // Also invalidate matching requests for service providers
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
+      
       toast({
         title: 'Request Updated',
         description: 'Your service request has been updated successfully!',
@@ -153,6 +162,9 @@ export const useServiceRequests = () => {
     mutationFn: deleteRequest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['serviceRequests'] });
+      // Also invalidate matching requests as the deleted request should no longer appear
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
+      
       toast({
         title: 'Request Deleted',
         description: 'Your service request has been deleted successfully!',

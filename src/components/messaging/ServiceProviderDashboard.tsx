@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Loader2, ArrowUpDown, Search, MessageSquare } from 'lucide-react';
+import { Calendar, Loader2, ArrowUpDown, Search, MessageSquare, RefreshCw } from 'lucide-react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { Button } from '@/components/ui/button';
@@ -54,8 +54,6 @@ interface ServiceProviderDashboardProps {
 
 // Get service requests that match a provider's category and subcategory
 const getMatchingRequests = async (providerId: string) => {
-  console.log('Getting matching requests for provider:', providerId);
-  
   // First get the provider's details to know their category and subcategory
   const { data: provider, error: providerError } = await supabase
     .from('service_providers')
@@ -64,8 +62,6 @@ const getMatchingRequests = async (providerId: string) => {
     .single();
     
   if (providerError) throw providerError;
-  
-  console.log('Provider details:', provider);
   
   // Then find all matching open requests without requiring conversations
   const { data, error } = await supabase
@@ -77,22 +73,16 @@ const getMatchingRequests = async (providerId: string) => {
   
   if (error) throw error;
   
-  console.log('Found matching requests:', data.length);
-  
   // Filter by subcategory if the provider has one
   const filteredRequests = provider.subcategory 
     ? data.filter(req => !req.subcategory || req.subcategory === provider.subcategory)
     : data;
-    
-  console.log('After subcategory filtering:', filteredRequests.length, 'requests remain');
     
   return filteredRequests as ServiceRequestWithConversation[];
 };
 
 // Get service requests that a provider has already responded to
 const getRespondedRequests = async (providerId: string) => {
-  console.log('Getting responded requests for provider:', providerId);
-
   const { data, error } = await supabase
     .from('conversations')
     .select(`
@@ -102,8 +92,6 @@ const getRespondedRequests = async (providerId: string) => {
     .eq('provider_id', providerId);
     
   if (error) throw error;
-  
-  console.log('Found responded requests:', data.length);
   
   // Extract the actual request data and add the conversation ID
   return data.map(item => ({
@@ -119,6 +107,7 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'new' | 'responded'>('all');
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const queryClient = useQueryClient();
   
   // Get the provider ID for the current user if not provided as prop
   const { data: providerData, isLoading: isLoadingProvider } = useQuery({
@@ -143,29 +132,32 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
   });
   
   // Get matching requests based on provider's category
-  const { data: matchingRequests, isLoading: isLoadingMatching } = useQuery({
+  const { 
+    data: matchingRequests, 
+    isLoading: isLoadingMatching,
+    refetch: refetchMatchingRequests,
+    isRefetching: isRefetchingMatching
+  } = useQuery({
     queryKey: ['matching-requests', providerData?.id],
     queryFn: () => getMatchingRequests(providerData!.id),
-    enabled: !!providerData?.id
+    enabled: !!providerData?.id,
+    refetchInterval: 60000, // Auto-refetch every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
   
   // Get requests the provider has already responded to
-  const { data: respondedRequests, isLoading: isLoadingResponded } = useQuery({
+  const { 
+    data: respondedRequests, 
+    isLoading: isLoadingResponded,
+    refetch: refetchRespondedRequests,
+    isRefetching: isRefetchingResponded
+  } = useQuery({
     queryKey: ['responded-requests', providerData?.id],
     queryFn: () => getRespondedRequests(providerData!.id),
-    enabled: !!providerData?.id
+    enabled: !!providerData?.id,
+    refetchInterval: 60000, // Auto-refetch every minute
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
-  
-  // Log data for debugging
-  useEffect(() => {
-    if (matchingRequests) {
-      console.log('Matching requests loaded:', matchingRequests.length);
-    }
-    if (respondedRequests) {
-      console.log('Responded requests loaded:', respondedRequests.length);
-      console.log('Responded request IDs:', respondedRequests.map(req => req.id));
-    }
-  }, [matchingRequests, respondedRequests]);
   
   // Process and filter the requests based on current filter and search
   const getFilteredRequests = () => {
@@ -221,6 +213,16 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
     const request = respondedRequests.find(r => r.id === requestId);
     return request?.conversation_id;
   };
+
+  // Manually refresh requests data
+  const handleRefresh = () => {
+    refetchMatchingRequests();
+    refetchRespondedRequests();
+    toast({
+      title: "Refreshing requests",
+      description: "Getting the latest service requests...",
+    });
+  };
   
   // Create a new conversation for a request
   const handleCreateConversation = async (request: ServiceRequestWithConversation) => {
@@ -234,14 +236,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
     }
     
     try {
-      // Add debug logging for the user and provider relationship
-      console.log('Creating conversation with:', {
-        currentUserId: user.id,
-        providerId: providerData.id,
-        requestId: request.id,
-        requestUserId: request.user_id
-      });
-      
       // First, verify the service provider belongs to the current user
       const { data: verifyProvider, error: verifyError } = await supabase
         .from('service_providers')
@@ -287,6 +281,10 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         throw new Error('No conversation data returned');
       }
       
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['responded-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
+      
       // Show success message
       toast({
         title: "Conversation created",
@@ -306,6 +304,7 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
   };
   
   const isLoading = isLoadingProvider || isLoadingMatching || isLoadingResponded;
+  const isRefetching = isRefetchingMatching || isRefetchingResponded;
   const filteredRequests = getFilteredRequests();
   
   if (isLoading) {
@@ -330,11 +329,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
   
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Service Requests Dashboard</h2>
-        <p className="text-muted-foreground">Find and respond to service requests matching your expertise</p>
-      </div>
-      
       {/* Search and filter controls */}
       <div className="flex flex-col sm:flex-row gap-3 justify-between">
         <div className="relative flex-1">
@@ -348,6 +342,17 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
         </div>
         
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefetching}
+            title="Refresh requests"
+            className="flex-shrink-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+          </Button>
+          
           <Select value={filter} onValueChange={(val) => setFilter(val as any)}>
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Filter" />
@@ -368,14 +373,6 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ pro
             {sort === 'newest' ? 'Newest' : 'Oldest'}
           </Button>
         </div>
-      </div>
-      
-      {/* Debug info */}
-      <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-        <p>Found {matchingRequests?.length || 0} matching requests and {respondedRequests?.length || 0} responded requests</p>
-        <p>Currently showing {filteredRequests.length} requests with filter: {filter}</p>
-        {user && <p>Current user ID: {user.id}</p>}
-        {providerData && <p>Current provider ID: {providerData.id}</p>}
       </div>
       
       {/* Requests list */}
