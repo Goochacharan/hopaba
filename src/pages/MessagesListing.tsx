@@ -35,11 +35,6 @@ const MessagesListing: React.FC = () => {
     }
   };
 
-  const handleRefresh = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    refetchConversations();
-  };
-
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -52,7 +47,7 @@ const MessagesListing: React.FC = () => {
           </div>
           <Button 
             variant="outline" 
-            onClick={handleRefresh}
+            onClick={refetchConversations}
           >
             Refresh
           </Button>
@@ -69,7 +64,7 @@ const MessagesListing: React.FC = () => {
             <p className="text-muted-foreground mb-6">
               There was a problem loading your messages. Please try again.
             </p>
-            <Button onClick={handleRefresh}>Try Again</Button>
+            <Button onClick={refetchConversations}>Try Again</Button>
           </div>
         ) : !conversations || conversations.length === 0 ? (
           <div className="text-center py-12">

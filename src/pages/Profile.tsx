@@ -6,12 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch } from 'lucide-react';
+import { Plus, Settings as SettingsIcon, LogOut, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
 import BusinessListSimple from '@/components/business/BusinessListSimple';
 import { Business } from '@/components/business/BusinessFormSimple';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Lazy load the AdminSection to improve performance and avoid initial loading issues
 const AdminSection = lazy(() => import('@/components/admin/AdminSectionWrapper'));
@@ -25,7 +24,6 @@ const Profile = () => {
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [showAddBusinessForm, setShowAddBusinessForm] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('businesses');
   
   useEffect(() => {
     if (!user) {
@@ -69,10 +67,6 @@ const Profile = () => {
   const handleCancelBusinessForm = () => {
     setEditingBusiness(null);
     setShowAddBusinessForm(false);
-  };
-
-  const handleViewServiceRequests = () => {
-    navigate('/provider-requests');
   };
 
   if (pageError) {
@@ -147,63 +141,31 @@ const Profile = () => {
           </Suspense>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="mb-4">
-            <TabsTrigger value="businesses">Your Businesses</TabsTrigger>
-            <TabsTrigger value="service-requests" className="flex items-center gap-1">
-              <FileSearch className="h-4 w-4" />
-              Service Requests
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="businesses">
-            {showAddBusinessForm ? (
-              <Card className="mb-8">
-                <CardHeader>
-                  <CardTitle>{editingBusiness ? 'Edit Business' : 'Add Business'}</CardTitle>
-                  <CardDescription>
-                    {editingBusiness ? 'Update your business information' : 'List your business or service'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">Your Business Listings</h2>
-                  <Button onClick={handleAddBusiness} className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Business
-                  </Button>
-                </div>
+        {showAddBusinessForm ? (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>{editingBusiness ? 'Edit Business' : 'Add Business'}</CardTitle>
+              <CardDescription>
+                {editingBusiness ? 'Update your business information' : 'List your business or service'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Your Business Listings</h2>
+              <Button onClick={handleAddBusiness} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Business
+              </Button>
+            </div>
 
-                <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="service-requests">
-            <Card>
-              <CardHeader>
-                <CardTitle>Service Provider Dashboard</CardTitle>
-                <CardDescription>Manage service requests for your businesses</CardDescription>
-              </CardHeader>
-              <CardContent className="text-center py-8">
-                <FileSearch className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">View and respond to service requests</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Check service requests from users that match your business categories and send them quotations.
-                </p>
-                <Button onClick={handleViewServiceRequests} className="flex items-center gap-2 mx-auto">
-                  <FileSearch className="h-4 w-4" />
-                  Open Service Requests Dashboard
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
+          </div>
+        )}
       </div>
     </MainLayout>;
 };

@@ -18,18 +18,6 @@ export interface ServiceRequest {
   status: 'open' | 'closed';
 }
 
-export interface ServiceProvider {
-  id: string;
-  name: string;
-  category: string;
-  subcategory?: string;
-  user_id: string;
-  provider_name?: string;
-  provider_category?: string;
-  provider_subcategory?: string;
-  provider_id?: string;
-}
-
 export interface Conversation {
   id: string;
   request_id: string;
@@ -50,4 +38,12 @@ export interface Message {
   read: boolean;
   attachments: string[];
   quotation_price?: number;
+}
+
+export interface ServiceProvider {
+  id: string;
+  name: string;
+  category: string;
+  subcategory?: string;
+  user_id: string;
 }
