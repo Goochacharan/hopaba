@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail } from 'lucide-react';
+import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 import { supabase } from '@/integrations/supabase/client';
 import RatingProgressBars from '@/components/RatingProgressBars';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import { BusinessReview } from '@/hooks/useBusinessDetail';
+import StarRating from '@/components/marketplace/StarRating';
+import { useToast } from '@/hooks/use-toast';
 
 interface BusinessCardPublicProps {
   business: Business;
@@ -21,8 +24,10 @@ interface CriteriaRating {
 
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating>({});
   const [overallRating, setOverallRating] = useState<number>(business.rating || 0);
+  const [reviewCount, setReviewCount] = useState<number>(0);
   
   // Load reviews and calculate actual ratings
   useEffect(() => {
@@ -35,6 +40,9 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         const reviews: BusinessReview[] = savedReviews ? JSON.parse(savedReviews) : [];
         
         if (reviews.length > 0) {
+          // Track review count
+          setReviewCount(reviews.length);
+          
           // Calculate overall rating from reviews
           const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
           setOverallRating(avgRating);
@@ -118,39 +126,20 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     return 'Not specified';
   };
 
-  const renderRating = () => {
-    // Scale rating to be out of 100 for color display
-    const ratingColor = getRatingColor(Math.round(overallRating * 10));
-    
-    return (
-      <div className="flex items-center gap-2">
-        <div 
-          className="flex items-center justify-center rounded-full font-bold text-base border-2"
-          style={{ 
-            width: 42, 
-            height: 42, 
-            borderColor: ratingColor,
-            color: ratingColor,
-            background: '#fff',
-            boxShadow: '0 0 3px 0 rgba(0,0,0,0.05)'
-          }}
-        >
-          {Math.round(overallRating * 10)}
-        </div>
-      </div>
-    );
-  };
-
-  const getRatingColor = (ratingNum: number) => {
-    if (ratingNum <= 30) return '#ea384c'; // dark red
-    if (ratingNum <= 50) return '#F97316'; // orange
-    if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
-    if (ratingNum <= 85) return '#68cd77'; // light green
-    return '#00ee24'; // bright green for highest rating
-  };
-
   const handleCardClick = () => {
     navigate(`/business/${business.id}`);
+  };
+  
+  const handleInstagramClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (business.instagram) {
+      window.open(`https://instagram.com/${business.instagram.replace('@', '')}`, '_blank', 'noopener,noreferrer');
+      toast({
+        title: "Opening video content",
+        description: `Visiting ${business.name}'s video content`,
+        duration: 2000
+      });
+    }
   };
 
   return (
@@ -187,13 +176,33 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
       <CardContent className="p-5 space-y-3">
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-lg line-clamp-2">{business.name}</h3>
-          {renderRating()}
+          <div>
+            <StarRating 
+              rating={overallRating} 
+              showCount={true} 
+              count={reviewCount} 
+              size="medium"
+            />
+          </div>
         </div>
         
         {business.description && (
           <p className="text-muted-foreground text-sm line-clamp-2">
             {business.description}
           </p>
+        )}
+        
+        {/* Display tags if available (above the location info) */}
+        {business.tags && business.tags.length > 0 && (
+          <div className="mb-2">
+            <div className="flex flex-wrap gap-1.5">
+              {business.tags.map((tag, index) => (
+                <Badge key={index} variant="secondary" className="bg-primary/10 text-primary text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
         )}
         
         {/* Real Criteria Rating Progress Bars from localStorage */}
@@ -208,23 +217,38 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         
         <div className="grid gap-2 text-sm">
           {(business.area || business.city) && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-1">
-                {[business.area, business.city].filter(Boolean).join(', ')}
-              </span>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="line-clamp-1">
+                  {[business.area, business.city].filter(Boolean).join(', ')}
+                </span>
+              </div>
+              {business.instagram && (
+                <button 
+                  onClick={handleInstagramClick}
+                  title="Watch Instagram content" 
+                  className="bg-gradient-to-tr from-purple-500 via-pink-500 to-yellow-500 rounded-full hover:shadow-md transition-all p-1.5"
+                >
+                  <Film className="h-3.5 w-3.5 text-white" />
+                </button>
+              )}
             </div>
           )}
           
           {business.availability_days && business.availability_days.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-1">
-                {formatAvailabilityDays(business.availability_days)}
-                {business.availability_start_time && business.availability_end_time && 
-                  ` (${business.availability_start_time} - ${business.availability_end_time})`
-                }
-              </span>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="line-clamp-1">
+                  {formatAvailabilityDays(business.availability_days)}
+                </span>
+              </div>
+              {business.availability_start_time && business.availability_end_time && (
+                <div className="ml-6 text-xs text-muted-foreground">
+                  {business.availability_start_time} - {business.availability_end_time}
+                </div>
+              )}
             </div>
           )}
           
@@ -254,7 +278,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
           mapLink={business.map_link}
         />
         
-        {/* Hide the website, Instagram and email buttons */}
+        {/* Hidden buttons */}
         <div className="hidden">
           {business.website && (
             <a 
