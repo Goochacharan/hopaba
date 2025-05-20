@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/MainLayout';
 import { useConversations } from '@/hooks/useConversations';
@@ -22,22 +23,12 @@ import ServiceProviderDashboard from '@/components/messaging/ServiceProviderDash
 const Messages: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
   
   const [message, setMessage] = useState('');
   const [quotationMode, setQuotationMode] = useState(false);
   const [quotationPrice, setQuotationPrice] = useState<string>('');
-  
-  // Set the default active tab based on URL parameters or provider status
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    // Check if there's a tab parameter in the URL
-    const params = new URLSearchParams(location.search);
-    const tabParam = params.get('tab');
-    if (tabParam) return tabParam;
-    // Default tab
-    return "requests";
-  });
+  const [activeTab, setActiveTab] = useState<string>('requests');
   
   const { 
     getConversationWithMessages,
@@ -47,7 +38,7 @@ const Messages: React.FC = () => {
   } = useConversations();
 
   // Fetch user's role (whether they're a service provider or not)
-  const { data: providerData, isLoading: isLoadingProvider } = useQuery({
+  const { data: providerData } = useQuery({
     queryKey: ['provider-role', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -56,8 +47,6 @@ const Messages: React.FC = () => {
         .select('id, category, subcategory')
         .eq('user_id', user.id)
         .maybeSingle();
-      
-      console.log('Provider data from query:', data);
       return data;
     },
     enabled: !!user
@@ -65,7 +54,6 @@ const Messages: React.FC = () => {
   
   // User is a service provider if they have a provider record
   const isServiceProvider = !!providerData;
-  console.log('Is Service Provider:', isServiceProvider);
   
   // Fetch conversation with messages when in single conversation view
   const { 
@@ -78,15 +66,6 @@ const Messages: React.FC = () => {
     queryFn: () => getConversationWithMessages(id!),
     enabled: !!id && !!user
   });
-  
-  // Update the URL when tab changes without a full page reload
-  useEffect(() => {
-    if (!id) {
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('tab', activeTab);
-      navigate({ search: searchParams.toString() }, { replace: true });
-    }
-  }, [activeTab, id, navigate, location.search]);
   
   // Determine if current user is the service provider or the requester
   const isProvider = conversationData?.conversation?.service_providers?.user_id === user?.id;
@@ -137,21 +116,16 @@ const Messages: React.FC = () => {
             </p>
           </div>
           
-          <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue={isServiceProvider ? "provider" : "requests"} value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="requests">My Requests</TabsTrigger>
               <TabsTrigger value="conversations">All Conversations</TabsTrigger>
-              
-              {/* Always show the provider tab for debugging - will be controlled by isServiceProvider */}
-              <TabsTrigger value="provider">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Service Requests
-                {!isServiceProvider && (
-                  <span className="ml-2 text-xs bg-yellow-200 text-yellow-800 rounded px-1">
-                    (Provider Only)
-                  </span>
-                )}
-              </TabsTrigger>
+              {isServiceProvider && (
+                <TabsTrigger value="provider">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Service Requests
+                </TabsTrigger>
+              )}
             </TabsList>
             
             <TabsContent value="requests">
@@ -164,33 +138,18 @@ const Messages: React.FC = () => {
               </div>
             </TabsContent>
             
-            <TabsContent value="provider">
-              {isServiceProvider && providerData ? (
-                <ServiceProviderDashboard 
-                  providerId={providerData.id}
-                  category={providerData.category}
-                  subcategory={providerData.subcategory}
-                />
-              ) : (
-                <div className="text-center py-12 border border-yellow-200 bg-yellow-50 rounded-lg">
-                  <h3 className="text-lg font-medium mb-2">Service Provider Profile Required</h3>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    You need to create a service provider profile to view and respond to service requests.
-                    Once your profile is created and approved, you'll be able to see matching requests here.
-                  </p>
-                  <Button onClick={() => navigate('/profile')}>Create Provider Profile</Button>
-                </div>
-              )}
-            </TabsContent>
+            {isServiceProvider && (
+              <TabsContent value="provider">
+                {providerData && (
+                  <ServiceProviderDashboard 
+                    providerId={providerData.id}
+                    category={providerData.category}
+                    subcategory={providerData.subcategory}
+                  />
+                )}
+              </TabsContent>
+            )}
           </Tabs>
-
-          {/* Debug information - can be removed in production */}
-          <div className="mt-8 p-4 border rounded bg-gray-50 text-xs text-gray-500">
-            <h4 className="font-medium mb-1">Debug Info:</h4>
-            <p>Provider Data: {providerData ? `ID: ${providerData.id}, Category: ${providerData.category}` : 'None'}</p>
-            <p>Is Service Provider: {isServiceProvider ? 'Yes' : 'No'}</p>
-            <p>Current Tab: {activeTab}</p>
-          </div>
         </div>
       </MainLayout>
     );
