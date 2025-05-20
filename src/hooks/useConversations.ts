@@ -267,10 +267,13 @@ export const useConversations = () => {
   };
 
   // Mark messages as read
-  const markMessagesAsReadFn = async (
-    conversationId: string, 
-    senderType: 'user' | 'provider'
-  ) => {
+  const markMessagesAsReadFn = async ({
+    conversationId,
+    senderType
+  }: {
+    conversationId: string;
+    senderType: 'user' | 'provider';
+  }) => {
     if (!user) throw new Error('User not authenticated');
 
     // Only mark messages as read that were sent by the other party
@@ -338,7 +341,8 @@ export const useConversations = () => {
   });
 
   const createConversationMutation = useMutation({
-    mutationFn: createConversationFn,
+    mutationFn: (params: { requestId: string; providerId: string; userId: string }) => 
+      createConversationFn(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast({
@@ -357,9 +361,10 @@ export const useConversations = () => {
   });
 
   const markMessagesAsReadMutation = useMutation({
-    mutationFn: markMessagesAsReadFn,
+    mutationFn: (params: { conversationId: string; senderType: 'user' | 'provider' }) => 
+      markMessagesAsReadFn(params),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', variables] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
     }
   });
@@ -407,14 +412,16 @@ export const useConversations = () => {
     refetchConversations,
     unreadCount,
     refetchUnreadCount,
-    createConversation: createConversationMutation.mutate,
+    createConversation: (requestId: string, providerId: string, userId: string) => {
+      return createConversationMutation.mutate({ requestId, providerId, userId });
+    },
     isCreatingConversation: createConversationMutation.isPending,
     sendMessage: sendMessageMutation.mutate,
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,
     markMessagesAsRead: (conversationId: string, senderType: 'user' | 'provider') => {
-      return markMessagesAsReadMutation.mutate(conversationId, senderType);
+      return markMessagesAsReadMutation.mutate({ conversationId, senderType });
     }
   };
 };
