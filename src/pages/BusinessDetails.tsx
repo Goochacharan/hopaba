@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import { Loader2 } from 'lucide-react';
@@ -11,6 +11,9 @@ import BusinessRatingOverview from '@/components/business/BusinessRatingOverview
 import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessReviewForm from '@/components/business/BusinessReviewForm';
 import { useAuth } from '@/hooks/useAuth';
+import ImageViewer from '@/components/ImageViewer';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 const BusinessDetails: React.FC = () => {
   const {
     id
@@ -20,6 +23,10 @@ const BusinessDetails: React.FC = () => {
   const {
     user
   } = useAuth();
+
+  // State for image viewer
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Use our custom hook to fetch business details
   const {
@@ -46,6 +53,12 @@ const BusinessDetails: React.FC = () => {
     };
   });
 
+  // Handle image click to open the image viewer
+  const handleImageClick = (index: number) => {
+    setCurrentImageIndex(index);
+    setIsImageViewerOpen(true);
+  };
+
   // Aggregate criteria ratings from all reviews
   const aggregatedCriteriaRatings = React.useMemo(() => {
     const allRatings: Record<string, number[]> = {};
@@ -68,6 +81,7 @@ const BusinessDetails: React.FC = () => {
     });
     return averageRatings;
   }, [reviews]);
+  
   const handleSubmitReview = async (review: {
     rating: number;
     text: string;
@@ -112,27 +126,50 @@ const BusinessDetails: React.FC = () => {
           <CardHeader>
             <div className="flex flex-col">
               <CardTitle className="text-2xl font-bold">{business.name}</CardTitle>
-              
-              
               <div className="flex items-center mt-2">
-                
               </div>
             </div>
           </CardHeader>
           
-          {/* Images section at the top */}
+          {/* Carousel section at the top */}
           <CardContent className="grid gap-6">
-            {business.images && business.images.length > 0 && <div>
-                <div className="grid grid-cols-3 gap-4">
-                  {business.images.map((image, index) => <img key={index} src={image} alt={`Business ${index + 1}`} className="rounded-md object-cover h-48 w-full" />)}
-                </div>
-              </div>}
+            {business.images && business.images.length > 0 && (
+              <div className="w-full">
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {business.images.map((image, index) => (
+                      <CarouselItem key={index}>
+                        <div className="p-1">
+                          <div 
+                            className="relative aspect-[16/9] w-full overflow-hidden rounded-md cursor-pointer"
+                            onClick={() => handleImageClick(index)}
+                          >
+                            <img 
+                              src={image} 
+                              alt={`${business.name} image ${index + 1}`}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </Carousel>
+                
+                <ImageViewer 
+                  images={business.images}
+                  initialIndex={currentImageIndex}
+                  open={isImageViewerOpen}
+                  onOpenChange={setIsImageViewerOpen}
+                />
+              </div>
+            )}
             
             <Separator />
             
             <div className="grid md:grid-cols-2 gap-6">
-              
-              
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Rating & Reviews</h3>
                 <BusinessRatingOverview avgRating={avgRating} totalReviews={reviews.length} ratingDistribution={ratingDistribution} criteriaRatings={aggregatedCriteriaRatings} />
