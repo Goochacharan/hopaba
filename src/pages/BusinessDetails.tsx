@@ -115,10 +115,7 @@ const BusinessDetails: React.FC = () => {
               
               
               <div className="flex items-center mt-2">
-                <Badge variant="secondary">
-                  {business.category}
-                  {business.subcategory ? ` / ${business.subcategory}` : ''}
-                </Badge>
+                
               </div>
             </div>
           </CardHeader>
