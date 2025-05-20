@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Business, BusinessFormValues } from './BusinessFormSimple';
@@ -12,6 +11,13 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+// Added list of major Indian cities
+const INDIAN_CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
+  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
+  "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"
+];
 
 interface BusinessFormContentProps {
   form?: UseFormReturn<BusinessFormValues>;
@@ -295,7 +301,22 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               <FormItem>
                 <FormLabel>City*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter city" {...field} />
+                  <Select 
+                    value={field.value} 
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDIAN_CITIES.map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
