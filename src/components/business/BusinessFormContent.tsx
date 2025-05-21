@@ -11,6 +11,7 @@ import { ImageUpload } from '@/components/ui/image-upload';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SubcategorySelector from './SubcategorySelector';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = [
@@ -183,48 +184,17 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
                 Subcategory
               </FormLabel>
               <div className="flex gap-2">
-                {/* Updated to handle string[] type */}
-                <Select 
-                  value={Array.isArray(field.value) && field.value.length > 0 ? field.value[0] : ""} 
-                  onValueChange={(value) => {
-                    if (value) {
-                      form.setValue("subcategory", [value], { shouldValidate: true });
-                    } else {
-                      form.setValue("subcategory", [], { shouldValidate: true });
-                    }
+                {/* Replace the Select with the SubcategorySelector component */}
+                <SubcategorySelector
+                  categoryId={selectedCategoryId || undefined}
+                  value={field.value}
+                  onChange={(values) => {
+                    form.setValue("subcategory", values, { shouldValidate: true });
                   }}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a subcategory (optional)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="max-h-[300px]">
-                    {!selectedCategoryId ? (
-                      <div className="px-2 py-1.5 text-sm">Select a category first</div>
-                    ) : loadingSubcategories ? (
-                      <div className="px-2 py-1.5 text-sm">Loading subcategories...</div>
-                    ) : subcategories?.length ? (
-                      subcategories.map(subcategory => (
-                        <SelectItem key={subcategory.id} value={subcategory.name}>
-                          {subcategory.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm">No subcategories found</div>
-                    )}
-                    {isAdmin && selectedCategoryId && (
-                      <button 
-                        className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
-                        type="button"
-                        onClick={() => setShowAddSubcategoryDialog(true)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add New Subcategory
-                      </button>
-                    )}
-                  </SelectContent>
-                </Select>
+                  disabled={!selectedCategoryId}
+                  isVisible={true}
+                  className="w-full"
+                />
                 {isAdmin && selectedCategoryId && (
                   <Button 
                     type="button" 

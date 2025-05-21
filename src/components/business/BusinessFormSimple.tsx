@@ -451,8 +451,11 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
         
       if (error) throw error;
       
-      // Set the current subcategory to the newly created one - Fixed to use array
-      form.setValue("subcategory", [newSubcategory]);
+      // Set the current subcategory to the newly created one
+      // Get current subcategories first
+      const currentSubcategories = form.getValues("subcategory") || [];
+      // Add the new subcategory to the existing ones
+      form.setValue("subcategory", [...currentSubcategories, newSubcategory]);
       setNewSubcategory("");
       setShowAddSubcategoryDialog(false);
       
