@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
-import { User, Store, MessageSquare, Plus, Briefcase } from 'lucide-react';
+import { User, Store, MessageSquare, Plus, Briefcase, Inbox } from 'lucide-react';
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -141,6 +141,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             </button>
             <span className="text-xs font-medium mt-0.5">Post Request</span>
           </div>
+          
+          {/* Inbox button */}
+          <NavButton 
+            to={user ? "/inbox" : "/login"}
+            icon={<Inbox className="h-5 w-5" />}
+            label="Inbox" 
+            isActive={location.pathname === '/inbox'} 
+          />
           
           {/* Messages Button */}
           <NavButton 
