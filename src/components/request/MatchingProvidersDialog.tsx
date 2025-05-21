@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import StarRating from '@/components/marketplace/StarRating';
 import { SortOption } from '@/components/SortButton'; 
 import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
+import RatingProgressBars from '@/components/RatingProgressBars';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -155,7 +156,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   // Navigate to provider's shop page
   const goToProviderShop = (providerId: string, userId: string) => {
-    navigate(`/shop?provider=${providerId}&user=${userId}`);
+    // Fix: Navigate to the seller details page directly
+    navigate(`/seller/${userId}`);
   };
 
   // Get unique cities for filtering
@@ -194,6 +196,14 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       }
     });
   }, [matchingProviders, filters, currentSort]);
+
+  const getOverallRatingColor = (ratingNum: number) => {
+    if (ratingNum <= 30) return '#ea384c'; // dark red
+    if (ratingNum <= 50) return '#F97316'; // orange
+    if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
+    if (ratingNum <= 85) return '#68cd77'; // light green
+    return '#00ee24'; // bright green as requested for highest rating
+  };
 
   if (isLoading) {
     return (
@@ -243,6 +253,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                             
           // Calculate numerical rating score (out of 100)
           const ratingScore = Math.round((provider.rating || 4.5) * 20);
+          const ratingColor = getOverallRatingColor(ratingScore);
                             
           return (
             <Card key={provider.provider_id} className="overflow-hidden border-l-4 border-l-primary mb-4">
@@ -255,17 +266,35 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                   >
                     {provider.provider_name}
                   </button>
+                  
+                  {/* Add circular rating display */}
+                  <div 
+                    title="Overall rating"
+                    className="flex items-center justify-center border-4 font-bold ml-auto"
+                    style={{
+                      width: 45,
+                      height: 45,
+                      borderRadius: '50%',
+                      color: ratingColor,
+                      borderColor: ratingColor,
+                      fontSize: 18,
+                      background: '#fff',
+                      boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    {ratingScore}
+                  </div>
                 </CardTitle>
                 <div className="flex flex-wrap gap-2 mt-1 items-center">
                   <Badge variant="secondary">{provider.provider_category}</Badge>
                   {provider.provider_subcategory && (
                     <Badge variant="outline">{provider.provider_subcategory}</Badge>
                   )}
-                  {/* Display rating */}
+                  {/* Display star rating with review count */}
                   <div className="flex items-center gap-1">
                     <StarRating rating={provider.rating || 4.5} size="small" />
                     <span className="text-xs text-muted-foreground">
-                      ({ratingScore}/100, {provider.review_count || 0} reviews)
+                      ({provider.review_count || 0})
                     </span>
                   </div>
                 </div>
