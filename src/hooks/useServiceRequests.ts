@@ -55,61 +55,83 @@ export const useServiceRequests = () => {
     return data[0] as ServiceRequest;
   };
 
-  // Delete a service request - Modified to handle conversations deletion first
+  // Delete a service request using Supabase transaction and better error handling
   const deleteRequest = async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
     try {
+      // Verify the request exists and belongs to the user before attempting deletion
+      const { data: requestData, error: requestError } = await supabase
+        .from('service_requests')
+        .select('id')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+        
+      if (requestError || !requestData) {
+        console.error('Request verification failed:', requestError);
+        throw new Error(`Could not verify request ownership: ${requestError?.message || 'Request not found'}`);
+      }
+      
       // Step 1: Find all conversations associated with this service request
       const { data: conversations, error: conversationsError } = await supabase
         .from('conversations')
         .select('id')
         .eq('request_id', id);
       
-      if (conversationsError) throw conversationsError;
+      if (conversationsError) {
+        console.error('Error fetching conversations:', conversationsError);
+        throw new Error(`Failed to fetch conversations: ${conversationsError.message}`);
+      }
       
-      // If there are conversations, delete them one by one
+      // If there are conversations, delete them with verification
       if (conversations && conversations.length > 0) {
         console.log(`Found ${conversations.length} conversations to delete for request ${id}`);
         
-        // Step 2: For each conversation, delete all associated messages first
+        // Use a transaction for deleting all related data to ensure atomicity
+        const { error: txError } = await supabase.rpc('delete_service_request_cascade', {
+          request_id_param: id, 
+          user_id_param: user.id
+        });
+        
+        if (txError) {
+          console.error('Transaction failed:', txError);
+          throw new Error(`Transaction failed: ${txError.message}`);
+        }
+        
+        // Verify conversations were actually deleted
         for (const conversation of conversations) {
-          // Delete messages for this conversation
-          const { error: messagesError } = await supabase
-            .from('messages')
-            .delete()
-            .eq('conversation_id', conversation.id);
-          
-          if (messagesError) {
-            console.error(`Error deleting messages for conversation ${conversation.id}:`, messagesError);
-            throw messagesError;
-          }
-          
-          // Delete the conversation itself
-          const { error: conversationError } = await supabase
+          const { data: checkData, error: checkError } = await supabase
             .from('conversations')
-            .delete()
-            .eq('id', conversation.id);
-          
-          if (conversationError) {
-            console.error(`Error deleting conversation ${conversation.id}:`, conversationError);
-            throw conversationError;
+            .select('id')
+            .eq('id', conversation.id)
+            .single();
+            
+          if (checkData) {
+            console.error(`Conversation ${conversation.id} still exists after deletion attempt`);
+            throw new Error(`Failed to delete conversation: ${conversation.id}`);
           }
         }
-      }
-      
-      // Step 3: Now it's safe to delete the service request
-      const { error } = await supabase
-        .from('service_requests')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        
+        return id;
+      } else {
+        // If there are no conversations, just delete the service request directly
+        const { error } = await supabase
+          .from('service_requests')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
 
-      if (error) throw error;
-      
-      return id;
+        if (error) {
+          console.error('Error deleting service request:', error);
+          throw error;
+        }
+        
+        return id;
+      }
     } catch (error: any) {
       console.error('Error in cascade delete operation:', error);
+      // Enhanced error message with more details
       throw new Error(`Failed to delete request: ${error.message || 'Unknown error'}`);
     }
   };
@@ -218,11 +240,13 @@ export const useServiceRequests = () => {
       });
     },
     onError: (error) => {
+      // More detailed error toast
       toast({
-        title: 'Error',
-        description: `Failed to delete request: ${error.message}`,
+        title: 'Error Deleting Request',
+        description: `${error.message}`,
         variant: 'destructive',
       });
+      console.error('Delete request error details:', error);
     }
   });
 
