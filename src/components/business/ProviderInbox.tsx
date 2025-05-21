@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2, Mail } from 'lucide-react';
+import { Loader2, Calendar, IndianRupee, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
@@ -13,6 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
+import { QuotationDialog } from '@/components/request/QuotationDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
 
@@ -33,11 +33,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { createConversation, conversations } = useConversations();
+  const { conversations } = useConversations();
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   
   // Helper function for normalized subcategory comparison with improved debugging
   const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
@@ -156,8 +157,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
   };
   
-  // Handle creating a new conversation and navigate to message page
-  const handleContactRequester = async (request: ServiceRequest) => {
+  // Handle opening the quotation dialog
+  const handleContactRequester = (request: ServiceRequest) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -167,49 +168,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       return;
     }
     
-    console.log('Creating conversation:', {
-      requestId: request.id,
-      providerId,
-      userId: request.user_id
-    });
-    
-    try {
-      // Create the conversation
-      createConversation(request.id, providerId, request.user_id);
-      
-      // Find the newly created conversation - we'll give it a moment to be created
-      setTimeout(async () => {
-        const { data } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('request_id', request.id)
-          .eq('provider_id', providerId)
-          .single();
-          
-        if (data) {
-          // Navigate to the conversation with quotation mode activated
-          navigate(`/messages/${data.id}?quotationMode=true`);
-          
-          toast({
-            title: "Conversation started",
-            description: "You can now send a quotation to the requester."
-          });
-        } else {
-          toast({
-            title: "Conversation created",
-            description: "You can find it in your messages section.",
-          });
-          navigate('/messages');
-        }
-      }, 500);
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      toast({
-        title: "Error",
-        description: "There was a problem creating the conversation. Please try again.",
-        variant: "destructive"
-      });
-    }
+    setSelectedRequest(request);
+    setIsQuotationDialogOpen(true);
   };
 
   // Handle viewing request details
@@ -321,7 +281,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   <CardContent className="pb-2">
                     <div className="space-y-2">
                       <div className="flex items-center gap-1 text-sm">
-                        <DollarSign className="h-4 w-4" />
+                        <IndianRupee className="h-4 w-4" />
                         <span>
                           {request.budget ? `Budget: ₹${request.budget}` : 'No budget specified'}
                         </span>
@@ -397,7 +357,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   <CardContent className="pb-2">
                     <div className="space-y-2">
                       <div className="flex items-center gap-1 text-sm">
-                        <DollarSign className="h-4 w-4" />
+                        <IndianRupee className="h-4 w-4" />
                         <span>
                           {request.budget ? `Budget: ₹${request.budget}` : 'No budget specified'}
                         </span>
@@ -456,6 +416,14 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         request={selectedRequest}
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
+        providerId={providerId}
+      />
+      
+      {/* Quotation Dialog */}
+      <QuotationDialog 
+        request={selectedRequest}
+        open={isQuotationDialogOpen}
+        onOpenChange={setIsQuotationDialogOpen}
         providerId={providerId}
       />
     </TooltipProvider>
