@@ -35,7 +35,9 @@ const Shop = () => {
 
   // Local state
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(subcategoryParam);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(
+    subcategoryParam ? [subcategoryParam] : []
+  );
   const [searchTerm, setSearchTerm] = useState<string>(searchQuery);
   const [inputValue, setInputValue] = useState<string>(searchQuery);
   const [selectedCity, setSelectedCity] = useState<string>(cityParam);
@@ -52,18 +54,21 @@ const Shop = () => {
     data: businesses,
     isLoading,
     error
-  } = useBusinessesBySubcategory(selectedCategory === 'All' ? null : selectedCategory, selectedSubcategory);
+  } = useBusinessesBySubcategory(
+    selectedCategory === 'All' ? null : selectedCategory, 
+    selectedSubcategories.length > 0 ? selectedSubcategories[0] : null
+  );
 
   // Update URL when filters change
   useEffect(() => {
     const newParams = new URLSearchParams();
     if (selectedCategory !== 'All') newParams.set('category', selectedCategory);
-    if (selectedSubcategory) newParams.set('subcategory', selectedSubcategory);
+    if (selectedSubcategories.length > 0) newParams.set('subcategory', selectedSubcategories[0]);
     if (searchTerm) newParams.set('q', searchTerm);
     if (selectedCity !== 'All Cities') newParams.set('city', selectedCity);
     if (postalCode) newParams.set('postalCode', postalCode);
     setSearchParams(newParams);
-  }, [selectedCategory, selectedSubcategory, searchTerm, selectedCity, postalCode, setSearchParams]);
+  }, [selectedCategory, selectedSubcategories, searchTerm, selectedCity, postalCode, setSearchParams]);
 
   // Handle category change
   const handleCategoryChange = (category: string) => {
@@ -71,9 +76,9 @@ const Shop = () => {
     // Don't reset subcategory here - the CategoryScrollBar component will handle it
   };
 
-  // Handle subcategory change
-  const handleSubcategoryChange = (subcategory: string) => {
-    setSelectedSubcategory(subcategory);
+  // Handle subcategory change - updated to accept string[]
+  const handleSubcategoryChange = (subcategories: string[]) => {
+    setSelectedSubcategories(subcategories);
   };
 
   // Handle search
@@ -94,7 +99,7 @@ const Shop = () => {
   // Handle reset filters
   const handleResetFilters = () => {
     setSelectedCategory('All');
-    setSelectedSubcategory('');
+    setSelectedSubcategories([]);
     setSearchTerm('');
     setInputValue('');
     setSelectedCity('All Cities');
@@ -212,12 +217,17 @@ const Shop = () => {
         
         {/* Categories with improved subcategory selector */}
         <div className="mb-6">
-          <CategoryScrollBar selected={selectedCategory} onSelect={handleCategoryChange} selectedSubcategory={selectedSubcategory} onSubcategorySelect={handleSubcategoryChange} />
+          <CategoryScrollBar 
+            selected={selectedCategory} 
+            onSelect={handleCategoryChange} 
+            selectedSubcategory={selectedSubcategories} 
+            onSubcategorySelect={handleSubcategoryChange} 
+          />
         </div>
         
         {/* Active Filters */}
         <div className="mb-4 flex flex-wrap gap-2">
-          {(selectedCategory !== 'All' || selectedSubcategory || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly) && (
+          {(selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly) && (
             <>
               <div className="text-sm text-muted-foreground mr-2 flex items-center">Active filters:</div>
               <Button size="sm" variant="destructive" onClick={handleResetFilters} className="h-7 gap-1">
