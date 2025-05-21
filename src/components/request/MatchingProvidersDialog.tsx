@@ -254,7 +254,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
           // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
           let allRatings = [provider.rating || 4.5];
           const averageRaw = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
-          const ratingScore = Math.round(averageRaw * 10);  // Matches RatingProgressBars calculation
+          const ratingScore = Math.round((averageRaw / 10) * 100);  // Update to match RatingProgressBars calculation
           const ratingColor = getOverallRatingColor(ratingScore);
                             
           return (
