@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 
 interface RatingProgressBarsProps {
   criteriaRatings: {
@@ -54,14 +54,6 @@ const getRatingLabel = (rating: number): string => {
   if (rating <= 5) return 'Bad';
   if (rating <= 8) return 'Good';
   return 'Excellent';
-};
-
-const getOverallRatingColor = (ratingNum: number) => {
-  if (ratingNum <= 30) return '#ea384c'; // dark red
-  if (ratingNum <= 50) return '#F97316'; // orange
-  if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
-  if (ratingNum <= 85) return '#68cd77'; // light green
-  return '#00ee24'; // bright green as requested for highest rating
 };
 
 const RatingProgressBars: React.FC<RatingProgressBarsProps> = ({ criteriaRatings, locationId }) => {
@@ -121,15 +113,9 @@ const RatingProgressBars: React.FC<RatingProgressBarsProps> = ({ criteriaRatings
     fetchCriterionNames();
   }, [mergedRatings]);
 
-  let allRatings: number[] = [];
-  Object.values(mergedRatings).forEach(val => {
-    if (!isNaN(Number(val))) allRatings.push(Number(val));
-  });
-  const averageRaw = allRatings.length
-    ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length
-    : 0;
-  const overallRating100 = Math.round((averageRaw / 10) * 100);
-  const overallColor = getOverallRatingColor(overallRating100);
+  // Calculate overall rating using our utility function
+  const overallRating100 = calculateOverallRating(mergedRatings);
+  const overallColor = getRatingColor(overallRating100);
 
   if (Object.keys(mergedRatings).length === 0) return null;
 
@@ -175,7 +161,7 @@ const RatingProgressBars: React.FC<RatingProgressBarsProps> = ({ criteriaRatings
         <div className="w-full pr-[90px]">
           {Object.entries(mergedRatings).map(([criterionId, rating]) => {
             const normalizedRating = (rating / 10) * 100;
-            const ratingColor = getOverallRatingColor(normalizedRating);
+            const ratingColor = getRatingColor(normalizedRating);
             const ratingLabel = getRatingLabel(rating);
             
             // Always display a name, either from database or fallback
