@@ -18,12 +18,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 
 const Inbox: React.FC = () => {
   const { user } = useAuth();
@@ -60,7 +61,22 @@ const Inbox: React.FC = () => {
     <MainLayout>
       <div className="min-h-screen bg-background">
         <SidebarProvider defaultOpen={true} open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <div className="flex h-full min-h-[calc(100vh-128px)] w-full">
+          <div className="flex h-full min-h-[calc(100vh-128px)] w-full relative">
+            {/* Custom sidebar toggle button that's visible when sidebar is collapsed */}
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className={cn(
+                "absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-primary-foreground p-2 rounded-r-md shadow-md transition-opacity",
+                "flex items-center justify-center hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring",
+                "md:h-12 md:w-6",
+                "h-10 w-5",
+                sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+              )}
+              aria-label="Open sidebar"
+            >
+              <ArrowRight size={18} />
+            </button>
+            
             <Sidebar side="left">
               <SidebarHeader className="border-b border-border p-4">
                 <h2 className="text-lg font-semibold">Your Requests</h2>
