@@ -1,481 +1,332 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Loader2, ArrowUpDown, Search, MessageSquare, RefreshCw } from 'lucide-react';
-import { format, parseISO, formatDistanceToNow } from 'date-fns';
-import { ServiceRequest } from '@/types/serviceRequestTypes';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Database } from '@/integrations/supabase/types';
+import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue
-} from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { FileSearch } from 'lucide-react';
 
-// Update the interface for service requests with conversations
+type ServiceRequest = Database['public']['Tables']['service_requests']['Row'];
+type ServiceProvider = Database['public']['Tables']['service_providers']['Row'];
+type Conversation = Database['public']['Tables']['conversations']['Row'];
+
 interface ServiceRequestWithConversation extends ServiceRequest {
-  conversation_id?: string;
+  conversation?: Conversation | null;
 }
 
-// For the requests that come with conversations
-interface ServiceRequestWithConversations {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string;
-  category: string;
-  subcategory?: string;
-  budget?: number;
-  date_range_start?: string;
-  date_range_end?: string;
-  city: string;
-  area: string;
-  postal_code: string;
-  contact_phone: string;
-  images: string[];
-  created_at: string;
-  status: string;
-  conversation_id: string;
-}
+const useServiceRequests = () => {
+  const [data, setData] = useState<ServiceRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-// Add props interface for the component
-interface ServiceProviderDashboardProps {
-  providerId?: string;
-  category?: string;
-  subcategory?: string;
-}
+  useEffect(() => {
+    const fetchServiceRequests = async () => {
+      setLoading(true);
+      try {
+        const { data: serviceRequests, error } = await supabase
+          .from('service_requests')
+          .select('*');
 
-// Get service requests that match a provider's category and subcategory
-const getMatchingRequests = async (providerId: string) => {
-  // First get the provider's details to know their category and subcategory
-  const { data: provider, error: providerError } = await supabase
-    .from('service_providers')
-    .select('category, subcategory')
-    .eq('id', providerId)
-    .single();
-    
-  if (providerError) throw providerError;
-  
-  // Then find all matching open requests without requiring conversations
-  const { data, error } = await supabase
-    .from('service_requests')
-    .select('*')
-    .eq('category', provider.category)
-    .eq('status', 'open')
-    .order('created_at', { ascending: false });
-  
-  if (error) throw error;
-  
-  // Improved subcategory matching logic
-  const filteredRequests = data.filter(req => {
-    // If provider has no subcategory, show all requests in their category
-    if (!provider.subcategory) return true;
-    
-    // If request has no subcategory, show it to all providers in that category
-    if (!req.subcategory) return true;
-    
-    // Case-insensitive comparison of subcategories
-    return req.subcategory.toLowerCase() === provider.subcategory.toLowerCase();
-  });
-    
-  return filteredRequests as ServiceRequestWithConversation[];
-};
-
-// Get service requests that a provider has already responded to
-const getRespondedRequests = async (providerId: string) => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select(`
-      *,
-      service_requests(*)
-    `)
-    .eq('provider_id', providerId);
-    
-  if (error) throw error;
-  
-  // Extract the actual request data and add the conversation ID
-  return data.map(item => ({
-    ...item.service_requests,
-    conversation_id: item.id
-  })) as ServiceRequestWithConversation[];
-};
-
-// Update the component declaration with props
-const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ providerId, category, subcategory }) => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'new' | 'responded'>('all');
-  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
-  const queryClient = useQueryClient();
-  
-  // Get the provider ID for the current user if not provided as prop
-  const { data: providerData, isLoading: isLoadingProvider } = useQuery({
-    queryKey: ['provider', user?.id, providerId],
-    queryFn: async () => {
-      // If providerId is passed as a prop, use it directly
-      if (providerId) {
-        return { id: providerId };
+        if (error) {
+          setError(error);
+        } else {
+          setData(serviceRequests || []);
+        }
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setLoading(false);
       }
-      
-      // Otherwise, fetch the provider ID for the current user
-      const { data, error } = await supabase
-        .from('service_providers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
-        
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user || !!providerId
-  });
-  
-  // Get matching requests based on provider's category
-  const { 
-    data: matchingRequests, 
-    isLoading: isLoadingMatching,
-    refetch: refetchMatchingRequests,
-    isRefetching: isRefetchingMatching
-  } = useQuery({
-    queryKey: ['matching-requests', providerData?.id],
-    queryFn: () => getMatchingRequests(providerData!.id),
-    enabled: !!providerData?.id,
-    refetchInterval: 60000, // Auto-refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
-  });
-  
-  // Get requests the provider has already responded to
-  const { 
-    data: respondedRequests, 
-    isLoading: isLoadingResponded,
-    refetch: refetchRespondedRequests,
-    isRefetching: isRefetchingResponded
-  } = useQuery({
-    queryKey: ['responded-requests', providerData?.id],
-    queryFn: () => getRespondedRequests(providerData!.id),
-    enabled: !!providerData?.id,
-    refetchInterval: 60000, // Auto-refetch every minute
-    staleTime: 30000, // Consider data stale after 30 seconds
-  });
-  
-  // Process and filter the requests based on current filter and search
-  const getFilteredRequests = () => {
-    if (!matchingRequests || !respondedRequests) return [] as ServiceRequestWithConversation[];
-    
-    // Get the responded request IDs for easy lookup
-    const respondedIds = new Set(respondedRequests.map(r => r.id));
-    
-    let filteredRequests: ServiceRequestWithConversation[] = [];
-    
-    if (filter === 'all' || filter === 'new') {
-      // For 'all' or 'new', include matching requests that haven't been responded to
-      const newRequests = matchingRequests
-        .filter(req => filter === 'all' || !respondedIds.has(req.id))
-        .map(req => ({ ...req }));
-      
-      filteredRequests = [...filteredRequests, ...newRequests];
-    }
-    
-    if (filter === 'all' || filter === 'responded') {
-      // For 'all' or 'responded', include requests that have been responded to
-      filteredRequests = [...filteredRequests, ...respondedRequests];
-    }
-    
-    // Apply search filter if there's a search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filteredRequests = filteredRequests.filter(req => 
-        req.title.toLowerCase().includes(term) || 
-        req.description.toLowerCase().includes(term) ||
-        req.area.toLowerCase().includes(term) ||
-        req.city.toLowerCase().includes(term)
-      );
-    }
-    
-    // Apply sorting
-    return filteredRequests.sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sort === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-  };
-  
-  // Check if a request has been responded to
-  const hasResponded = (requestId: string) => {
-    if (!respondedRequests) return false;
-    return respondedRequests.some(r => r.id === requestId);
-  };
-  
-  // Get the conversation ID for a request that has been responded to
-  const getConversationId = (requestId: string) => {
-    if (!respondedRequests) return undefined;
-    const request = respondedRequests.find(r => r.id === requestId);
-    return request?.conversation_id;
-  };
+    };
 
-  // Manually refresh requests data
-  const handleRefresh = () => {
-    refetchMatchingRequests();
-    refetchRespondedRequests();
-    toast({
-      title: "Refreshing requests",
-      description: "Getting the latest service requests...",
-    });
-  };
-  
-  // Create a new conversation for a request
-  const handleCreateConversation = async (request: ServiceRequestWithConversation) => {
-    if (!providerData || !user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to respond to service requests",
-        variant: "destructive",
-      });
+    fetchServiceRequests();
+  }, []);
+
+  return { data, loading, error };
+};
+
+const useServiceProvider = (userId: string | undefined) => {
+  const [provider, setProvider] = useState<ServiceProvider | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchServiceProvider = async () => {
+      if (!userId) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('service_providers')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (error) {
+          setError(error);
+        } else {
+          setProvider(data || null);
+        }
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServiceProvider();
+  }, [userId]);
+
+  return { provider, loading, error };
+};
+
+const useConversations = (userId: string | undefined) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchConversations = async () => {
+      if (!userId) return;
+
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('user_id', userId);
+
+        if (error) {
+          setError(error);
+        } else {
+          setConversations(data || []);
+        }
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [userId]);
+
+  return { conversations, loading, error };
+};
+
+const useServiceRequestsForProvider = (provider: ServiceProvider | null) => {
+  const { data: allRequests, loading: requestsLoading, error: requestsError } = useServiceRequests();
+  const { conversations, loading: conversationsLoading, error: conversationsError } = useConversations(provider?.user_id);
+  const { toast } = useToast();
+  const [data, setData] = useState<ServiceRequestWithConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (requestsLoading || conversationsLoading) {
+      setLoading(true);
       return;
     }
-    
-    try {
-      // First, verify the service provider belongs to the current user
-      const { data: verifyProvider, error: verifyError } = await supabase
-        .from('service_providers')
-        .select('user_id')
-        .eq('id', providerData.id)
-        .single();
-        
-      if (verifyError) {
-        console.error('Error verifying provider:', verifyError);
-        toast({
-          title: "Error",
-          description: "Could not verify your service provider account",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (verifyProvider.user_id !== user.id) {
-        toast({
-          title: "Error",
-          description: "You don't have permission to respond as this service provider",
-          variant: "destructive",
-        });
-        return;
-      }
-        
-      // Create the conversation
-      const { data, error } = await supabase
-        .from('conversations')
-        .insert({
-          request_id: request.id,
-          provider_id: providerData.id,
-          user_id: request.user_id,
-        })
-        .select();
-      
-      if (error) {
-        console.error('Error creating conversation:', error);
-        throw error;
-      }
-      
-      if (!data || data.length === 0) {
-        throw new Error('No conversation data returned');
-      }
-      
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: ['responded-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
-      
-      // Show success message
-      toast({
-        title: "Conversation created",
-        description: "You've started a new conversation with this requester",
-      });
-      
-      // Navigate to the new conversation
-      navigate(`/messages/${data[0].id}`);
-    } catch (error: any) {
-      console.error('Error creating conversation:', error);
-      toast({
-        title: "Error",
-        description: `Failed to create conversation: ${error.message || 'Unknown error'}`,
-        variant: "destructive",
-      });
+
+    if (requestsError || conversationsError) {
+      setError(requestsError || conversationsError || null);
+      setLoading(false);
+      return;
     }
-  };
-  
-  const isLoading = isLoadingProvider || isLoadingMatching || isLoadingResponded;
-  const isRefetching = isRefetchingMatching || isRefetchingResponded;
-  const filteredRequests = getFilteredRequests();
-  
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!providerData) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium mb-2">Provider Profile Not Found</h3>
-        <p className="text-muted-foreground mb-6">
-          You need to create a service provider profile to view matching requests.
-        </p>
-        <Button onClick={() => navigate('/profile')}>Go to Profile</Button>
-      </div>
-    );
-  }
-  
-  return (
-    <div className="space-y-6">
-      {/* Search and filter controls */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search requests"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefetching}
-            title="Refresh requests"
-            className="flex-shrink-0"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-          </Button>
-          
-          <Select value={filter} onValueChange={(val) => setFilter(val as any)}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Requests</SelectItem>
-              <SelectItem value="new">New Requests</SelectItem>
-              <SelectItem value="responded">Responded</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Button 
-            variant="outline" 
-            onClick={() => setSort(sort === 'newest' ? 'oldest' : 'newest')}
-            className="flex items-center gap-1"
-          >
-            <ArrowUpDown className="h-4 w-4" />
-            {sort === 'newest' ? 'Newest' : 'Oldest'}
-          </Button>
-        </div>
-      </div>
+
+    if (!provider) {
+      setLoading(false);
+      return;
+    }
+
+    // Filter service requests based on provider's category and subcategory
+    // Improved subcategory matching logic for subcategory array
+    const filteredRequests = allRequests.filter(req => {
+      // If provider has no subcategories, show all requests in their category
+      if (!provider.subcategory || provider.subcategory.length === 0) {
+        return req.category.toLowerCase() === provider.category.toLowerCase();
+      }
       
-      {/* Requests list */}
-      {filteredRequests.length > 0 ? (
-        <div className="space-y-4">
-          {filteredRequests.map((request) => {
-            const responded = hasResponded(request.id);
-            const conversationId = getConversationId(request.id);
-            
-            return (
-              <Card key={request.id} className="overflow-hidden">
-                <div className="p-4 border-b">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{request.title}</h3>
-                        {responded ? (
-                          <Badge variant="success">Responded</Badge>
+      // If request has no subcategory, show it to all providers in that category
+      if (!req.subcategory) return req.category.toLowerCase() === provider.category.toLowerCase();
+      
+      // Check if any of the provider's subcategories match the request's subcategory
+      return provider.subcategory.some(sub => 
+        req.subcategory?.toLowerCase() === sub.toLowerCase() && req.category.toLowerCase() === provider.category.toLowerCase()
+      );
+    });
+
+    // Attach conversations to the service requests
+    const requestsWithConversations = filteredRequests.map(req => ({
+      ...req,
+      conversation: conversations.find(c => c.request_id === req.id),
+    }));
+
+    setData(requestsWithConversations);
+    setLoading(false);
+    setError(null);
+
+  }, [allRequests, conversations, provider, requestsError, conversationsError, requestsLoading, conversationsLoading, toast]);
+     
+  return { data, loading, error };
+};
+
+const ServiceProviderDashboard = () => {
+  const { user } = useAuth();
+  const { provider, loading: providerLoading, error: providerError } = useServiceProvider(user?.id);
+  const { data: serviceRequests, loading: requestsLoading, error: requestsError } = useServiceRequestsForProvider(provider);
+  const [activeTab, setActiveTab] = useState('requests');
+
+  if (providerLoading) {
+    return <div className="h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+          <CardDescription>Fetching your profile information.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="flex items-center">
+            <Avatar>
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </Avatar>
+            <div className="ml-4 space-y-1">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-2 w-12" />
+            </div>
+          </div>
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-[70%]" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-[90%]" />
+        </CardContent>
+      </Card>
+    </div>;
+  }
+
+  if (providerError) {
+    return <div className="h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+          <CardDescription>Failed to load your profile.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500">Error: {providerError.message}</p>
+        </CardContent>
+      </Card>
+    </div>;
+  }
+
+  if (!provider) {
+    return <div className="h-screen flex items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>No Profile Found</CardTitle>
+          <CardDescription>You don't have a service provider profile yet.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>Please create a service provider profile to view service requests.</p>
+          <Button asChild>
+            <Link to="/settings">Create Profile</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>;
+  }
+
+  return (
+    <div className="container mx-auto py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Provider Dashboard</CardTitle>
+          <CardDescription>
+            Manage service requests related to your business.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <Avatar>
+              <AvatarImage src={`https://avatar.vercel.sh/${provider.name}.png`} />
+              <AvatarFallback>{provider.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-semibold">{provider.name}</h2>
+              <p className="text-sm text-muted-foreground">{provider.category} {provider.subcategory && provider.subcategory.length > 0 && `(${provider.subcategory.join(', ')})`}</p>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {requestsLoading ? (
+              <div className="flex items-center justify-center">
+                <p>Loading service requests...</p>
+              </div>
+            ) : requestsError ? (
+              <div className="flex items-center justify-center">
+                <p className="text-red-500">Error: {requestsError.message}</p>
+              </div>
+            ) : serviceRequests && serviceRequests.length > 0 ? (
+              <ScrollArea className="rounded-md border">
+                <div className="p-4">
+                  {serviceRequests.map((request) => (
+                    <Card key={request.id} className="mb-4">
+                      <CardHeader>
+                        <CardTitle>{request.title}</CardTitle>
+                        <CardDescription>
+                          {request.city}, {request.area} - {request.postal_code}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p>{request.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Budget: ₹{request.budget || 'Not specified'}
+                        </p>
+                        {request.subcategory && (
+                          <Badge variant="secondary" className="mr-2">
+                            {request.subcategory}
+                          </Badge>
+                        )}
+                      </CardContent>
+                      <div className="flex justify-end space-x-2 p-4">
+                        <Button asChild variant="outline">
+                          <Link to={`/service-requests/${request.id}`}>
+                            View Details
+                          </Link>
+                        </Button>
+                        {request.conversation ? (
+                          <Button asChild>
+                            <Link to={`/messages/${request.conversation.id}`}>
+                              View Conversation
+                            </Link>
+                          </Button>
                         ) : (
-                          <Badge>New Request</Badge>
+                          <Button asChild>
+                            <Link to={`/service-requests/${request.id}`}>
+                              Start Conversation
+                            </Link>
+                          </Button>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {request.category}
-                        {request.subcategory && ` / ${request.subcategory}`}
-                        {request.budget && ` • Budget: ₹${request.budget}`}
-                      </p>
-                      <p className="text-sm mb-3">{request.description}</p>
-                      
-                      <div className="flex flex-wrap gap-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {request.date_range_start ? (
-                              <>
-                                {format(parseISO(request.date_range_start), 'dd MMM yyyy')}
-                                {request.date_range_end && (
-                                  <> - {format(parseISO(request.date_range_end), 'dd MMM yyyy')}</>
-                                )}
-                              </>
-                            ) : (
-                              'No date specified'
-                            )}
-                          </span>
-                        </div>
-                        <span className="text-muted-foreground">•</span>
-                        <span>Location: {request.area}, {request.city}</span>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-muted-foreground">
-                          Posted {formatDistanceToNow(parseISO(request.created_at), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    </Card>
+                  ))}
                 </div>
-                
-                {/* Action buttons */}
-                <div className="p-4 bg-accent/5 flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate(`/request/${request.id}`)}
-                  >
-                    View Full Request
-                  </Button>
-                  
-                  {responded && conversationId ? (
-                    <Button onClick={() => navigate(`/messages/${conversationId}`)} className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      Continue Conversation
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={() => handleCreateConversation(request)}
-                      className="flex items-center gap-1"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-1" />
-                      Respond with Quote
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-8 bg-accent/5 rounded-lg">
-          <h3 className="text-lg font-medium mb-1">No matching requests found</h3>
-          <p className="text-muted-foreground">
-            {filter === 'new' ? 
-              "No new service requests matching your category" : 
-              filter === 'responded' ? 
-              "No responded service requests" : 
-              "No matching requests"}
-          </p>
-        </div>
-      )}
+              </ScrollArea>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <FileSearch className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">No service requests found.</p>
+                <p className="text-muted-foreground">
+                  Check back later for new requests matching your business.
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

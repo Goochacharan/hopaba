@@ -89,7 +89,7 @@ export interface Business {
 const businessSchema = z.object({
   name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
   category: z.string().min(1, { message: "Please select a category." }),
-  subcategory: z.string().optional().or(z.literal('')),
+  subcategory: z.array(z.string()).optional().default([]),
   description: z.string().min(10, { message: "Description must be at least 10 characters." }),
   area: z.string().min(2, { message: "Area must be at least 2 characters." }),
   city: z.string().min(2, { message: "City must be at least 2 characters." }),
@@ -291,7 +291,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     defaultValues: {
       name: business?.name || "",
       category: business?.category || "",
-      subcategory: business?.subcategory || "",
+      subcategory: business?.subcategory || [],
       description: business?.description || "",
       area: business?.area || "",
       city: business?.city || "",
@@ -326,7 +326,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       if (categoryMatch) {
         setSelectedCategoryId(categoryMatch.id);
         // Reset subcategory when category changes
-        form.setValue("subcategory", "");
+        form.setValue("subcategory", []);
       } else {
         setSelectedCategoryId(null);
       }
@@ -502,13 +502,13 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       const availabilityString = availabilityDays.join(', ');
       
       console.log("Submitting availability days:", availabilityDays);
-      console.log("Subcategory value:", data.subcategory);
+      console.log("Subcategory values:", data.subcategory);
       
-      // Prepare business data, ensuring subcategory can be null
+      // Prepare business data, ensuring subcategory can be an array
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory || null,
+        subcategory: data.subcategory || [],
         description: data.description,
         area: data.area,
         city: data.city,

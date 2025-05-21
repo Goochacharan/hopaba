@@ -576,7 +576,7 @@ export type Database = {
           price_range_max: number | null
           price_range_min: number | null
           price_unit: string | null
-          subcategory: string | null
+          subcategory: string[] | null
           tags: string[] | null
           updated_at: string
           user_id: string
@@ -611,7 +611,7 @@ export type Database = {
           price_range_max?: number | null
           price_range_min?: number | null
           price_unit?: string | null
-          subcategory?: string | null
+          subcategory?: string[] | null
           tags?: string[] | null
           updated_at?: string
           user_id: string
@@ -646,7 +646,7 @@ export type Database = {
           price_range_max?: number | null
           price_range_min?: number | null
           price_unit?: string | null
-          subcategory?: string | null
+          subcategory?: string[] | null
           tags?: string[] | null
           updated_at?: string
           user_id?: string
