@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User, AuthError } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +30,7 @@ interface AuthContextType {
   }>;
   authAttempts: number;
   isRateLimited: boolean;
+  resetAuthAttempts: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AuthError | null>(null);
+  const { toast } = useToast();
   // Add state for authentication attempts tracking
   const [authAttempts, setAuthAttempts] = useState(0);
   const [lastAttemptTime, setLastAttemptTime] = useState<Date | null>(null);
@@ -79,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      (event, newSession) => {
         console.log('Auth state changed:', event);
         
         if (newSession) {
@@ -104,6 +107,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
   const trackAuthAttempt = () => {
     setAuthAttempts(prev => prev + 1);
     setLastAttemptTime(new Date());
+  };
+  
+  // Reset authentication attempts counter
+  const resetAuthAttempts = () => {
+    setAuthAttempts(0);
+    setLastAttemptTime(null);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -140,26 +149,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     trackAuthAttempt();
     
     try {
-      const options: any = {};
-      if (captchaToken) {
-        options.captchaToken = captchaToken;
-      }
+      const options: any = {
+        captchaToken
+      };
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-        options
+      // Set timeout for login requests
+      const timeoutPromise = new Promise<{success: false, error: AuthError}>(resolve => {
+        setTimeout(() => {
+          resolve({ 
+            success: false, 
+            error: {
+              message: 'Login request timed out. Please try again.',
+              name: 'TimeoutError',
+              status: 408
+            } as AuthError
+          });
+        }, 20000); // 20 second timeout
       });
       
-      if (error) {
-        throw error;
-      }
+      // Actual login request
+      const loginPromise = (async () => {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+            options
+          });
+          
+          if (error) {
+            return { success: false, error };
+          }
+          
+          // Reset auth attempts on successful login
+          resetAuthAttempts();
+          return { success: true, error: null };
+        } catch (err) {
+          console.error('Error signing in:', err);
+          return { success: false, error: err as AuthError };
+        }
+      })();
       
-      // Reset auth attempts on successful login
-      setAuthAttempts(0);
-      setLastAttemptTime(null);
-      
-      return { success: true, error: null };
+      // Race between timeout and login
+      return await Promise.race([loginPromise, timeoutPromise]);
     } catch (err) {
       console.error('Error signing in:', err);
       return { success: false, error: err as AuthError };
@@ -222,8 +253,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       }
       
       // Reset auth attempts on successful signup
-      setAuthAttempts(0);
-      setLastAttemptTime(null);
+      resetAuthAttempts();
       
       return { success: true, error: null };
     } catch (err) {
@@ -237,6 +267,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Error signing out:', err);
+      toast({
+        title: "Logout error",
+        description: "There was a problem logging you out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -258,7 +293,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }): JSX.Element
     loginWithEmail,
     signupWithEmail,
     authAttempts,
-    isRateLimited
+    isRateLimited,
+    resetAuthAttempts
   };
 
   return (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -8,11 +7,12 @@ import { LoginCard } from '@/components/auth/LoginCard';
 import { LoginFormValues } from '@/components/auth/LoginForm';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { UserCheck, LogOut } from 'lucide-react';
+import { UserCheck, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const HCAPTCHA_SITE_KEY = 'fda043e0-8372-4d8a-b190-84a8fdee1528';
 const REQUIRE_CAPTCHA = true;
+const MAX_RETRIES = 3;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -23,9 +23,45 @@ export default function Login() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { loginWithEmail, isRateLimited, authAttempts, logout, session } = useAuth();
   const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false);
+  const [connectionIssue, setConnectionIssue] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Check if user explicitly wants to see the login form (from URL parameter)
   const forceShowLogin = searchParams.get('forceLogin') === 'true';
+  
+  // Network check function
+  const checkConnection = async () => {
+    try {
+      const response = await fetch('/api/health-check', { 
+        method: 'HEAD',
+        cache: 'no-cache',
+        headers: { 'pragma': 'no-cache' }
+      });
+      if (response.ok) {
+        setConnectionIssue(false);
+        return true;
+      } else {
+        setConnectionIssue(true);
+        return false;
+      }
+    } catch (error) {
+      console.log("Connection check failed:", error);
+      setConnectionIssue(true);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Check connection on mount and every 30 seconds if there's an issue
+    checkConnection();
+    const intervalId = setInterval(() => {
+      if (connectionIssue) {
+        checkConnection();
+      }
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [connectionIssue]);
   
   useEffect(() => {
     const handleRedirectResponse = async () => {
@@ -56,6 +92,11 @@ export default function Login() {
           }
         } catch (err) {
           console.error("Error handling redirect:", err);
+          toast({
+            title: "Login error",
+            description: "There was a problem processing your login. Please try again.",
+            variant: "destructive",
+          });
         } finally {
           setIsLoading(false);
         }
@@ -67,16 +108,59 @@ export default function Login() {
     // Only check for existing session if not forcing login view
     if (!forceShowLogin) {
       const checkUser = async () => {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          setAlreadyLoggedIn(true);
-          // Don't redirect automatically - show the "already logged in" view instead
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error("Session check error:", error);
+          } else if (data.session) {
+            setAlreadyLoggedIn(true);
+            // Don't redirect automatically - show the "already logged in" view instead
+          }
+        } catch (error) {
+          console.error("Error checking user session:", error);
         }
       };
       
       checkUser();
     }
   }, [navigate, toast, forceShowLogin]);
+
+  const retryLogin = async (values: LoginFormValues) => {
+    if (retryCount >= MAX_RETRIES) {
+      toast({
+        title: "Maximum retry attempts reached",
+        description: "Please try again later or contact support",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    setRetryCount(prev => prev + 1);
+    const connectionOk = await checkConnection();
+    if (!connectionOk) {
+      toast({
+        title: "Connection issue",
+        description: "Please check your internet connection and try again",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Clear existing captcha token and get a new one
+    setCaptchaToken(null);
+    if (window.hcaptcha) {
+      try {
+        window.hcaptcha.reset();
+      } catch (error) {
+        console.error("Error resetting hCaptcha:", error);
+      }
+    }
+    
+    // Wait a bit before retrying
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    return true;
+  };
 
   const onSubmit = async (values: LoginFormValues) => {
     if (isRateLimited) {
@@ -99,10 +183,50 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      await loginWithEmail(values.email, values.password, REQUIRE_CAPTCHA ? captchaToken : undefined);
-      navigate('/');
+      const result = await loginWithEmail(values.email, values.password, REQUIRE_CAPTCHA ? captchaToken : undefined);
+      
+      if (result.success) {
+        navigate('/');
+      } else {
+        // Handle login error with retry capability
+        if (result.error) {
+          console.error("Login error:", result.error);
+          
+          // Check if it's a timeout error or connection issue
+          if (result.error.message?.includes('timeout') || 
+              result.error.message?.includes('network') ||
+              result.error.message?.includes('captcha')) {
+                
+            toast({
+              title: "Connection issue",
+              description: "There was a problem connecting to the server. Retrying...",
+              variant: "destructive",
+            });
+            
+            // Try again after a short delay
+            setIsLoading(false);
+            const shouldRetry = await retryLogin(values);
+            if (shouldRetry) {
+              onSubmit(values);
+              return;
+            }
+          } else {
+            // Other errors like wrong password
+            toast({
+              title: "Login failed",
+              description: result.error.message || "Invalid credentials",
+              variant: "destructive",
+            });
+          }
+        }
+      }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Unexpected login error:", error);
+      toast({
+        title: "Login error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +273,7 @@ export default function Login() {
   };
 
   const handleCaptchaVerify = (token: string) => {
+    console.log("CAPTCHA verified successfully");
     setCaptchaToken(token);
   };
 
@@ -185,6 +310,12 @@ export default function Login() {
   
   const handleContinue = () => {
     navigate('/');
+  };
+
+  const handleManualRetry = async () => {
+    setConnectionIssue(false);
+    setRetryCount(0);
+    await checkConnection();
   };
 
   // Show a different UI if the user is already logged in
@@ -237,6 +368,39 @@ export default function Login() {
               </a>
             </p>
           </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (connectionIssue) {
+    return (
+      <MainLayout>
+        <div className="max-w-md mx-auto space-y-6 py-8">
+          <Alert variant="destructive" className="bg-red-50 border-red-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="py-4 text-center">
+                <h3 className="text-lg font-semibold text-red-700">Connection Issue Detected</h3>
+                <p className="mt-2 mb-4 text-red-600">
+                  We're having trouble connecting to our servers. This could be due to:
+                </p>
+                <ul className="list-disc text-left pl-8 mb-4 text-red-600">
+                  <li>Your internet connection</li>
+                  <li>Server maintenance</li>
+                  <li>Temporary service disruption</li>
+                </ul>
+                <Button 
+                  onClick={handleManualRetry}
+                  variant="outline" 
+                  className="flex items-center gap-2 mx-auto bg-white"
+                >
+                  <RefreshCw size={16} />
+                  Retry Connection
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         </div>
       </MainLayout>
     );

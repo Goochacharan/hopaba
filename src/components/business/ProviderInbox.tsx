@@ -1,16 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, DollarSign, MapPin, MessageSquare } from 'lucide-react';
+import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -26,6 +27,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const { createConversation, conversations } = useConversations();
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
   
   console.log('Provider filtering with:', { 
     providerId, 
@@ -38,46 +41,66 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const { 
     data: matchingRequests, 
     isLoading, 
-    error 
+    error,
+    refetch
   } = useQuery({
     queryKey: ['matchingRequests', providerId, category, subcategory],
     queryFn: async () => {
       console.log('Fetching requests for category:', category);
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select('*')
-        .eq('status', 'open')
-        .eq('category', category)
-        .order('created_at', { ascending: false });
+      // Optimize query to only select needed columns and add timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      if (error) throw error;
-      
-      console.log('Found service requests:', data?.length || 0);
-      
-      // If subcategory is specified, filter results client-side with case-insensitive matching
-      let filteredData = data as ServiceRequest[];
-      if (subcategory && subcategory.length > 0) {
-        console.log('Filtering by subcategories:', subcategory);
+      try {
+        const { data, error } = await supabase
+          .from('service_requests')
+          .select('id, title, description, budget, area, city, created_at, subcategory, user_id, status')
+          .eq('status', 'open')
+          .eq('category', category)
+          .order('created_at', { ascending: false });
         
-        // Case-insensitive filtering
-        filteredData = filteredData.filter(req => {
-          if (!req.subcategory) return false;
-          
-          // Convert both to lowercase for case-insensitive comparison
-          const requestSubLower = req.subcategory.toLowerCase();
-          
-          // Check if any of the provider's subcategories match (case-insensitive)
-          return subcategory.some(providerSub => 
-            providerSub.toLowerCase() === requestSubLower
-          );
-        });
+        clearTimeout(timeoutId);
         
-        console.log('After subcategory filtering, found:', filteredData.length);
+        if (error) throw error;
+        
+        console.log('Found service requests:', data?.length || 0);
+        
+        // If subcategory is specified, filter results client-side with case-insensitive matching
+        let filteredData = data as ServiceRequest[];
+        if (subcategory && subcategory.length > 0) {
+          console.log('Filtering by subcategories:', subcategory);
+          
+          // Case-insensitive filtering
+          filteredData = filteredData.filter(req => {
+            if (!req.subcategory) return false;
+            
+            // Convert both to lowercase for case-insensitive comparison
+            const requestSubLower = req.subcategory.toLowerCase();
+            
+            // Check if any of the provider's subcategories match (case-insensitive)
+            return subcategory.some(providerSub => 
+              providerSub.toLowerCase() === requestSubLower
+            );
+          });
+          
+          console.log('After subcategory filtering, found:', filteredData.length);
+        }
+        
+        return filteredData;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        
+        // If query timed out or was aborted
+        if (error.code === '20' || error.name === 'AbortError') {
+          throw new Error('Query timed out. The database might be busy. Please try again.');
+        }
+        
+        throw error;
       }
-      
-      return filteredData;
     },
-    enabled: !!providerId && !!user && !!category
+    enabled: !!providerId && !!user && !!category,
+    staleTime: 60000, // 1 minute cache
+    retry: false // We'll handle retries manually
   });
   
   // Check if the provider already has a conversation for a request
@@ -99,6 +122,14 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     createConversation(request.id, providerId, request.user_id);
   };
   
+  // Retry fetching data
+  const handleRetry = () => {
+    if (retryCount < MAX_RETRIES) {
+      setRetryCount(prev => prev + 1);
+      refetch();
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -109,10 +140,24 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   
   if (error) {
     return (
-      <div className="text-center py-4">
-        <p className="text-sm text-muted-foreground">
-          Error loading matching requests
-        </p>
+      <div className="space-y-4 py-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Error loading matching requests'}
+          </AlertDescription>
+        </Alert>
+        <div className="text-center">
+          <Button 
+            onClick={handleRetry}
+            variant="outline"
+            disabled={retryCount >= MAX_RETRIES}
+            className="flex items-center gap-2"
+          >
+            <Loader2 className={retryCount < MAX_RETRIES ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            {retryCount < MAX_RETRIES ? `Retry (${retryCount}/${MAX_RETRIES})` : 'Max retries reached'}
+          </Button>
+        </div>
       </div>
     );
   }
