@@ -759,6 +759,10 @@ export type Database = {
       }
     }
     Functions: {
+      delete_service_request_cascade: {
+        Args: { request_id_param: string; user_id_param: string }
+        Returns: undefined
+      }
       get_high_limit_sellers: {
         Args: Record<PropertyKey, never>
         Returns: {
