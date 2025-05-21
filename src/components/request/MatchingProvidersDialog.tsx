@@ -154,10 +154,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     });
   };
 
-  // Navigate to provider's shop page
+  // Navigate to provider's business profile page
   const goToProviderShop = (providerId: string, userId: string) => {
-    // Fix: Navigate to the seller details page directly
-    navigate(`/seller/${userId}`);
+    // Updated to navigate to the business page instead of seller page
+    navigate(`/business/${providerId}`);
   };
 
   // Get unique cities for filtering
@@ -251,8 +251,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
           const isContacted = hasExistingConversation(provider.provider_id) || 
                             contactedProviders.has(provider.provider_id);
                             
-          // Calculate numerical rating score (out of 100)
-          const ratingScore = Math.round((provider.rating || 4.5) * 20);
+          // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
+          let allRatings = [provider.rating || 4.5];
+          const averageRaw = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+          const ratingScore = Math.round(averageRaw * 10);  // Matches RatingProgressBars calculation
           const ratingColor = getOverallRatingColor(ratingScore);
                             
           return (
@@ -267,7 +269,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     {provider.provider_name}
                   </button>
                   
-                  {/* Add circular rating display */}
+                  {/* Add circular rating display with updated calculation */}
                   <div 
                     title="Overall rating"
                     className="flex items-center justify-center border-4 font-bold ml-auto"
