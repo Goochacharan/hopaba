@@ -32,7 +32,8 @@ const Inbox: React.FC = () => {
   const { conversations, isLoadingConversations } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Changed initial state to false (collapsed) so the toggle button will be visible
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Redirect to login if not authenticated
   if (!user) {
@@ -60,21 +61,22 @@ const Inbox: React.FC = () => {
   return (
     <MainLayout>
       <div className="min-h-screen bg-background">
-        <SidebarProvider defaultOpen={true} open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SidebarProvider defaultOpen={false} open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <div className="flex h-full min-h-[calc(100vh-128px)] w-full relative">
-            {/* Custom sidebar toggle button that's visible when sidebar is collapsed */}
+            {/* Enhanced sidebar toggle button with higher visibility */}
             <button 
               onClick={() => setSidebarOpen(true)}
               className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-primary-foreground p-2 rounded-r-md shadow-md transition-opacity",
+                "absolute left-0 top-1/2 -translate-y-1/2 z-[100] bg-primary text-primary-foreground p-2 rounded-r-md shadow-lg transition-all",
                 "flex items-center justify-center hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring",
-                "md:h-12 md:w-6",
-                "h-10 w-5",
+                "md:h-16 md:w-8",
+                "h-14 w-7",
+                "border-r border-t border-b border-primary-foreground/20",
                 sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
               )}
               aria-label="Open sidebar"
             >
-              <ArrowRight size={18} />
+              <ArrowRight size={20} className="animate-pulse" />
             </button>
             
             <Sidebar side="left">
