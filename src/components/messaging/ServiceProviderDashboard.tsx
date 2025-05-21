@@ -1,34 +1,28 @@
 
 import React from 'react';
-import ProviderInbox from '@/components/business/ProviderInbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ProviderInbox from '../business/ProviderInbox';
 
 interface ServiceProviderDashboardProps {
   providerId: string;
   category: string;
-  subcategory: string[];
+  subcategory?: string[];
 }
 
-// Component that properly handles subcategory as an array
+/**
+ * Dashboard component for service providers to view and respond to requests
+ */
 const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
   providerId,
   category,
   subcategory
 }) => {
   return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-muted/50 pb-4">
-          <CardTitle className="text-lg">Matching Service Requests</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <ProviderInbox 
-            providerId={providerId}
-            category={category}
-            subcategory={subcategory}
-          />
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <ProviderInbox 
+        providerId={providerId}
+        category={category}
+        subcategory={subcategory}
+      />
     </div>
   );
 };

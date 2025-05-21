@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2 } from 'lucide-react';
+import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -20,6 +21,10 @@ interface ProviderInboxProps {
   subcategory?: string[];
 }
 
+/**
+ * Displays service requests that match provider's category and subcategories
+ * Shows both new requests and requests that the provider has already responded to
+ */
 const ProviderInbox: React.FC<ProviderInboxProps> = ({
   providerId,
   category,
@@ -39,6 +44,33 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     subcategory: subcategory || [],
     subcategoryType: typeof subcategory
   });
+  
+  // Helper function for normalized subcategory comparison
+  const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
+    // If provider has no subcategories, match any request
+    if (!providerSubcategories || providerSubcategories.length === 0) {
+      return true;
+    }
+    
+    // If request has no subcategory but provider has subcategories,
+    // only match if one of provider's subcategories is empty
+    if (!requestSubcategory || requestSubcategory.trim() === '') {
+      return providerSubcategories.some(s => !s || s.trim() === '');
+    }
+    
+    // Normalize request subcategory
+    const normalizedRequestSub = requestSubcategory.toLowerCase().trim();
+    
+    // Check if any of provider's subcategories match the request subcategory
+    return providerSubcategories.some(providerSub => {
+      // Skip empty subcategories
+      if (!providerSub || providerSub.trim() === '') return false;
+      
+      // Normalize provider subcategory and compare
+      const normalizedProviderSub = providerSub.toLowerCase().trim();
+      return normalizedRequestSub === normalizedProviderSub;
+    });
+  };
   
   // Fetch matching requests for this provider's category/subcategory
   const { 
@@ -68,23 +100,14 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         
         console.log('Found service requests:', data?.length || 0);
         
-        // If subcategory is specified, filter results client-side with case-insensitive matching
+        // Filter results on the client side for better subcategory matching
         let filteredData = data as ServiceRequest[];
+        
         if (subcategory && subcategory.length > 0) {
           console.log('Filtering by subcategories:', subcategory);
           
-          // Case-insensitive filtering with trimming
-          filteredData = filteredData.filter(req => {
-            if (!req.subcategory) return false;
-            
-            // Trim and convert both to lowercase for case-insensitive comparison
-            const requestSubLower = req.subcategory.toLowerCase().trim();
-            
-            // Check if any of the provider's subcategories match (case-insensitive with trim)
-            return subcategory.some(providerSub => 
-              providerSub.toLowerCase().trim() === requestSubLower
-            );
-          });
+          // Use the isSubcategoryMatch helper function
+          filteredData = filteredData.filter(req => isSubcategoryMatch(req.subcategory, subcategory));
           
           console.log('After subcategory filtering, found:', filteredData.length);
         }
@@ -188,18 +211,31 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const newRequests = matchingRequests.filter(req => !hasExistingConversation(req.id));
   
   return (
-    <>
+    <TooltipProvider>
       <div className="space-y-4">
         {newRequests.length > 0 && (
           <div>
-            <h3 className="font-medium mb-3">New Requests</h3>
+            <h3 className="font-medium mb-3">
+              New Requests 
+              <Badge variant="secondary" className="ml-2">{newRequests.length}</Badge>
+            </h3>
             <div className="space-y-4">
               {newRequests.slice(0, 5).map(request => (
-                <Card key={request.id}>
+                <Card key={request.id} className="border-l-4 border-l-primary">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">{request.title}</CardTitle>
-                      <Badge>New</Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge>
+                            <Mail className="h-3 w-3 mr-1" />
+                            New
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>New request - you haven't responded yet</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     <CardDescription className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -250,17 +286,27 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 
         {respondedRequests.length > 0 && (
           <div>
-            <h3 className="font-medium mb-3">Responded Requests</h3>
+            <h3 className="font-medium mb-3">
+              Responded Requests
+              <Badge variant="outline" className="ml-2">{respondedRequests.length}</Badge>
+            </h3>
             <div className="space-y-4">
               {respondedRequests.slice(0, 5).map(request => (
-                <Card key={request.id} className="border-muted">
+                <Card key={request.id} className="border-l-4 border-l-muted-foreground">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">{request.title}</CardTitle>
-                      <Badge variant="success">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Responded
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="success">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Responded
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>You've already sent a quotation for this request</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                     <CardDescription className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -333,7 +379,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         onOpenChange={setIsDetailsOpen}
         providerId={providerId}
       />
-    </>
+    </TooltipProvider>
   );
 };
 

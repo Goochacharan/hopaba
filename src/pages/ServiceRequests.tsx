@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import MainLayout from '@/components/MainLayout';
-import ServiceProviderDashboard from '@/components/messaging/ServiceProviderDashboard';
+import ProviderInbox from '@/components/business/ProviderInbox';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,7 +83,7 @@ const ServiceRequests: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           {providerData?.map((provider) => (
             <div key={provider.id} className="mb-8">
-              <ServiceProviderDashboard 
+              <ProviderInbox
                 providerId={provider.id}
                 category={provider.category}
                 subcategory={provider.subcategory}

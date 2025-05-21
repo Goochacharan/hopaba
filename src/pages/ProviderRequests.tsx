@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import MainLayout from '@/components/MainLayout';
-import ServiceProviderDashboard from '@/components/messaging/ServiceProviderDashboard';
+import ProviderInbox from '@/components/business/ProviderInbox'; 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from '@tanstack/react-query';
@@ -97,7 +97,7 @@ const ProviderRequests: React.FC = () => {
             <TabsContent value="requests">
               {providerData?.map((provider) => (
                 <div key={provider.id}>
-                  <ServiceProviderDashboard 
+                  <ProviderInbox
                     providerId={provider.id}
                     category={provider.category}
                     subcategory={provider.subcategory || []}
