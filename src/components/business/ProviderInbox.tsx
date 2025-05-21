@@ -27,6 +27,13 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const { user } = useAuth();
   const { createConversation, conversations } = useConversations();
   
+  console.log('Provider filtering with:', { 
+    providerId, 
+    category, 
+    subcategory: subcategory || [],
+    subcategoryType: typeof subcategory
+  });
+  
   // Fetch matching requests for this provider's category/subcategory
   const { 
     data: matchingRequests, 
@@ -35,6 +42,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   } = useQuery({
     queryKey: ['matchingRequests', providerId, category, subcategory],
     queryFn: async () => {
+      console.log('Fetching requests for category:', category);
       const { data, error } = await supabase
         .from('service_requests')
         .select('*')
@@ -44,11 +52,27 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       
       if (error) throw error;
       
-      // If subcategory is specified, filter results client-side
+      console.log('Found service requests:', data?.length || 0);
+      
+      // If subcategory is specified, filter results client-side with case-insensitive matching
       let filteredData = data as ServiceRequest[];
       if (subcategory && subcategory.length > 0) {
-        // Filter requests where the request's subcategory is included in the provider's subcategory array
-        filteredData = filteredData.filter(req => req.subcategory && subcategory.includes(req.subcategory));
+        console.log('Filtering by subcategories:', subcategory);
+        
+        // Case-insensitive filtering
+        filteredData = filteredData.filter(req => {
+          if (!req.subcategory) return false;
+          
+          // Convert both to lowercase for case-insensitive comparison
+          const requestSubLower = req.subcategory.toLowerCase();
+          
+          // Check if any of the provider's subcategories match (case-insensitive)
+          return subcategory.some(providerSub => 
+            providerSub.toLowerCase() === requestSubLower
+          );
+        });
+        
+        console.log('After subcategory filtering, found:', filteredData.length);
       }
       
       return filteredData;
