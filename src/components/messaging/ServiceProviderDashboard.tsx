@@ -1,5 +1,7 @@
 
 import React from 'react';
+import ProviderInbox from '@/components/business/ProviderInbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ServiceProviderDashboardProps {
   providerId: string;
@@ -7,23 +9,26 @@ interface ServiceProviderDashboardProps {
   subcategory: string[];
 }
 
-// Update this component to accept subcategory as an array
+// Component that properly handles subcategory as an array
 const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
   providerId,
   category,
   subcategory
 }) => {
   return (
-    <div>
-      {/* Component implementation that properly handles subcategory as an array */}
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-4">Service Provider Dashboard</h2>
-        <div className="bg-gray-100 p-4 rounded-md">
-          <p><strong>Provider ID:</strong> {providerId}</p>
-          <p><strong>Category:</strong> {category}</p>
-          <p><strong>Subcategories:</strong> {subcategory.join(', ') || 'None'}</p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/50 pb-4">
+          <CardTitle className="text-lg">Matching Service Requests</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <ProviderInbox 
+            providerId={providerId}
+            category={category}
+            subcategory={subcategory}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 };

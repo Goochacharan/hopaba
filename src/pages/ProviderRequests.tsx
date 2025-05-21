@@ -100,7 +100,7 @@ const ProviderRequests: React.FC = () => {
                   <ServiceProviderDashboard 
                     providerId={provider.id}
                     category={provider.category}
-                    subcategory={provider.subcategory}
+                    subcategory={provider.subcategory || []}
                   />
                 </div>
               ))}

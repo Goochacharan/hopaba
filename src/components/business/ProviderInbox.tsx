@@ -15,7 +15,7 @@ import { useConversations } from '@/hooks/useConversations';
 interface ProviderInboxProps {
   providerId: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string[];
 }
 
 const ProviderInbox: React.FC<ProviderInboxProps> = ({
@@ -46,8 +46,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       
       // If subcategory is specified, filter results client-side
       let filteredData = data as ServiceRequest[];
-      if (subcategory) {
-        filteredData = filteredData.filter(req => req.subcategory === subcategory);
+      if (subcategory && subcategory.length > 0) {
+        // Filter requests where the request's subcategory is included in the provider's subcategory array
+        filteredData = filteredData.filter(req => req.subcategory && subcategory.includes(req.subcategory));
       }
       
       return filteredData;
