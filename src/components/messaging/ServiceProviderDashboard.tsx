@@ -73,10 +73,17 @@ const getMatchingRequests = async (providerId: string) => {
   
   if (error) throw error;
   
-  // Filter by subcategory if the provider has one
-  const filteredRequests = provider.subcategory 
-    ? data.filter(req => !req.subcategory || req.subcategory === provider.subcategory)
-    : data;
+  // Improved subcategory matching logic
+  const filteredRequests = data.filter(req => {
+    // If provider has no subcategory, show all requests in their category
+    if (!provider.subcategory) return true;
+    
+    // If request has no subcategory, show it to all providers in that category
+    if (!req.subcategory) return true;
+    
+    // Case-insensitive comparison of subcategories
+    return req.subcategory.toLowerCase() === provider.subcategory.toLowerCase();
+  });
     
   return filteredRequests as ServiceRequestWithConversation[];
 };
