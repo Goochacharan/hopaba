@@ -7,7 +7,8 @@ import {
   SidebarContent, 
   SidebarTrigger, 
   SidebarHeader,
-  SidebarRail
+  SidebarRail,
+  useSidebar
 } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchingProvidersContent } from '@/components/request/MatchingProvidersDialog';
@@ -26,14 +27,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
+// Create a custom sidebar toggle button component that uses useSidebar
+const SidebarToggleButton = () => {
+  const { toggleSidebar, state } = useSidebar();
+  const isOpen = state === "expanded";
+  
+  return (
+    <button 
+      onClick={toggleSidebar}
+      className={cn(
+        "absolute left-0 top-1/2 -translate-y-1/2 z-[100] bg-primary text-primary-foreground p-2 rounded-r-md shadow-lg transition-all duration-300",
+        "flex items-center justify-center hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring",
+        "md:h-16 md:w-8",
+        "h-14 w-7",
+        "border-r border-t border-b border-primary-foreground/20",
+        isOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+      )}
+      aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
+    >
+      <ArrowRight size={20} className="animate-pulse" />
+    </button>
+  );
+};
+
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
   const { conversations, isLoadingConversations } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
-  // Changed initial state to false (collapsed) so the toggle button will be visible
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Redirect to login if not authenticated
   if (!user) {
@@ -46,7 +68,7 @@ const Inbox: React.FC = () => {
     
     // Close sidebar on mobile when a request is selected
     if (window.innerWidth < 768) {
-      setSidebarOpen(false);
+      // Will be handled by the SidebarProvider
     }
   };
   
@@ -61,23 +83,10 @@ const Inbox: React.FC = () => {
   return (
     <MainLayout>
       <div className="min-h-screen bg-background">
-        <SidebarProvider defaultOpen={false} open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SidebarProvider defaultOpen={false}>
           <div className="flex h-full min-h-[calc(100vh-128px)] w-full relative">
-            {/* Enhanced sidebar toggle button with higher visibility */}
-            <button 
-              onClick={() => setSidebarOpen(true)}
-              className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 z-[100] bg-primary text-primary-foreground p-2 rounded-r-md shadow-lg transition-all",
-                "flex items-center justify-center hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring",
-                "md:h-16 md:w-8",
-                "h-14 w-7",
-                "border-r border-t border-b border-primary-foreground/20",
-                sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-              )}
-              aria-label="Open sidebar"
-            >
-              <ArrowRight size={20} className="animate-pulse" />
-            </button>
+            {/* Use our custom sidebar toggle button that uses the useSidebar hook */}
+            <SidebarToggleButton />
             
             <Sidebar side="left">
               <SidebarHeader className="border-b border-border p-4">
