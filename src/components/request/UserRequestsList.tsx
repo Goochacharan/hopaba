@@ -14,16 +14,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarIcon, Trash2, ListCheck } from 'lucide-react';
+import { CalendarIcon, Trash2, ListCheck, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MatchingProvidersDialog } from './MatchingProvidersDialog';
 
 const UserRequestsList: React.FC = () => {
   const { userRequests, isLoadingUserRequests, deleteRequest, isDeleting, refetchUserRequests } = useServiceRequests();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [showProvidersDialog, setShowProvidersDialog] = useState(false);
   
   const handleDeleteClick = (requestId: string) => {
     setRequestToDelete(requestId);
@@ -35,6 +45,11 @@ const UserRequestsList: React.FC = () => {
       deleteRequest(requestToDelete);
       setDeleteDialogOpen(false);
     }
+  };
+
+  const handleViewProviders = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setShowProvidersDialog(true);
   };
 
   const openRequests = userRequests?.filter(req => req.status === 'open') || [];
@@ -70,15 +85,27 @@ const UserRequestsList: React.FC = () => {
             )}
           </div>
         </CardContent>
-        <CardFooter className="pt-2 flex justify-end">
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={() => handleDeleteClick(request.id)}
-            disabled={isDeleting}
-          >
-            <Trash2 className="h-4 w-4 mr-1" /> Delete
-          </Button>
+        <CardFooter className="pt-2 flex justify-between">
+          {request.status === 'open' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleViewProviders(request.id)}
+              className="flex items-center gap-1"
+            >
+              <Users className="h-4 w-4 mr-1" /> View Providers
+            </Button>
+          )}
+          <div className="ml-auto">
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => handleDeleteClick(request.id)}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     );
@@ -159,6 +186,13 @@ const UserRequestsList: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Matching Providers Dialog */}
+      <MatchingProvidersDialog
+        requestId={selectedRequestId}
+        open={showProvidersDialog} 
+        onOpenChange={setShowProvidersDialog}
+      />
       
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
