@@ -111,7 +111,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       try {
         const { data, error } = await supabase
           .from('service_requests')
-          .select('id, title, description, budget, area, city, created_at, subcategory, user_id, status')
+          .select('id, title, description, budget, area, city, created_at, subcategory, user_id, status, category')
           .eq('status', 'open')
           .eq('category', category)
           .order('created_at', { ascending: false });
