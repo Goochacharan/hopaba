@@ -55,18 +55,63 @@ export const useServiceRequests = () => {
     return data[0] as ServiceRequest;
   };
 
-  // Delete a service request
+  // Delete a service request - Modified to handle conversations deletion first
   const deleteRequest = async (id: string) => {
     if (!user) throw new Error('User not authenticated');
 
-    const { error } = await supabase
-      .from('service_requests')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+    try {
+      // Step 1: Find all conversations associated with this service request
+      const { data: conversations, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('request_id', id);
+      
+      if (conversationsError) throw conversationsError;
+      
+      // If there are conversations, delete them one by one
+      if (conversations && conversations.length > 0) {
+        console.log(`Found ${conversations.length} conversations to delete for request ${id}`);
+        
+        // Step 2: For each conversation, delete all associated messages first
+        for (const conversation of conversations) {
+          // Delete messages for this conversation
+          const { error: messagesError } = await supabase
+            .from('messages')
+            .delete()
+            .eq('conversation_id', conversation.id);
+          
+          if (messagesError) {
+            console.error(`Error deleting messages for conversation ${conversation.id}:`, messagesError);
+            throw messagesError;
+          }
+          
+          // Delete the conversation itself
+          const { error: conversationError } = await supabase
+            .from('conversations')
+            .delete()
+            .eq('id', conversation.id);
+          
+          if (conversationError) {
+            console.error(`Error deleting conversation ${conversation.id}:`, conversationError);
+            throw conversationError;
+          }
+        }
+      }
+      
+      // Step 3: Now it's safe to delete the service request
+      const { error } = await supabase
+        .from('service_requests')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
 
-    if (error) throw error;
-    return id;
+      if (error) throw error;
+      
+      return id;
+    } catch (error: any) {
+      console.error('Error in cascade delete operation:', error);
+      throw new Error(`Failed to delete request: ${error.message || 'Unknown error'}`);
+    }
   };
 
   // Get requests for a specific category and subcategory (for providers)
@@ -164,6 +209,8 @@ export const useServiceRequests = () => {
       queryClient.invalidateQueries({ queryKey: ['serviceRequests'] });
       // Also invalidate matching requests as the deleted request should no longer appear
       queryClient.invalidateQueries({ queryKey: ['matching-requests'] });
+      // Also invalidate conversations as they're deleted with the request
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       
       toast({
         title: 'Request Deleted',
