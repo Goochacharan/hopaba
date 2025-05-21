@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Phone, Mail, MessageSquare } from 'lucide-react';
+import { Loader2, Phone, Mail, MessageSquare, MapPin, Building } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -37,7 +38,7 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
   };
 
   // Fetch matching providers using the database function
-  const { data: matchingProviders, isLoading, error } = useQuery({
+  const { data: matchingProviders, isLoading, error, refetch } = useQuery({
     queryKey: ['matchingProviders', requestId],
     queryFn: async () => {
       if (!requestId) return [];
@@ -45,7 +46,12 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
       const { data, error } = await supabase
         .rpc('get_matching_providers_for_request', { request_id: requestId });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching matching providers:", error);
+        throw error;
+      }
+      
+      console.log("Matching providers found:", data);
       return data as MatchingProviderResult[];
     },
     enabled: !!requestId && open,
@@ -53,22 +59,34 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
   });
 
   const handleContactProvider = (provider: MatchingProviderResult) => {
-    if (!user || !requestId) return;
+    if (!user || !requestId) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to contact a service provider.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Call the createConversation function
     createConversation(requestId, provider.provider_id, user.id);
     
     // Add to local state to show as contacted
     setContactedProviders(prev => new Set([...prev, provider.provider_id]));
+    
+    toast({
+      title: "Provider contacted",
+      description: `You've initiated a conversation with ${provider.provider_name}.`,
+    });
   };
 
   if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Matching Service Providers</DialogTitle>
+          <DialogTitle className="text-xl">Matching Service Providers</DialogTitle>
           <DialogDescription>
             These providers match your service request category and can help you.
           </DialogDescription>
@@ -80,8 +98,11 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : error ? (
-            <div className="text-center text-destructive py-4">
-              Error loading matching providers. Please try again.
+            <div className="text-center text-destructive py-4 flex flex-col items-center gap-2">
+              <p>Error loading matching providers.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Try Again
+              </Button>
             </div>
           ) : !matchingProviders || matchingProviders.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
@@ -93,17 +114,25 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
                                   contactedProviders.has(provider.provider_id);
                                   
               return (
-                <Card key={provider.provider_id} className="overflow-hidden">
+                <Card key={provider.provider_id} className="overflow-hidden border-l-4 border-l-primary">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-md">{provider.provider_name}</CardTitle>
-                    <div className="flex flex-wrap gap-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Building className="h-5 w-5 text-muted-foreground" />
+                      {provider.provider_name}
+                    </CardTitle>
+                    <div className="flex flex-wrap gap-1 mt-1">
                       <Badge variant="secondary">{provider.provider_category}</Badge>
                       {provider.provider_subcategory && (
                         <Badge variant="outline">{provider.provider_subcategory}</Badge>
                       )}
                     </div>
                   </CardHeader>
-                  <CardFooter className="flex justify-end pt-2">
+                  <CardContent className="pb-2 text-sm text-muted-foreground">
+                    <p>This service provider specializes in {provider.provider_category.toLowerCase()}
+                    {provider.provider_subcategory ? ` with focus on ${provider.provider_subcategory.toLowerCase()}` : ''}.
+                    </p>
+                  </CardContent>
+                  <CardFooter className="flex justify-end pt-2 gap-2">
                     <Button
                       size="sm"
                       variant={isContacted ? "outline" : "default"}
@@ -111,7 +140,7 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
                       disabled={isCreatingConversation || isContacted}
                       className="flex items-center gap-1"
                     >
-                      {isCreatingConversation ? (
+                      {isCreatingConversation && contactedProviders.has(provider.provider_id) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <MessageSquare className="h-4 w-4" />
