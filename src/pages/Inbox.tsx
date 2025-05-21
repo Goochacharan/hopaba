@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
@@ -93,7 +92,8 @@ const Inbox: React.FC = () => {
                 <h2 className="text-lg font-semibold">Your Requests</h2>
               </SidebarHeader>
               <SidebarContent>
-                {isLoadingUserRequests ? (
+                {
+                  isLoadingUserRequests ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
@@ -130,7 +130,8 @@ const Inbox: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                )}
+                )
+                }
               </SidebarContent>
               <SidebarRail />
             </Sidebar>
@@ -170,7 +171,8 @@ const Inbox: React.FC = () => {
                     
                     <TabsContent value="messages">
                       <div className="space-y-4">
-                        {isLoadingConversations ? (
+                        {
+                           isLoadingConversations ? (
                           <div className="flex justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           </div>
@@ -222,7 +224,8 @@ const Inbox: React.FC = () => {
                               </CardContent>
                             </Card>
                           ))
-                        )}
+                        )
+                        }
                       </div>
                     </TabsContent>
                     

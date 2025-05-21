@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,6 +11,10 @@ import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import StarRating from '@/components/marketplace/StarRating';
+import { SortOption } from '@/components/SortButton'; 
+import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -24,6 +28,10 @@ interface MatchingProviderResult {
   provider_category: string;
   provider_subcategory: string;
   user_id: string;
+  city?: string;
+  area?: string;
+  rating?: number;
+  review_count?: number;
 }
 
 // Export the main dialog component
@@ -51,8 +59,14 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
 // Export the content component so it can be used directly without the dialog wrapper
 export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
+  const [currentSort, setCurrentSort] = useState<SortOption>('rating');
+  const [filters, setFilters] = useState<ProviderFiltersType>({
+    minRating: 0,
+    city: null
+  });
 
   // Function to check if the provider already has a conversation for this request
   const hasExistingConversation = (providerId: string) => {
@@ -60,22 +74,58 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
   };
 
-  // Fetch matching providers using the database function
+  // Fetch matching providers using the database function with expanded details
   const { data: matchingProviders, isLoading, error, refetch } = useQuery({
     queryKey: ['matchingProviders', requestId],
     queryFn: async () => {
       if (!requestId) return [];
       
-      const { data, error } = await supabase
+      // First get the matching providers
+      const { data: baseData, error: baseError } = await supabase
         .rpc('get_matching_providers_for_request', { request_id: requestId });
         
-      if (error) {
-        console.error("Error fetching matching providers:", error);
-        throw error;
+      if (baseError) {
+        console.error("Error fetching matching providers:", baseError);
+        throw baseError;
       }
       
-      console.log("Matching providers found:", data);
-      return data as MatchingProviderResult[];
+      // Then fetch additional details for each provider
+      const enhancedData = await Promise.all(
+        (baseData || []).map(async (provider: MatchingProviderResult) => {
+          // Get detailed provider info including city, area
+          const { data: providerDetail } = await supabase
+            .from('service_providers')
+            .select('city, area')
+            .eq('id', provider.provider_id)
+            .single();
+          
+          // Get reviews for the provider to calculate average rating
+          const { data: reviews } = await supabase
+            .from('seller_reviews')
+            .select('rating')
+            .eq('seller_id', provider.user_id);
+          
+          // Calculate average rating if reviews exist
+          let rating = 4.5; // Default rating
+          let reviewCount = 0;
+          
+          if (reviews && reviews.length > 0) {
+            rating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+            reviewCount = reviews.length;
+          }
+          
+          return {
+            ...provider,
+            city: providerDetail?.city || 'Unknown',
+            area: providerDetail?.area || 'Unknown',
+            rating,
+            review_count: reviewCount
+          };
+        })
+      );
+      
+      console.log("Enhanced providers data:", enhancedData);
+      return enhancedData as MatchingProviderResult[];
     },
     enabled: !!requestId,
     staleTime: 60000, // 1 minute cache
@@ -102,6 +152,48 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       description: `You've initiated a conversation with ${provider.provider_name}.`,
     });
   };
+
+  // Navigate to provider's shop page
+  const goToProviderShop = (providerId: string, userId: string) => {
+    navigate(`/shop?provider=${providerId}&user=${userId}`);
+  };
+
+  // Get unique cities for filtering
+  const cities = useMemo(() => {
+    if (!matchingProviders) return [];
+    const uniqueCities = new Set<string>();
+    matchingProviders.forEach(provider => {
+      if (provider.city) uniqueCities.add(provider.city);
+    });
+    return Array.from(uniqueCities).sort();
+  }, [matchingProviders]);
+
+  // Apply sorting and filtering to providers
+  const filteredAndSortedProviders = useMemo(() => {
+    if (!matchingProviders) return [];
+    
+    // Apply filters
+    let filtered = matchingProviders.filter(provider => {
+      const meetsRatingFilter = provider.rating !== undefined && provider.rating >= filters.minRating;
+      const meetsCityFilter = !filters.city || provider.city === filters.city;
+      return meetsRatingFilter && meetsCityFilter;
+    });
+    
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      switch (currentSort) {
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'reviewCount':
+          return (b.review_count || 0) - (a.review_count || 0);
+        case 'newest':
+          // Since we don't have a 'created_at' field in our data, we'll use alphabetical order
+          return a.provider_name.localeCompare(b.provider_name);
+        default:
+          return 0;
+      }
+    });
+  }, [matchingProviders, filters, currentSort]);
 
   if (isLoading) {
     return (
@@ -132,48 +224,90 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   return (
     <>
-      {matchingProviders.map((provider) => {
-        const isContacted = hasExistingConversation(provider.provider_id) || 
+      {/* Add filters and sort buttons */}
+      <ProviderFilters 
+        cities={cities}
+        onFilterChange={setFilters}
+        onSortChange={setCurrentSort}
+        currentSort={currentSort}
+      />
+    
+      {filteredAndSortedProviders.length === 0 ? (
+        <div className="text-center py-4 text-muted-foreground">
+          No providers match your current filters.
+        </div>
+      ) : (
+        filteredAndSortedProviders.map((provider) => {
+          const isContacted = hasExistingConversation(provider.provider_id) || 
                             contactedProviders.has(provider.provider_id);
                             
-        return (
-          <Card key={provider.provider_id} className="overflow-hidden border-l-4 border-l-primary">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building className="h-5 w-5 text-muted-foreground" />
-                {provider.provider_name}
-              </CardTitle>
-              <div className="flex flex-wrap gap-1 mt-1">
-                <Badge variant="secondary">{provider.provider_category}</Badge>
-                {provider.provider_subcategory && (
-                  <Badge variant="outline">{provider.provider_subcategory}</Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pb-2 text-sm text-muted-foreground">
-              <p>This service provider specializes in {provider.provider_category.toLowerCase()}
-              {provider.provider_subcategory ? ` with focus on ${provider.provider_subcategory.toLowerCase()}` : ''}.
-              </p>
-            </CardContent>
-            <CardFooter className="flex justify-end pt-2 gap-2">
-              <Button
-                size="sm"
-                variant={isContacted ? "outline" : "default"}
-                onClick={() => handleContactProvider(provider)}
-                disabled={isCreatingConversation || isContacted}
-                className="flex items-center gap-1"
-              >
-                {isCreatingConversation && contactedProviders.has(provider.provider_id) ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MessageSquare className="h-4 w-4" />
-                )}
-                {isContacted ? "Contacted" : "Contact Provider"}
-              </Button>
-            </CardFooter>
-          </Card>
-        );
-      })}
+          // Calculate numerical rating score (out of 100)
+          const ratingScore = Math.round((provider.rating || 4.5) * 20);
+                            
+          return (
+            <Card key={provider.provider_id} className="overflow-hidden border-l-4 border-l-primary mb-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Building className="h-5 w-5 text-muted-foreground" />
+                  <button 
+                    onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
+                    className="hover:underline text-primary"
+                  >
+                    {provider.provider_name}
+                  </button>
+                </CardTitle>
+                <div className="flex flex-wrap gap-2 mt-1 items-center">
+                  <Badge variant="secondary">{provider.provider_category}</Badge>
+                  {provider.provider_subcategory && (
+                    <Badge variant="outline">{provider.provider_subcategory}</Badge>
+                  )}
+                  {/* Display rating */}
+                  <div className="flex items-center gap-1">
+                    <StarRating rating={provider.rating || 4.5} size="small" />
+                    <span className="text-xs text-muted-foreground">
+                      ({ratingScore}/100, {provider.review_count || 0} reviews)
+                    </span>
+                  </div>
+                </div>
+                {/* Location information */}
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <MapPin className="h-3 w-3" />
+                  <span>{provider.area}, {provider.city}</span>
+                </div>
+              </CardHeader>
+              <CardContent className="pb-2 text-sm text-muted-foreground">
+                <p>This service provider specializes in {provider.provider_category.toLowerCase()}
+                {provider.provider_subcategory ? ` with focus on ${provider.provider_subcategory.toLowerCase()}` : ''}.
+                </p>
+              </CardContent>
+              <CardFooter className="flex justify-between pt-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
+                  className="flex items-center gap-1"
+                >
+                  View Profile
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isContacted ? "outline" : "default"}
+                  onClick={() => handleContactProvider(provider)}
+                  disabled={isCreatingConversation || isContacted}
+                  className="flex items-center gap-1"
+                >
+                  {isCreatingConversation && contactedProviders.has(provider.provider_id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="h-4 w-4" />
+                  )}
+                  {isContacted ? "Contacted" : "Contact Provider"}
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })
+      )}
     </>
   );
 }
