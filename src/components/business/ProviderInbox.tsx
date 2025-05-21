@@ -14,6 +14,7 @@ import { useConversations } from '@/hooks/useConversations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { toast } from '@/components/ui/use-toast';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -37,14 +38,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const MAX_RETRIES = 3;
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  
-  // Debug logs to understand provider filtering parameters
-  console.log('Provider filtering with:', { 
-    providerId, 
-    category, 
-    subcategory: subcategory || [],
-    subcategoryType: typeof subcategory
-  });
   
   // Helper function for normalized subcategory comparison with improved debugging
   const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
@@ -163,17 +156,60 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
   };
   
-  // Handle creating a new conversation
-  const handleContactRequester = (request: ServiceRequest) => {
-    if (!user) return;
+  // Handle creating a new conversation and navigate to message page
+  const handleContactRequester = async (request: ServiceRequest) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to contact a requester.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     console.log('Creating conversation:', {
       requestId: request.id,
       providerId,
       userId: request.user_id
     });
     
-    // Call the createConversation with the updated signature
-    createConversation(request.id, providerId, request.user_id);
+    try {
+      // Create the conversation
+      createConversation(request.id, providerId, request.user_id);
+      
+      // Find the newly created conversation - we'll give it a moment to be created
+      setTimeout(async () => {
+        const { data } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('request_id', request.id)
+          .eq('provider_id', providerId)
+          .single();
+          
+        if (data) {
+          // Navigate to the conversation with quotation mode activated
+          navigate(`/messages/${data.id}?quotationMode=true`);
+          
+          toast({
+            title: "Conversation started",
+            description: "You can now send a quotation to the requester."
+          });
+        } else {
+          toast({
+            title: "Conversation created",
+            description: "You can find it in your messages section.",
+          });
+          navigate('/messages');
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem creating the conversation. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle viewing request details

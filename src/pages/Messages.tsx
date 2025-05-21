@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import MainLayout from '@/components/MainLayout';
 import { useConversations } from '@/hooks/useConversations';
@@ -23,6 +24,7 @@ import ServiceProviderDashboard from '@/components/messaging/ServiceProviderDash
 const Messages: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   
   const [message, setMessage] = useState('');
@@ -36,6 +38,20 @@ const Messages: React.FC = () => {
     isSendingMessage,
     markMessagesAsRead 
   } = useConversations();
+
+  // Check for quotationMode param in URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const shouldActivateQuotation = queryParams.get('quotationMode') === 'true';
+    
+    if (shouldActivateQuotation) {
+      setQuotationMode(true);
+      
+      // Clean up the URL by removing the parameter
+      const newUrl = `${location.pathname}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [location]);
 
   // Fetch user's role (whether they're a service provider or not)
   const { data: providerData, isLoading: isLoadingProviderData } = useQuery({

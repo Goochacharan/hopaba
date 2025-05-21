@@ -10,6 +10,8 @@ import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RequestDetailsDialogProps {
   request: ServiceRequest | null;
@@ -20,11 +22,12 @@ interface RequestDetailsDialogProps {
 
 export function RequestDetailsDialog({ request, open, onOpenChange, providerId }: RequestDetailsDialogProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { createConversation, isCreatingConversation } = useConversations();
   
   if (!open || !request) return null;
 
-  const handleContactRequester = () => {
+  const handleContactRequester = async () => {
     if (!user || !request) {
       toast({
         title: "Authentication required",
@@ -34,15 +37,45 @@ export function RequestDetailsDialog({ request, open, onOpenChange, providerId }
       return;
     }
     
-    createConversation(request.id, providerId, request.user_id);
-    
-    toast({
-      title: "Requester contacted",
-      description: `You've initiated a conversation for this service request.`,
-    });
-    
-    // Close dialog after contacting
-    onOpenChange(false);
+    try {
+      // Create the conversation
+      createConversation(request.id, providerId, request.user_id);
+      
+      // Find the newly created conversation - we'll give it a moment to be created
+      setTimeout(async () => {
+        const { data } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('request_id', request.id)
+          .eq('provider_id', providerId)
+          .single();
+          
+        if (data) {
+          // Navigate to the conversation with quotation mode activated
+          navigate(`/messages/${data.id}?quotationMode=true`);
+          
+          toast({
+            title: "Conversation started",
+            description: "You can now send a quotation to the requester."
+          });
+        } else {
+          toast({
+            title: "Conversation created",
+            description: "You can find it in your messages section.",
+          });
+          navigate('/messages');
+        }
+      }, 500);
+      
+      // Close dialog after contacting
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem creating the conversation. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Format date range if available
