@@ -6,7 +6,7 @@ export interface Business {
   id: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string[];
   description: string;
   address: string;
   area: string;
@@ -30,7 +30,7 @@ export interface Business {
   created_at: string;
   updated_at: string;
   rating?: number;
-  postal_code?: string; // Add the postal_code property
+  postal_code?: string;
 }
 
 export const useBusinesses = () => {
@@ -44,7 +44,7 @@ export const useBusinesses = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw new Error(error.message);
-      return data;
+      return data as Business[];
     }
   });
 };
@@ -65,7 +65,7 @@ export const useBusinessesByCategory = (category: string | null) => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw new Error(error.message);
-      return data;
+      return data as Business[];
     },
     enabled: true
   });
@@ -88,7 +88,8 @@ export const useBusinessesBySubcategory = (category: string | null, subcategory:
       
       if (subcategory && subcategory !== "") {
         console.log(`Filtering by subcategory: ${subcategory}`);
-        query = query.eq('subcategory', subcategory);
+        // Use contains operator for array fields
+        query = query.contains('subcategory', [subcategory]);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -99,7 +100,7 @@ export const useBusinessesBySubcategory = (category: string | null, subcategory:
       }
       
       console.log(`Found ${data?.length} businesses with subcategory: ${subcategory}`);
-      return data || [];
+      return data as Business[];
     },
     enabled: true
   });

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +14,7 @@ export interface Business {
   id?: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string[];
   description: string;
   area: string;
   city: string;

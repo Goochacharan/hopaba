@@ -40,7 +40,8 @@ const SubcategorySelector: React.FC<SubcategorySelectorProps> = ({
   const [open, setOpen] = useState(false);
   
   useEffect(() => {
-    setSelectedValues(Array.isArray(value) ? value : []);
+    // Ensure value is always treated as an array
+    setSelectedValues(Array.isArray(value) ? value : value ? [value] : []);
   }, [value]);
   
   const handleValueChange = (newValue: string) => {

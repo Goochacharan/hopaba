@@ -49,7 +49,7 @@ export const useBusinessDetail = (id: string | undefined) => {
         return null;
       }
       
-      return data;
+      return data as Business;
     },
     enabled: !!id
   });

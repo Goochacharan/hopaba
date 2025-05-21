@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Event, SupabaseEvent } from '@/hooks/types/recommendationTypes';
 import { toast } from '@/components/ui/use-toast';
@@ -205,3 +204,8 @@ export const fetchEvents = async (searchTerm: string): Promise<Event[]> => {
     return [];
   }
 };
+
+export function ensureStringArray(value: any): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}

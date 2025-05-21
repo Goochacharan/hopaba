@@ -22,11 +22,11 @@ export interface ServiceProvider {
   id: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string[];
   user_id: string;
   provider_name?: string;
   provider_category?: string;
-  provider_subcategory?: string;
+  provider_subcategory?: string[];
   provider_id?: string;
 }
 

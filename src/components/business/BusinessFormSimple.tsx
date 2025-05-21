@@ -27,7 +27,7 @@ import { useCategories, useSubcategories } from '@/hooks/useCategories';
 export interface BusinessFormValues {
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory: string[];
   description: string;
   area: string;
   city: string;
@@ -56,7 +56,7 @@ export interface Business {
   id?: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string[];
   description: string;
   area: string;
   city: string;
@@ -504,11 +504,15 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       console.log("Submitting availability days:", availabilityDays);
       console.log("Subcategory values:", data.subcategory);
       
-      // Prepare business data, ensuring subcategory can be an array
+      // Ensure subcategory is always an array
+      const subcategoryArray = Array.isArray(data.subcategory) ? data.subcategory : 
+                              (data.subcategory ? [data.subcategory] : []);
+      
+      // Prepare business data with correct subcategory array
       const businessData = {
         name: data.name,
         category: data.category,
-        subcategory: data.subcategory || [],
+        subcategory: subcategoryArray,
         description: data.description,
         area: data.area,
         city: data.city,
