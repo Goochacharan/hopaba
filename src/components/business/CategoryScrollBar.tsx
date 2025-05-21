@@ -80,15 +80,15 @@ interface CategoryScrollBarProps {
   selected: string;
   onSelect: (category: string) => void;
   className?: string;
-  selectedSubcategory?: string;
-  onSubcategorySelect?: (subcategory: string) => void;
+  selectedSubcategory?: string[];  // Changed from string to string[]
+  onSubcategorySelect?: (subcategories: string[]) => void;  // Changed from string to string[]
 }
 
 const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   selected,
   onSelect,
   className,
-  selectedSubcategory = "",
+  selectedSubcategory = [],  // Default to empty array
   onSubcategorySelect
 }) => {
   const { data: categoriesData, isLoading } = useCategories();
@@ -160,12 +160,10 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
     }
   };
   
-  const handleSubcategoryChange = (subcategory: string) => {
-    console.log("Subcategory selected:", subcategory);
+  const handleSubcategoryChange = (subcategories: string[]) => {
+    console.log("Subcategories selected:", subcategories);
     if (onSubcategorySelect) {
-      // Convert 'all' value to empty string for consistent handling in parent components
-      const normalizedValue = subcategory === 'all' ? '' : subcategory;
-      onSubcategorySelect(normalizedValue);
+      onSubcategorySelect(subcategories);
     }
   };
 
@@ -176,7 +174,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
     if (cat !== selected) {
       // Reset subcategory when changing category
       if (onSubcategorySelect) {
-        onSubcategorySelect('');
+        onSubcategorySelect([]);  // Reset with empty array
       }
     }
   };
@@ -250,10 +248,10 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
               className="w-full"
             />
             
-            {selectedSubcategory && selectedSubcategory !== 'all' && (
+            {selectedSubcategory && selectedSubcategory.length > 0 && (
               <div className="mt-2 flex items-center justify-center">
                 <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                  Currently viewing: {selectedSubcategory}
+                  Currently viewing: {selectedSubcategory.join(', ')}
                 </div>
               </div>
             )}

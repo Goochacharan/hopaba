@@ -35,7 +35,7 @@ interface BusinessFormContentProps {
   setShowAddSubcategoryDialog?: (show: boolean) => void;
   isSubmitting: boolean;
   business?: Business;
-  onCancel?: () => void; // Added this property to fix the error
+  onCancel?: () => void;
 }
 
 const DAYS_OF_WEEK = [
@@ -183,7 +183,17 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
                 Subcategory
               </FormLabel>
               <div className="flex gap-2">
-                <Select value={field.value || ""} onValueChange={field.onChange}>
+                {/* Updated to handle string[] type */}
+                <Select 
+                  value={Array.isArray(field.value) && field.value.length > 0 ? field.value[0] : ""} 
+                  onValueChange={(value) => {
+                    if (value) {
+                      form.setValue("subcategory", [value], { shouldValidate: true });
+                    } else {
+                      form.setValue("subcategory", [], { shouldValidate: true });
+                    }
+                  }}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a subcategory (optional)" />

@@ -37,10 +37,13 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
           if (subcategoryFilter) {
             // Safely check if the provider has a subcategory property
             filteredProviders = filteredProviders.filter(provider => {
-              // Access the subcategory safely using any type assertion since it's not in the type definition
-              const providerSubcategory = (provider as any).subcategory;
-              return providerSubcategory && 
-                providerSubcategory.toLowerCase() === subcategoryFilter.toLowerCase();
+              // Access the subcategory safely as an array
+              const providerSubcategories = (provider as any).subcategory || [];
+              // Check if the subcategory array includes the filter value
+              return Array.isArray(providerSubcategories) && 
+                providerSubcategories.some(sub => 
+                  sub.toLowerCase() === subcategoryFilter.toLowerCase()
+                );
             });
           }
         }
@@ -101,9 +104,9 @@ export const fetchServiceProviders = async (searchTerm: string, categoryFilter: 
       const dbCategory = categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
       query = query.eq('category', dbCategory);
       
-      // Apply subcategory filter if provided
+      // Apply subcategory filter if provided - updated to handle subcategory as array
       if (subcategoryFilter) {
-        query = query.eq('subcategory', subcategoryFilter);
+        query = query.contains('subcategory', [subcategoryFilter]);
       }
     }
     
