@@ -1,17 +1,17 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle } from 'lucide-react';
+import { Loader2, Calendar, DollarSign, MapPin, MessageSquare, AlertCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -29,6 +29,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const { createConversation, conversations } = useConversations();
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 3;
+  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
   console.log('Provider filtering with:', { 
     providerId, 
@@ -121,6 +123,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     // Call the createConversation with the updated signature
     createConversation(request.id, providerId, request.user_id);
   };
+
+  // Handle viewing request details
+  const handleViewDetails = (request: ServiceRequest) => {
+    setSelectedRequest(request);
+    setIsDetailsOpen(true);
+  };
   
   // Retry fetching data
   const handleRetry = () => {
@@ -188,49 +196,68 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   }
   
   return (
-    <div className="space-y-4">
-      {newRequests.slice(0, 5).map(request => (
-        <Card key={request.id}>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-lg">{request.title}</CardTitle>
-              <Badge>New</Badge>
-            </div>
-            <CardDescription className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>
-                {format(parseISO(request.created_at), 'dd MMM yyyy')}
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pb-2">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1 text-sm">
-                <DollarSign className="h-4 w-4" />
+    <>
+      <div className="space-y-4">
+        {newRequests.slice(0, 5).map(request => (
+          <Card key={request.id}>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg">{request.title}</CardTitle>
+                <Badge>New</Badge>
+              </div>
+              <CardDescription className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
                 <span>
-                  {request.budget ? `Budget: ₹${request.budget}` : 'No budget specified'}
+                  {format(parseISO(request.created_at), 'dd MMM yyyy')}
                 </span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 text-sm">
+                  <DollarSign className="h-4 w-4" />
+                  <span>
+                    {request.budget ? `Budget: ₹${request.budget}` : 'No budget specified'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-sm">
+                  <MapPin className="h-4 w-4" />
+                  <span>{request.area}, {request.city}</span>
+                </div>
+                <p className="text-sm line-clamp-2">{request.description}</p>
               </div>
-              <div className="flex items-center gap-1 text-sm">
-                <MapPin className="h-4 w-4" />
-                <span>{request.area}, {request.city}</span>
-              </div>
-              <p className="text-sm line-clamp-2">{request.description}</p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              className="w-full" 
-              size="sm"
-              onClick={() => handleContactRequester(request)}
-            >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Send Quotation
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => handleViewDetails(request)}
+                className="flex items-center gap-1"
+              >
+                <Eye className="h-4 w-4" />
+                View Details
+              </Button>
+              <Button 
+                className="flex-1" 
+                size="sm"
+                onClick={() => handleContactRequester(request)}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send Quotation
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+      {/* Request Details Dialog */}
+      <RequestDetailsDialog 
+        request={selectedRequest}
+        open={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
+        providerId={providerId}
+      />
+    </>
   );
 };
 
