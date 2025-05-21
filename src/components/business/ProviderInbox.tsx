@@ -38,6 +38,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
+  // Debug logs to understand provider filtering parameters
   console.log('Provider filtering with:', { 
     providerId, 
     category, 
@@ -45,31 +46,52 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     subcategoryType: typeof subcategory
   });
   
-  // Helper function for normalized subcategory comparison
+  // Helper function for normalized subcategory comparison with improved debugging
   const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
+    // For debugging
+    console.log('Matching subcategories:', { 
+      request: requestSubcategory, 
+      provider: providerSubcategories 
+    });
+    
     // If provider has no subcategories, match any request
     if (!providerSubcategories || providerSubcategories.length === 0) {
+      console.log('Provider has no subcategories, matching all requests');
       return true;
     }
     
     // If request has no subcategory but provider has subcategories,
     // only match if one of provider's subcategories is empty
     if (!requestSubcategory || requestSubcategory.trim() === '') {
-      return providerSubcategories.some(s => !s || s.trim() === '');
+      const hasEmptySubcategory = providerSubcategories.some(s => !s || s.trim() === '');
+      console.log('Request has no subcategory, matching if provider has empty subcategory:', hasEmptySubcategory);
+      return hasEmptySubcategory;
     }
     
     // Normalize request subcategory
     const normalizedRequestSub = requestSubcategory.toLowerCase().trim();
+    console.log('Normalized request subcategory:', normalizedRequestSub);
     
     // Check if any of provider's subcategories match the request subcategory
-    return providerSubcategories.some(providerSub => {
+    const match = providerSubcategories.some(providerSub => {
       // Skip empty subcategories
       if (!providerSub || providerSub.trim() === '') return false;
       
       // Normalize provider subcategory and compare
       const normalizedProviderSub = providerSub.toLowerCase().trim();
-      return normalizedRequestSub === normalizedProviderSub;
+      console.log('Comparing request:', normalizedRequestSub, 'with provider:', normalizedProviderSub);
+      
+      // Check for exact match and partial match
+      const exactMatch = normalizedRequestSub === normalizedProviderSub;
+      const includesMatch = normalizedRequestSub.includes(normalizedProviderSub) || 
+                            normalizedProviderSub.includes(normalizedRequestSub);
+      
+      console.log('Match result:', { exactMatch, includesMatch });
+      return exactMatch || includesMatch;
     });
+    
+    console.log('Final subcategory match result:', match);
+    return match;
   };
   
   // Fetch matching requests for this provider's category/subcategory
@@ -99,6 +121,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         if (error) throw error;
         
         console.log('Found service requests:', data?.length || 0);
+        if (data && data.length > 0) {
+          // Log some details about the found requests for debugging
+          data.forEach(req => {
+            console.log(`Request ${req.id}: Category: ${req.category}, Subcategory: ${req.subcategory}`);
+          });
+        }
         
         // Filter results on the client side for better subcategory matching
         let filteredData = data as ServiceRequest[];
@@ -202,6 +230,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         <p className="text-sm text-muted-foreground">
           There are no open service requests matching your business category.
         </p>
+        <div className="mt-4 text-sm text-muted-foreground">
+          <p>Your provider details:</p>
+          <p>Category: {category}</p>
+          <p>Subcategories: {subcategory && subcategory.length > 0 ? subcategory.join(', ') : 'None'}</p>
+        </div>
       </div>
     );
   }
@@ -242,6 +275,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       <span>
                         {format(parseISO(request.created_at), 'dd MMM yyyy')}
                       </span>
+                      {request.subcategory && (
+                        <span className="ml-2 text-xs bg-secondary px-2 py-0.5 rounded-full">
+                          {request.subcategory}
+                        </span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pb-2">
@@ -313,6 +351,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       <span>
                         {format(parseISO(request.created_at), 'dd MMM yyyy')}
                       </span>
+                      {request.subcategory && (
+                        <span className="ml-2 text-xs bg-secondary px-2 py-0.5 rounded-full">
+                          {request.subcategory}
+                        </span>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pb-2">

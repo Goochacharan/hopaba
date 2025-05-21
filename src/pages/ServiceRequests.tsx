@@ -23,12 +23,16 @@ const ServiceRequests: React.FC = () => {
   const { data: providerData, isLoading: isLoadingProvider, error } = useQuery({
     queryKey: ['providerData', user?.id],
     queryFn: async () => {
+      console.log('Fetching provider data for user ID:', user.id);
+      
       const { data, error } = await supabase
         .from('service_providers')
         .select('*')
         .eq('user_id', user.id);
         
       if (error) throw error;
+      
+      console.log('Provider data found:', data);
       return data;
     }
   });
@@ -83,10 +87,20 @@ const ServiceRequests: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           {providerData?.map((provider) => (
             <div key={provider.id} className="mb-8">
+              <div className="mb-4 p-4 bg-muted rounded-lg">
+                <h3 className="font-medium">Your Business Profile</h3>
+                <p className="text-sm mt-1">Category: <strong>{provider.category}</strong></p>
+                {provider.subcategory && provider.subcategory.length > 0 && (
+                  <p className="text-sm mt-1">
+                    Subcategories: <strong>{provider.subcategory.join(', ')}</strong>
+                  </p>
+                )}
+              </div>
+              
               <ProviderInbox
                 providerId={provider.id}
                 category={provider.category}
-                subcategory={provider.subcategory}
+                subcategory={provider.subcategory || []}
               />
             </div>
           ))}
