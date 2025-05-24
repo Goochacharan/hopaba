@@ -16,6 +16,7 @@ export const useConversations = () => {
     console.log('Fetching conversations for user:', user.id);
     
     try {
+      // Fixed SQL query syntax - using proper OR condition
       const { data, error } = await supabase
         .from('conversations')
         .select(`
@@ -28,7 +29,7 @@ export const useConversations = () => {
 
       if (error) {
         console.error('Error fetching conversations:', error);
-        throw error;
+        throw new Error(`Failed to fetch conversations: ${error.message}`);
       }
       
       console.log('Raw conversation data:', data);
@@ -87,7 +88,7 @@ export const useConversations = () => {
     }
   };
 
-  // Create a new conversation with better duplicate handling
+  // Create a new conversation with better duplicate prevention
   const createConversationFn = async ({
     requestId,
     providerId,
@@ -102,13 +103,14 @@ export const useConversations = () => {
     if (!user) throw new Error('User not authenticated');
     
     try {
-      // Check for existing conversation first
+      // Check for existing conversation first with better query
       const { data: existingConversations, error: fetchError } = await supabase
         .from('conversations')
-        .select('id')
+        .select('id, created_at')
         .eq('request_id', requestId)
         .eq('provider_id', providerId)
         .eq('user_id', userId)
+        .order('created_at', { ascending: false })
         .limit(1);
         
       if (fetchError) {
@@ -183,7 +185,7 @@ export const useConversations = () => {
 
       if (error) {
         console.error('Error fetching conversations for request:', error);
-        throw error;
+        throw new Error(`Failed to fetch conversations for request: ${error.message}`);
       }
       
       console.log('Conversations for request:', data);
@@ -269,7 +271,7 @@ export const useConversations = () => {
     };
   };
 
-  // Send a message in a conversation
+  // Send a message in a conversation with improved validation
   const sendMessageFn = async ({
     conversationId,
     content,
@@ -290,10 +292,10 @@ export const useConversations = () => {
       throw new Error('Message content cannot be empty');
     }
     
-    // Ensure quotation price is a valid number if provided
+    // Improve quotation price validation
     if (quotationPrice !== undefined) {
-      if (isNaN(quotationPrice) || quotationPrice <= 0) {
-        throw new Error('Quotation price must be a positive number');
+      if (isNaN(quotationPrice) || quotationPrice <= 0 || quotationPrice > 10000000) {
+        throw new Error('Quotation price must be a positive number less than 10,000,000');
       }
     }
     
@@ -341,13 +343,7 @@ export const useConversations = () => {
           isProvider
         });
         
-        if (isRequester && senderType === 'provider') {
-          throw new Error('You cannot send messages as a provider in this conversation');
-        } else if (isProvider && senderType === 'user') {
-          throw new Error('You cannot send messages as a requester in this conversation');
-        } else {
-          throw new Error('You are not authorized to send messages in this conversation');
-        }
+        throw new Error('You are not authorized to send messages in this conversation');
       }
       
       console.log('Authorization check passed, sending message');
@@ -369,13 +365,14 @@ export const useConversations = () => {
 
       if (error) {
         console.error('Error sending message:', error);
-        throw error;
+        throw new Error(`Failed to send message: ${error.message}`);
       }
       
       if (!data || data.length === 0) {
         throw new Error('No message data returned');
       }
       
+      console.log('Message sent successfully:', data[0]);
       return data[0] as Message;
     } catch (error) {
       console.error('Error in sendMessageFn:', error);
@@ -430,8 +427,9 @@ export const useConversations = () => {
     queryKey: ['conversations', user?.id],
     queryFn: getUserConversations,
     enabled: !!user,
-    retry: 3,
-    retryDelay: 1000
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 30000 // 30 seconds
   });
 
   const {
@@ -451,17 +449,23 @@ export const useConversations = () => {
     onSuccess: (data, variables) => {
       console.log('Message sent successfully:', data);
       
-      // Invalidate and refetch relevant queries
+      // Invalidate and refetch relevant queries immediately
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
       
-      // Don't show success toast here as it's handled in the QuotationDialog component
+      // Force immediate refetch
+      setTimeout(() => {
+        refetchConversations();
+      }, 100);
     },
     onError: (error: any) => {
       console.error('Error sending message:', error);
-      // Re-throw the error so it can be handled by the calling component
-      throw error;
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send message',
+        variant: 'destructive',
+      });
     }
   });
 
@@ -508,17 +512,25 @@ export const useConversations = () => {
         },
         (payload) => {
           const message = payload.new as Message;
+          console.log('Real-time message received:', message);
           
           // Update the conversation cache when a new message arrives
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
           queryClient.invalidateQueries({ queryKey: ['conversation', message.conversation_id] });
           queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
           
+          // Force immediate refetch for better responsiveness
+          setTimeout(() => {
+            refetchConversations();
+          }, 100);
+          
           // Show notification for new message if it's not from the current user
           if (message.sender_id !== user.id) {
             toast({
               title: 'New Message',
-              description: 'You have received a new message',
+              description: message.quotation_price 
+                ? `New quotation received: ₹${message.quotation_price}` 
+                : 'You have received a new message',
             });
           }
         }
@@ -528,7 +540,7 @@ export const useConversations = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [user, queryClient, refetchConversations]);
 
   return {
     conversations,

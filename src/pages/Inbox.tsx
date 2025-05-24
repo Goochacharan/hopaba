@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
   SidebarProvider, 
@@ -52,9 +53,17 @@ const SidebarToggleButton = () => {
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
-  const { conversations, isLoadingConversations } = useConversations();
+  const { conversations, isLoadingConversations, conversationsError } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
+  
+  // Debug logging for conversations
+  useEffect(() => {
+    console.log('Inbox - Conversations data:', conversations);
+    console.log('Inbox - Loading state:', isLoadingConversations);
+    console.log('Inbox - Error state:', conversationsError);
+    console.log('Inbox - Selected request ID:', selectedRequestId);
+  }, [conversations, isLoadingConversations, conversationsError, selectedRequestId]);
   
   // Redirect to login if not authenticated
   if (!user) {
@@ -62,6 +71,7 @@ const Inbox: React.FC = () => {
   }
   
   const handleRequestClick = (requestId: string) => {
+    console.log('Request clicked:', requestId);
     setSelectedRequestId(requestId);
     setActiveTab("messages");
     
@@ -74,10 +84,12 @@ const Inbox: React.FC = () => {
   // Get the selected request details
   const selectedRequest = userRequests?.find(req => req.id === selectedRequestId);
   
-  // Filter conversations for the selected request
+  // Filter conversations for the selected request with debugging
   const requestConversations = conversations?.filter(
     conv => conv.request_id === selectedRequestId
   ) || [];
+  
+  console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
   
   return (
     <MainLayout>
@@ -161,7 +173,7 @@ const Inbox: React.FC = () => {
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                       <TabsTrigger value="messages">
                         <MessageSquare className="h-4 w-4 mr-2" />
-                        Messages
+                        Messages ({requestConversations.length})
                       </TabsTrigger>
                       <TabsTrigger value="providers">
                         <Users className="h-4 w-4 mr-2" />
@@ -171,8 +183,22 @@ const Inbox: React.FC = () => {
                     
                     <TabsContent value="messages">
                       <div className="space-y-4">
-                        {
-                           isLoadingConversations ? (
+                        {conversationsError ? (
+                          <div className="text-center py-8 border rounded-md border-red-200 bg-red-50">
+                            <MessageSquare className="h-10 w-10 mx-auto mb-2 text-red-500" />
+                            <h3 className="text-lg font-medium text-red-700">Error loading messages</h3>
+                            <p className="text-red-600 mb-4">
+                              {conversationsError.message || 'Failed to load conversations'}
+                            </p>
+                            <Button 
+                              onClick={() => window.location.reload()} 
+                              variant="outline" 
+                              className="mt-2"
+                            >
+                              Retry
+                            </Button>
+                          </div>
+                        ) : isLoadingConversations ? (
                           <div className="flex justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           </div>
@@ -208,8 +234,8 @@ const Inbox: React.FC = () => {
                                         "No messages yet"}
                                     </p>
                                     {conversation.latest_quotation && (
-                                      <p className="text-sm font-medium mt-1">
-                                        Latest quotation: ₹{conversation.latest_quotation}
+                                      <p className="text-sm font-medium mt-1 text-green-600">
+                                        Latest quotation: ₹{conversation.latest_quotation.toLocaleString()}
                                       </p>
                                     )}
                                   </div>
@@ -247,14 +273,5 @@ const Inbox: React.FC = () => {
     </MainLayout>
   );
 };
-
-// Types
-interface MatchingProviderResult {
-  provider_id: string;
-  provider_name: string;
-  provider_category: string;
-  provider_subcategory: string;
-  user_id: string;
-}
 
 export default Inbox;

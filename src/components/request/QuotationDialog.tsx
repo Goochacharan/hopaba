@@ -36,10 +36,20 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
       return;
     }
 
-    if (!price.trim() || isNaN(parseFloat(price))) {
+    const numericPrice = parseFloat(price);
+    if (!price.trim() || isNaN(numericPrice) || numericPrice <= 0) {
       toast({
         title: "Invalid price",
         description: "Please enter a valid price for your quotation.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (numericPrice > 10000000) {
+      toast({
+        title: "Price too high",
+        description: "Please enter a reasonable quotation amount.",
         variant: "destructive"
       });
       return;
@@ -108,18 +118,26 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
         conversationId,
         content: messageContent,
         senderType: 'provider',
-        quotationPrice: parseFloat(price)
+        quotationPrice: numericPrice
       });
       
       await sendMessage({
         conversationId,
         content: messageContent,
         senderType: 'provider',
-        quotationPrice: parseFloat(price)
+        quotationPrice: numericPrice
       });
       
-      // Force refresh conversations to ensure the new data appears
+      console.log('Quotation sent successfully, refreshing conversations');
+      
+      // Force refresh conversations multiple times to ensure UI updates
       await refetchConversations();
+      
+      // Additional refresh after a short delay
+      setTimeout(async () => {
+        await refetchConversations();
+        console.log('Secondary refresh completed');
+      }, 500);
       
       toast({
         title: "Quotation Sent",
@@ -167,7 +185,8 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className="pl-10"
-                min="0"
+                min="1"
+                max="10000000"
               />
             </div>
           </div>
