@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,7 +61,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
-  const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
+  const [contactingProviders, setContactingProviders] = useState<Set<string>>(new Set());
   const [currentSort, setCurrentSort] = useState<SortOption>('rating');
   const [filters, setFilters] = useState<ProviderFiltersType>({
     minRating: 0,
@@ -73,6 +72,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const hasExistingConversation = (providerId: string) => {
     if (!conversations) return false;
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
+  };
+
+  // Get existing conversation ID for navigation
+  const getExistingConversationId = (providerId: string) => {
+    if (!conversations) return null;
+    const conversation = conversations.find(c => c.request_id === requestId && c.provider_id === providerId);
+    return conversation?.id || null;
   };
 
   // Fetch matching providers using the database function with expanded details
@@ -132,7 +138,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     staleTime: 60000, // 1 minute cache
   });
 
-  const handleContactProvider = (provider: MatchingProviderResult) => {
+  const handleStartChat = async (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
       toast({
         title: "Authentication required",
@@ -142,16 +148,92 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       return;
     }
     
-    // Call the createConversation function
-    createConversation(requestId, provider.provider_id, user.id);
+    // Check if conversation already exists
+    const existingConversationId = getExistingConversationId(provider.provider_id);
+    if (existingConversationId) {
+      // Navigate directly to existing conversation
+      navigate(`/messages/${existingConversationId}`);
+      return;
+    }
     
-    // Add to local state to show as contacted
-    setContactedProviders(prev => new Set([...prev, provider.provider_id]));
+    // Set loading state for this specific provider
+    setContactingProviders(prev => new Set([...prev, provider.provider_id]));
     
-    toast({
-      title: "Provider contacted",
-      description: `You've initiated a conversation with ${provider.provider_name}.`,
-    });
+    try {
+      // Create new conversation
+      const conversation = await new Promise((resolve, reject) => {
+        const originalCreateConversation = createConversation;
+        
+        // Override the mutation's onSuccess temporarily
+        const tempCreateConversation = async (requestId: string, providerId: string, userId: string) => {
+          try {
+            // Check for existing conversation first
+            const { data: existingConversations, error: fetchError } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('request_id', requestId)
+              .eq('provider_id', providerId)
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false })
+              .limit(1);
+              
+            if (fetchError) {
+              throw new Error('Failed to check existing conversations');
+            }
+            
+            if (existingConversations && existingConversations.length > 0) {
+              resolve(existingConversations[0]);
+              return;
+            }
+            
+            // Create new conversation
+            const { data: newConversation, error: createError } = await supabase
+              .from('conversations')
+              .insert({
+                request_id: requestId,
+                provider_id: providerId,
+                user_id: userId
+              })
+              .select('id')
+              .single();
+              
+            if (createError) {
+              throw new Error(`Failed to create conversation: ${createError.message}`);
+            }
+            
+            resolve(newConversation);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        tempCreateConversation(requestId, provider.provider_id, user.id);
+      });
+      
+      // Navigate to the chat with the new or existing conversation
+      if (conversation && 'id' in conversation) {
+        navigate(`/messages/${conversation.id}`);
+        
+        toast({
+          title: "Chat Started",
+          description: `You can now chat with ${provider.provider_name}`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error starting chat:', error);
+      toast({
+        title: "Error",
+        description: `Failed to start chat: ${error.message || 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      // Remove loading state
+      setContactingProviders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(provider.provider_id);
+        return newSet;
+      });
+    }
   };
 
   // Navigate to provider's business profile page
@@ -248,8 +330,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
         </div>
       ) : (
         filteredAndSortedProviders.map((provider) => {
-          const isContacted = hasExistingConversation(provider.provider_id) || 
-                            contactedProviders.has(provider.provider_id);
+          const hasExistingChat = hasExistingConversation(provider.provider_id);
+          const isContacting = contactingProviders.has(provider.provider_id);
                             
           // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
           let allRatings = [provider.rating || 4.5];
@@ -322,17 +404,17 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                 </Button>
                 <Button
                   size="sm"
-                  variant={isContacted ? "outline" : "default"}
-                  onClick={() => handleContactProvider(provider)}
-                  disabled={isCreatingConversation || isContacted}
+                  variant={hasExistingChat ? "outline" : "default"}
+                  onClick={() => handleStartChat(provider)}
+                  disabled={isContacting}
                   className="flex items-center gap-1"
                 >
-                  {isCreatingConversation && contactedProviders.has(provider.provider_id) ? (
+                  {isContacting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <MessageSquare className="h-4 w-4" />
                   )}
-                  {isContacted ? "Contacted" : "Contact Provider"}
+                  {hasExistingChat ? "View Chat" : isContacting ? "Starting..." : "Start Chat"}
                 </Button>
               </CardFooter>
             </Card>
