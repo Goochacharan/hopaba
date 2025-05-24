@@ -1,4 +1,3 @@
-
 export interface ServiceRequest {
   id: string;
   user_id: string;
@@ -50,4 +49,9 @@ export interface Message {
   read: boolean;
   attachments: string[];
   quotation_price?: number;
+  quotation_images?: string[];
+  delivery_available?: boolean;
+  pricing_type?: 'fixed' | 'negotiable' | 'wholesale';
+  wholesale_price?: number;
+  negotiable_price?: number;
 }

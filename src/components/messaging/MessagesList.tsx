@@ -1,10 +1,10 @@
-
 import React, { useRef, useEffect } from 'react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Message } from '@/types/serviceRequestTypes';
 import { DollarSign } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { EnhancedMessageItem } from './EnhancedMessageItem';
 
 interface MessageItemProps {
   message: Message;
@@ -133,9 +133,18 @@ interface MessagesListProps {
   userId: string;
   otherPartyName: string;
   isProvider: boolean;
+  businessName?: string;
+  providerId?: string;
 }
 
-const MessagesList: React.FC<MessagesListProps> = ({ messages, userId, otherPartyName, isProvider }) => {
+const MessagesList: React.FC<MessagesListProps> = ({ 
+  messages, 
+  userId, 
+  otherPartyName, 
+  isProvider, 
+  businessName, 
+  providerId 
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -152,17 +161,40 @@ const MessagesList: React.FC<MessagesListProps> = ({ messages, userId, otherPart
   
   return (
     <div className="flex-1 overflow-y-auto p-4">
-      {messages.map(message => (
-        <MessageItem 
-          key={message.id} 
-          message={message}
-          // For providers, messages sent as 'provider' are from the user (current user)
-          // For regular users, messages sent as 'user' are from the user (current user)
-          isUser={(isProvider && message.sender_type === 'provider') || 
-                 (!isProvider && message.sender_type === 'user')}
-          otherPartyName={otherPartyName}
-        />
-      ))}
+      {messages.map(message => {
+        // Check if this message has enhanced quotation features
+        const hasEnhancedFeatures = message.quotation_images || 
+                                   message.delivery_available || 
+                                   message.pricing_type || 
+                                   message.wholesale_price || 
+                                   message.negotiable_price;
+        
+        const isUser = (isProvider && message.sender_type === 'provider') || 
+                      (!isProvider && message.sender_type === 'user');
+        
+        // Use EnhancedMessageItem for messages with enhanced features, fallback to MessageItem
+        if (hasEnhancedFeatures) {
+          return (
+            <EnhancedMessageItem
+              key={message.id}
+              message={message}
+              isUser={isUser}
+              otherPartyName={otherPartyName}
+              businessName={businessName}
+              providerId={providerId}
+            />
+          );
+        } else {
+          return (
+            <MessageItem 
+              key={message.id} 
+              message={message}
+              isUser={isUser}
+              otherPartyName={otherPartyName}
+            />
+          );
+        }
+      })}
       <div ref={messagesEndRef} />
     </div>
   );

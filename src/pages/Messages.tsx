@@ -285,6 +285,8 @@ const Messages: React.FC = () => {
                   userId={user?.id || ''}
                   otherPartyName={otherPartyName}
                   isProvider={isProvider}
+                  businessName={conversationData.conversation.service_providers?.name}
+                  providerId={conversationData.conversation.provider_id}
                 />
               )}
             </div>

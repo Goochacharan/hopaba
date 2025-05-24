@@ -307,13 +307,23 @@ export const useConversations = () => {
     content,
     senderType,
     attachments = [],
-    quotationPrice
+    quotationPrice,
+    quotationImages = [],
+    deliveryAvailable = false,
+    pricingType = 'fixed',
+    wholesalePrice,
+    negotiablePrice
   }: {
     conversationId: string;
     content: string;
     senderType: 'user' | 'provider';
     attachments?: string[];
     quotationPrice?: number;
+    quotationImages?: string[];
+    deliveryAvailable?: boolean;
+    pricingType?: 'fixed' | 'negotiable' | 'wholesale';
+    wholesalePrice?: number;
+    negotiablePrice?: number;
   }) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -334,7 +344,12 @@ export const useConversations = () => {
       content, 
       senderType, 
       userId: user.id,
-      quotationPrice
+      quotationPrice,
+      quotationImages,
+      deliveryAvailable,
+      pricingType,
+      wholesalePrice,
+      negotiablePrice
     });
     
     try {
@@ -378,14 +393,19 @@ export const useConversations = () => {
       
       console.log('Authorization check passed, sending message');
 
-      // Prepare message data with validated quotation price
+      // Prepare message data with enhanced quotation fields
       const messageData = {
         conversation_id: conversationId,
         sender_id: user.id,
         sender_type: senderType,
         content: content.trim(),
         attachments,
-        quotation_price: quotationPrice
+        quotation_price: quotationPrice,
+        quotation_images: quotationImages,
+        delivery_available: deliveryAvailable,
+        pricing_type: pricingType,
+        wholesale_price: wholesalePrice,
+        negotiable_price: negotiablePrice
       };
 
       const { data, error } = await supabase
@@ -642,6 +662,11 @@ export const useConversations = () => {
       senderType: 'user' | 'provider';
       attachments?: string[];
       quotationPrice?: number;
+      quotationImages?: string[];
+      deliveryAvailable?: boolean;
+      pricingType?: 'fixed' | 'negotiable' | 'wholesale';
+      wholesalePrice?: number;
+      negotiablePrice?: number;
     }) => {
       try {
         return await sendMessageMutation.mutateAsync(params);

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,9 @@ import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
-import { QuotationDialog } from './QuotationDialog';
+import { EnhancedQuotationDialog } from './EnhancedQuotationDialog';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RequestDetailsDialogProps {
   request: ServiceRequest | null;
@@ -21,6 +22,20 @@ interface RequestDetailsDialogProps {
 export function RequestDetailsDialog({ request, open, onOpenChange, providerId }: RequestDetailsDialogProps) {
   const { user } = useAuth();
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
+  
+  // Fetch business name for the provider
+  const { data: businessData } = useQuery({
+    queryKey: ['business-name', providerId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('service_providers')
+        .select('name')
+        .eq('id', providerId)
+        .single();
+      return data;
+    },
+    enabled: !!providerId
+  });
   
   if (!open || !request) return null;
 
@@ -150,11 +165,12 @@ export function RequestDetailsDialog({ request, open, onOpenChange, providerId }
       </Dialog>
       
       {/* Quotation Dialog */}
-      <QuotationDialog 
+      <EnhancedQuotationDialog 
         request={request}
         open={isQuotationDialogOpen}
         onOpenChange={setIsQuotationDialogOpen}
         providerId={providerId}
+        businessName={businessData?.name}
       />
     </>
   );

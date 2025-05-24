@@ -12,7 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
-import { QuotationDialog } from '@/components/request/QuotationDialog';
+import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
 
@@ -39,6 +39,20 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
+  
+  // Fetch business name for the provider
+  const { data: businessData } = useQuery({
+    queryKey: ['business-name', providerId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('service_providers')
+        .select('name')
+        .eq('id', providerId)
+        .single();
+      return data;
+    },
+    enabled: !!providerId
+  });
   
   // Helper function for normalized subcategory comparison with improved debugging
   const isSubcategoryMatch = (requestSubcategory?: string | string[], providerSubcategories?: string[]) => {
@@ -763,11 +777,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       />
       
       {/* Quotation Dialog */}
-      <QuotationDialog 
+      <EnhancedQuotationDialog 
         request={selectedRequest}
         open={isQuotationDialogOpen}
         onOpenChange={setIsQuotationDialogOpen}
         providerId={providerId}
+        businessName={businessData?.name}
       />
     </TooltipProvider>
   );
