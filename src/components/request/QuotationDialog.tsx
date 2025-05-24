@@ -130,18 +130,23 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
       
       console.log('Quotation sent successfully, refreshing conversations');
       
-      // Force refresh conversations multiple times to ensure UI updates
+      // Force refresh conversations with multiple attempts
       await refetchConversations();
       
-      // Additional refresh after a short delay
+      // Additional refresh after delays to ensure UI updates
       setTimeout(async () => {
         await refetchConversations();
         console.log('Secondary refresh completed');
       }, 500);
       
+      setTimeout(async () => {
+        await refetchConversations();
+        console.log('Tertiary refresh completed');
+      }, 1500);
+      
       toast({
         title: "Quotation Sent",
-        description: `Your quotation of ₹${price} has been sent to the requester.`
+        description: `Your quotation of ₹${numericPrice.toLocaleString()} has been sent to the requester.`
       });
       
       // Close dialog and reset form

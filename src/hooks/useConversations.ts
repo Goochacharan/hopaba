@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message } from '@/types/serviceRequestTypes';
@@ -16,7 +17,7 @@ export const useConversations = () => {
     console.log('Fetching conversations for user:', user.id);
     
     try {
-      // Fixed SQL query syntax - using proper OR condition
+      // Fixed SQL query syntax - using proper OR condition with correct escaping
       const { data, error } = await supabase
         .from('conversations')
         .select(`

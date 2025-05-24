@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
@@ -19,13 +18,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -53,7 +51,7 @@ const SidebarToggleButton = () => {
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
-  const { conversations, isLoadingConversations, conversationsError } = useConversations();
+  const { conversations, isLoadingConversations, conversationsError, refetchConversations } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   
@@ -90,6 +88,12 @@ const Inbox: React.FC = () => {
   ) || [];
   
   console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
+
+  // Handle retry for conversation loading
+  const handleRetryConversations = () => {
+    console.log('Retrying conversation fetch...');
+    refetchConversations();
+  };
   
   return (
     <MainLayout>
@@ -184,20 +188,26 @@ const Inbox: React.FC = () => {
                     <TabsContent value="messages">
                       <div className="space-y-4">
                         {conversationsError ? (
-                          <div className="text-center py-8 border rounded-md border-red-200 bg-red-50">
-                            <MessageSquare className="h-10 w-10 mx-auto mb-2 text-red-500" />
-                            <h3 className="text-lg font-medium text-red-700">Error loading messages</h3>
-                            <p className="text-red-600 mb-4">
-                              {conversationsError.message || 'Failed to load conversations'}
-                            </p>
-                            <Button 
-                              onClick={() => window.location.reload()} 
-                              variant="outline" 
-                              className="mt-2"
-                            >
-                              Retry
-                            </Button>
-                          </div>
+                          <Alert variant="destructive" className="border-red-200 bg-red-50">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              <div className="flex flex-col gap-2">
+                                <span className="font-medium">Error loading messages</span>
+                                <span className="text-sm">
+                                  {conversationsError.message || 'Failed to load conversations. This may be due to a database connection issue.'}
+                                </span>
+                                <Button 
+                                  onClick={handleRetryConversations} 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="w-fit mt-2"
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Retry Loading
+                                </Button>
+                              </div>
+                            </AlertDescription>
+                          </Alert>
                         ) : isLoadingConversations ? (
                           <div className="flex justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin text-primary" />
