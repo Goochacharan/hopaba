@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message } from '@/types/serviceRequestTypes';
@@ -238,15 +239,6 @@ export const useConversations = () => {
         throw new Error('Could not verify conversation permissions');
       }
       
-      // Log more details about the conversation for debugging
-      console.log('Conversation details:', {
-        conversationId: conversation.id,
-        conversationUserId: conversation.user_id,
-        providerUserId: conversation.service_providers?.user_id,
-        currentUserId: user.id,
-        attemptingToSendAs: senderType
-      });
-      
       // Check that the user has permission to send a message as this sender type
       const isRequester = conversation.user_id === user.id;
       const isProvider = conversation.service_providers && 
@@ -265,7 +257,6 @@ export const useConversations = () => {
           isProvider
         });
         
-        // Better error message depending on the case
         if (isRequester && senderType === 'provider') {
           throw new Error('You cannot send messages as a provider in this conversation');
         } else if (isProvider && senderType === 'user') {
@@ -366,27 +357,23 @@ export const useConversations = () => {
     enabled: !!user
   });
 
-  // Update sendMessageMutation to improve error handling
+  // Update sendMessageMutation to improve error handling and success feedback
   const sendMessageMutation = useMutation({
     mutationFn: sendMessageFn,
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
+      console.log('Message sent successfully:', data);
+      
+      // Invalidate and refetch relevant queries
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
       
-      if (variables.quotationPrice) {
-        toast({
-          title: "Quotation Sent",
-          description: `Your price quote of ₹${variables.quotationPrice} has been sent.`,
-        });
-      }
+      // Don't show success toast here as it's handled in the QuotationDialog component
     },
     onError: (error: any) => {
       console.error('Error sending message:', error);
-      toast({
-        title: 'Error Sending Message',
-        description: error.message || 'An unexpected error occurred while sending your message.',
-        variant: 'destructive',
-      });
+      // Re-throw the error so it can be handled by the calling component
+      throw error;
     }
   });
 
@@ -466,7 +453,19 @@ export const useConversations = () => {
       return createConversationMutation.mutate({ requestId, providerId, userId });
     },
     isCreatingConversation: createConversationMutation.isPending,
-    sendMessage: sendMessageMutation.mutate,
+    sendMessage: async (params: {
+      conversationId: string;
+      content: string;
+      senderType: 'user' | 'provider';
+      attachments?: string[];
+      quotationPrice?: number;
+    }) => {
+      try {
+        return await sendMessageMutation.mutateAsync(params);
+      } catch (error) {
+        throw error;
+      }
+    },
     isSendingMessage: sendMessageMutation.isPending,
     getConversationWithMessages,
     getConversationsForRequest,

@@ -24,7 +24,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
   const [price, setPrice] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
-  const { createConversation, sendMessage } = useConversations();
+  const { sendMessage } = useConversations();
 
   const handleSendQuotation = async () => {
     if (!user || !request) {
@@ -48,61 +48,77 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
     setIsSending(true);
 
     try {
-      // Create the conversation
-      createConversation(request.id, providerId, request.user_id);
+      // Check if a conversation already exists
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('request_id', request.id)
+        .eq('provider_id', providerId)
+        .limit(1)
+        .order('created_at', { ascending: false });
+        
+      if (fetchError) {
+        console.error('Error checking existing conversations:', fetchError);
+        throw new Error('Failed to check existing conversations');
+      }
       
-      // Find the newly created conversation - we'll give it a moment to be created
-      setTimeout(async () => {
-        try {
-          const { data, error } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('request_id', request.id)
-            .eq('provider_id', providerId)
-            .single();
-            
-          if (error) throw error;
+      let conversationId: string;
+      
+      if (existingConversations && existingConversations.length > 0) {
+        // Use existing conversation
+        conversationId = existingConversations[0].id;
+        console.log('Using existing conversation:', conversationId);
+      } else {
+        // Create new conversation
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            request_id: request.id,
+            provider_id: providerId,
+            user_id: request.user_id
+          })
+          .select('id')
+          .limit(1);
           
-          if (data) {
-            // Send the quotation message
-            sendMessage({
-              conversationId: data.id,
-              content: message || `I'm interested in helping you with this service request.`,
-              senderType: 'provider',
-              quotationPrice: parseFloat(price)
-            });
-            
-            toast({
-              title: "Quotation Sent",
-              description: `Your quotation of ₹${price} has been sent to the requester.`
-            });
-            
-            // Close dialog after sending
-            onOpenChange(false);
-            
-            // Reset form
-            setMessage('');
-            setPrice('');
-          }
-        } catch (error) {
-          console.error("Error finding conversation:", error);
-          toast({
-            title: "Error",
-            description: "There was a problem sending your quotation. Please try again.",
-            variant: "destructive"
-          });
-        } finally {
-          setIsSending(false);
+        if (createError) {
+          console.error('Error creating conversation:', createError);
+          throw new Error('Failed to create conversation');
         }
-      }, 800);
+        
+        if (!newConversation || newConversation.length === 0) {
+          throw new Error('No conversation data returned');
+        }
+        
+        conversationId = newConversation[0].id;
+        console.log('Created new conversation:', conversationId);
+      }
       
-    } catch (error) {
-      console.error("Error in quotation flow:", error);
+      // Send the quotation message
+      await sendMessage({
+        conversationId,
+        content: message || `I'm interested in helping you with "${request.title}". Here's my quotation:`,
+        senderType: 'provider',
+        quotationPrice: parseFloat(price)
+      });
+      
+      toast({
+        title: "Quotation Sent",
+        description: `Your quotation of ₹${price} has been sent to the requester.`
+      });
+      
+      // Close dialog and reset form
+      onOpenChange(false);
+      setMessage('');
+      setPrice('');
+      
+    } catch (error: any) {
+      console.error('Error in quotation flow:', error);
       toast({
         title: "Error",
-        description: "There was a problem sending your quotation. Please try again.",
+        description: error.message || "There was a problem sending your quotation. Please try again.",
         variant: "destructive"
       });
+    } finally {
       setIsSending(false);
     }
   };
