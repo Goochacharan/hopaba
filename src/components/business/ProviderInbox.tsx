@@ -40,6 +40,15 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   
+  // Debug logs for state changes
+  console.log('ProviderInbox - Current state:', {
+    selectedRequest: selectedRequest?.id || 'none',
+    isDetailsOpen,
+    isQuotationDialogOpen,
+    providerId,
+    user: user?.id || 'none'
+  });
+  
   // Helper function for normalized subcategory comparison with improved debugging
   const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
     // For debugging
@@ -157,9 +166,18 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
   };
   
-  // Handle opening the quotation dialog
+  // Handle opening the quotation dialog with extensive debugging
   const handleContactRequester = (request: ServiceRequest) => {
+    console.log('=== DEBUG: handleContactRequester called ===');
+    console.log('Request:', request);
+    console.log('User:', user);
+    console.log('Current state before change:', {
+      selectedRequest: selectedRequest?.id,
+      isQuotationDialogOpen
+    });
+    
     if (!user) {
+      console.log('DEBUG: No user found, showing auth error');
       toast({
         title: "Authentication required",
         description: "You must be logged in to contact a requester.",
@@ -168,12 +186,25 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       return;
     }
     
+    console.log('DEBUG: Setting selected request and opening dialog');
     setSelectedRequest(request);
     setIsQuotationDialogOpen(true);
+    
+    console.log('DEBUG: State should be changed now');
+    
+    // Force a re-render debug
+    setTimeout(() => {
+      console.log('DEBUG: State after timeout:', {
+        selectedRequest: selectedRequest?.id,
+        isQuotationDialogOpen
+      });
+    }, 100);
   };
 
-  // Handle viewing request details
+  // Handle viewing request details with debugging
   const handleViewDetails = (request: ServiceRequest) => {
+    console.log('=== DEBUG: handleViewDetails called ===');
+    console.log('Request:', request);
     setSelectedRequest(request);
     setIsDetailsOpen(true);
   };
@@ -236,12 +267,30 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   }
   
   // Group requests into "new" and "responded"
-  const respondedRequests = matchingRequests.filter(req => hasExistingConversation(req.id));
-  const newRequests = matchingRequests.filter(req => !hasExistingConversation(req.id));
+  const respondedRequests = matchingRequests?.filter(req => hasExistingConversation(req.id)) || [];
+  const newRequests = matchingRequests?.filter(req => !hasExistingConversation(req.id)) || [];
+  
+  // Debug dialog state changes
+  const handleQuotationDialogChange = (open: boolean) => {
+    console.log('=== DEBUG: QuotationDialog onOpenChange called ===');
+    console.log('New open state:', open);
+    setIsQuotationDialogOpen(open);
+  };
+
+  const handleDetailsDialogChange = (open: boolean) => {
+    console.log('=== DEBUG: RequestDetailsDialog onOpenChange called ===');
+    console.log('New open state:', open);
+    setIsDetailsOpen(open);
+  };
   
   return (
     <TooltipProvider>
       <div className="space-y-4">
+        {/* Debug info */}
+        <div className="p-2 bg-gray-100 text-xs rounded">
+          DEBUG: Dialog states - Details: {isDetailsOpen ? 'OPEN' : 'CLOSED'}, Quotation: {isQuotationDialogOpen ? 'OPEN' : 'CLOSED'}, Selected: {selectedRequest?.id || 'none'}
+        </div>
+        
         {newRequests.length > 0 && (
           <div>
             <h3 className="font-medium mb-3">
@@ -297,7 +346,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={() => handleViewDetails(request)}
+                      onClick={() => {
+                        console.log('DEBUG: View Details button clicked for request:', request.id);
+                        handleViewDetails(request);
+                      }}
                       className="flex items-center gap-1"
                     >
                       <Eye className="h-4 w-4" />
@@ -306,7 +358,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       className="flex-1" 
                       size="sm"
-                      onClick={() => handleContactRequester(request)}
+                      onClick={() => {
+                        console.log('DEBUG: Send Quotation button clicked for request:', request.id);
+                        handleContactRequester(request);
+                      }}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Send Quotation
@@ -373,7 +428,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={() => handleViewDetails(request)}
+                      onClick={() => {
+                        console.log('DEBUG: View Details button clicked for request:', request.id);
+                        handleViewDetails(request);
+                      }}
                       className="flex items-center gap-1"
                     >
                       <Eye className="h-4 w-4" />
@@ -415,17 +473,24 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       <RequestDetailsDialog 
         request={selectedRequest}
         open={isDetailsOpen}
-        onOpenChange={setIsDetailsOpen}
+        onOpenChange={handleDetailsDialogChange}
         providerId={providerId}
       />
       
-      {/* Quotation Dialog */}
+      {/* Quotation Dialog with debugging */}
       <QuotationDialog 
         request={selectedRequest}
         open={isQuotationDialogOpen}
-        onOpenChange={setIsQuotationDialogOpen}
+        onOpenChange={handleQuotationDialogChange}
         providerId={providerId}
       />
+      
+      {/* Debug overlay */}
+      {isQuotationDialogOpen && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[9999]">
+          QUOTATION DIALOG SHOULD BE OPEN
+        </div>
+      )}
     </TooltipProvider>
   );
 };
