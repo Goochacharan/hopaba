@@ -40,26 +40,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   
-  // Debug logs for state changes
-  console.log('ProviderInbox - Current state:', {
-    selectedRequest: selectedRequest?.id || 'none',
-    isDetailsOpen,
-    isQuotationDialogOpen,
-    providerId,
-    user: user?.id || 'none'
-  });
-  
-  // Helper function for normalized subcategory comparison with improved debugging
+  // Helper function for normalized subcategory comparison
   const isSubcategoryMatch = (requestSubcategory?: string, providerSubcategories?: string[]) => {
-    // For debugging
-    console.log('Matching subcategories:', { 
-      request: requestSubcategory, 
-      provider: providerSubcategories 
-    });
-    
     // If provider has no subcategories, match any request
     if (!providerSubcategories || providerSubcategories.length === 0) {
-      console.log('Provider has no subcategories, matching all requests');
       return true;
     }
     
@@ -67,13 +51,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     // only match if one of provider's subcategories is empty
     if (!requestSubcategory || requestSubcategory.trim() === '') {
       const hasEmptySubcategory = providerSubcategories.some(s => !s || s.trim() === '');
-      console.log('Request has no subcategory, matching if provider has empty subcategory:', hasEmptySubcategory);
       return hasEmptySubcategory;
     }
     
     // Normalize request subcategory
     const normalizedRequestSub = requestSubcategory.toLowerCase().trim();
-    console.log('Normalized request subcategory:', normalizedRequestSub);
     
     // Check if any of provider's subcategories match the request subcategory
     const match = providerSubcategories.some(providerSub => {
@@ -82,18 +64,15 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       
       // Normalize provider subcategory and compare
       const normalizedProviderSub = providerSub.toLowerCase().trim();
-      console.log('Comparing request:', normalizedRequestSub, 'with provider:', normalizedProviderSub);
       
       // Check for exact match and partial match
       const exactMatch = normalizedRequestSub === normalizedProviderSub;
       const includesMatch = normalizedRequestSub.includes(normalizedProviderSub) || 
                             normalizedProviderSub.includes(normalizedRequestSub);
       
-      console.log('Match result:', { exactMatch, includesMatch });
       return exactMatch || includesMatch;
     });
     
-    console.log('Final subcategory match result:', match);
     return match;
   };
   
@@ -106,7 +85,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   } = useQuery({
     queryKey: ['matchingRequests', providerId, category, subcategory],
     queryFn: async () => {
-      console.log('Fetching requests for category:', category);
       // Optimize query to only select needed columns and add timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -123,24 +101,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         
         if (error) throw error;
         
-        console.log('Found service requests:', data?.length || 0);
-        if (data && data.length > 0) {
-          // Log some details about the found requests for debugging
-          data.forEach(req => {
-            console.log(`Request ${req.id}: Category: ${req.category}, Subcategory: ${req.subcategory}`);
-          });
-        }
-        
         // Filter results on the client side for better subcategory matching
         let filteredData = data as ServiceRequest[];
         
         if (subcategory && subcategory.length > 0) {
-          console.log('Filtering by subcategories:', subcategory);
-          
           // Use the isSubcategoryMatch helper function
           filteredData = filteredData.filter(req => isSubcategoryMatch(req.subcategory, subcategory));
-          
-          console.log('After subcategory filtering, found:', filteredData.length);
         }
         
         return filteredData;
@@ -166,18 +132,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
   };
   
-  // Handle opening the quotation dialog with extensive debugging
+  // Handle opening the quotation dialog
   const handleContactRequester = (request: ServiceRequest) => {
-    console.log('=== DEBUG: handleContactRequester called ===');
-    console.log('Request:', request);
-    console.log('User:', user);
-    console.log('Current state before change:', {
-      selectedRequest: selectedRequest?.id,
-      isQuotationDialogOpen
-    });
-    
     if (!user) {
-      console.log('DEBUG: No user found, showing auth error');
       toast({
         title: "Authentication required",
         description: "You must be logged in to contact a requester.",
@@ -186,25 +143,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       return;
     }
     
-    console.log('DEBUG: Setting selected request and opening dialog');
     setSelectedRequest(request);
     setIsQuotationDialogOpen(true);
-    
-    console.log('DEBUG: State should be changed now');
-    
-    // Force a re-render debug
-    setTimeout(() => {
-      console.log('DEBUG: State after timeout:', {
-        selectedRequest: selectedRequest?.id,
-        isQuotationDialogOpen
-      });
-    }, 100);
   };
 
-  // Handle viewing request details with debugging
+  // Handle viewing request details
   const handleViewDetails = (request: ServiceRequest) => {
-    console.log('=== DEBUG: handleViewDetails called ===');
-    console.log('Request:', request);
     setSelectedRequest(request);
     setIsDetailsOpen(true);
   };
@@ -270,27 +214,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const respondedRequests = matchingRequests?.filter(req => hasExistingConversation(req.id)) || [];
   const newRequests = matchingRequests?.filter(req => !hasExistingConversation(req.id)) || [];
   
-  // Debug dialog state changes
-  const handleQuotationDialogChange = (open: boolean) => {
-    console.log('=== DEBUG: QuotationDialog onOpenChange called ===');
-    console.log('New open state:', open);
-    setIsQuotationDialogOpen(open);
-  };
-
-  const handleDetailsDialogChange = (open: boolean) => {
-    console.log('=== DEBUG: RequestDetailsDialog onOpenChange called ===');
-    console.log('New open state:', open);
-    setIsDetailsOpen(open);
-  };
-  
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        {/* Debug info */}
-        <div className="p-2 bg-gray-100 text-xs rounded">
-          DEBUG: Dialog states - Details: {isDetailsOpen ? 'OPEN' : 'CLOSED'}, Quotation: {isQuotationDialogOpen ? 'OPEN' : 'CLOSED'}, Selected: {selectedRequest?.id || 'none'}
-        </div>
-        
         {newRequests.length > 0 && (
           <div>
             <h3 className="font-medium mb-3">
@@ -346,10 +272,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        console.log('DEBUG: View Details button clicked for request:', request.id);
-                        handleViewDetails(request);
-                      }}
+                      onClick={() => handleViewDetails(request)}
                       className="flex items-center gap-1"
                     >
                       <Eye className="h-4 w-4" />
@@ -358,10 +281,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       className="flex-1" 
                       size="sm"
-                      onClick={() => {
-                        console.log('DEBUG: Send Quotation button clicked for request:', request.id);
-                        handleContactRequester(request);
-                      }}
+                      onClick={() => handleContactRequester(request)}
                     >
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Send Quotation
@@ -428,10 +348,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     <Button 
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        console.log('DEBUG: View Details button clicked for request:', request.id);
-                        handleViewDetails(request);
-                      }}
+                      onClick={() => handleViewDetails(request)}
                       className="flex items-center gap-1"
                     >
                       <Eye className="h-4 w-4" />
@@ -473,24 +390,17 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       <RequestDetailsDialog 
         request={selectedRequest}
         open={isDetailsOpen}
-        onOpenChange={handleDetailsDialogChange}
+        onOpenChange={setIsDetailsOpen}
         providerId={providerId}
       />
       
-      {/* Quotation Dialog with debugging */}
+      {/* Quotation Dialog */}
       <QuotationDialog 
         request={selectedRequest}
         open={isQuotationDialogOpen}
-        onOpenChange={handleQuotationDialogChange}
+        onOpenChange={setIsQuotationDialogOpen}
         providerId={providerId}
       />
-      
-      {/* Debug overlay */}
-      {isQuotationDialogOpen && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[9999]">
-          QUOTATION DIALOG SHOULD BE OPEN
-        </div>
-      )}
     </TooltipProvider>
   );
 };
