@@ -24,7 +24,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
   const [price, setPrice] = useState('');
   const [isSending, setIsSending] = useState(false);
   const { user } = useAuth();
-  const { sendMessage } = useConversations();
+  const { sendMessage, refetchConversations } = useConversations();
 
   const handleSendQuotation = async () => {
     if (!user || !request) {
@@ -46,16 +46,18 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
     }
 
     setIsSending(true);
+    console.log('Starting quotation send process for request:', request.id);
 
     try {
-      // Check if a conversation already exists
+      // Check if a conversation already exists with better error handling
       const { data: existingConversations, error: fetchError } = await supabase
         .from('conversations')
         .select('id')
         .eq('request_id', request.id)
         .eq('provider_id', providerId)
-        .limit(1)
-        .order('created_at', { ascending: false });
+        .eq('user_id', request.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1);
         
       if (fetchError) {
         console.error('Error checking existing conversations:', fetchError);
@@ -70,6 +72,12 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
         console.log('Using existing conversation:', conversationId);
       } else {
         // Create new conversation
+        console.log('Creating new conversation for:', {
+          request_id: request.id,
+          provider_id: providerId,
+          user_id: request.user_id
+        });
+        
         const { data: newConversation, error: createError } = await supabase
           .from('conversations')
           .insert({
@@ -78,28 +86,40 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
             user_id: request.user_id
           })
           .select('id')
-          .limit(1);
+          .single();
           
         if (createError) {
           console.error('Error creating conversation:', createError);
-          throw new Error('Failed to create conversation');
+          throw new Error(`Failed to create conversation: ${createError.message}`);
         }
         
-        if (!newConversation || newConversation.length === 0) {
+        if (!newConversation) {
           throw new Error('No conversation data returned');
         }
         
-        conversationId = newConversation[0].id;
+        conversationId = newConversation.id;
         console.log('Created new conversation:', conversationId);
       }
       
       // Send the quotation message
-      await sendMessage({
+      const messageContent = message.trim() || `I'm interested in helping you with "${request.title}". Here's my quotation:`;
+      
+      console.log('Sending quotation message:', {
         conversationId,
-        content: message || `I'm interested in helping you with "${request.title}". Here's my quotation:`,
+        content: messageContent,
         senderType: 'provider',
         quotationPrice: parseFloat(price)
       });
+      
+      await sendMessage({
+        conversationId,
+        content: messageContent,
+        senderType: 'provider',
+        quotationPrice: parseFloat(price)
+      });
+      
+      // Force refresh conversations to ensure the new data appears
+      await refetchConversations();
       
       toast({
         title: "Quotation Sent",

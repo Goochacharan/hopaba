@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message } from '@/types/serviceRequestTypes';
@@ -10,52 +9,85 @@ export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get user's conversations
+  // Get user's conversations with improved query and error handling
   const getUserConversations = async () => {
     if (!user) throw new Error('User not authenticated');
     
-    const { data, error } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        service_requests (id, title, category, subcategory),
-        service_providers (id, name, user_id)
-      `)
-      .or(`user_id.eq.${user.id},service_providers.user_id.eq.${user.id}`)
-      .order('last_message_at', { ascending: false });
-
-    if (error) throw error;
+    console.log('Fetching conversations for user:', user.id);
     
-    // Get latest quotations for each conversation
-    const conversationsWithQuotations = await Promise.all(
-      data.map(async (conversation) => {
-        const { data: quotationMessage } = await supabase
-          .from('messages')
-          .select('quotation_price')
-          .eq('conversation_id', conversation.id)
-          .not('quotation_price', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        const latestQuotation = quotationMessage && quotationMessage.length > 0 
-          ? quotationMessage[0].quotation_price 
-          : undefined;
-          
-        return {
-          ...conversation,
-          latest_quotation: latestQuotation
-        };
-      })
-    );
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          service_requests!inner (id, title, category, subcategory, user_id),
+          service_providers!inner (id, name, user_id)
+        `)
+        .or(`user_id.eq.${user.id},service_providers.user_id.eq.${user.id}`)
+        .order('last_message_at', { ascending: false });
 
-    return conversationsWithQuotations as (Conversation & {
-      service_requests: { id: string; title: string; category: string; subcategory?: string };
-      service_providers: { id: string; name: string; user_id: string };
-      latest_quotation?: number;
-    })[];
+      if (error) {
+        console.error('Error fetching conversations:', error);
+        throw error;
+      }
+      
+      console.log('Raw conversation data:', data);
+      
+      if (!data || data.length === 0) {
+        console.log('No conversations found for user');
+        return [];
+      }
+      
+      // Get latest quotations for each conversation
+      const conversationsWithQuotations = await Promise.all(
+        data.map(async (conversation) => {
+          try {
+            const { data: quotationMessage, error: quotationError } = await supabase
+              .from('messages')
+              .select('quotation_price')
+              .eq('conversation_id', conversation.id)
+              .not('quotation_price', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+              
+            if (quotationError) {
+              console.error('Error fetching quotation for conversation:', conversation.id, quotationError);
+            }
+            
+            const latestQuotation = quotationMessage && quotationMessage.length > 0 
+              ? quotationMessage[0].quotation_price 
+              : undefined;
+              
+            const result = {
+              ...conversation,
+              latest_quotation: latestQuotation
+            };
+            
+            console.log('Processed conversation:', result);
+            return result;
+          } catch (error) {
+            console.error('Error processing conversation:', conversation.id, error);
+            return {
+              ...conversation,
+              latest_quotation: undefined
+            };
+          }
+        })
+      );
+
+      console.log('Final conversations with quotations:', conversationsWithQuotations);
+      return conversationsWithQuotations as (Conversation & {
+        service_requests: { id: string; title: string; category: string; subcategory?: string; user_id: string };
+        service_providers: { id: string; name: string; user_id: string };
+        latest_quotation?: number;
+      })[];
+    } catch (error) {
+      console.error('Error in getUserConversations:', error);
+      throw error;
+    }
   };
 
-  // Create a new conversation
+  // Create a new conversation with better duplicate handling
   const createConversationFn = async ({
     requestId,
     providerId,
@@ -69,89 +101,141 @@ export const useConversations = () => {
     
     if (!user) throw new Error('User not authenticated');
     
-    // Verify the provider belongs to the current user if the request is coming from a provider
-    const { data: providerData, error: providerError } = await supabase
-      .from('service_providers')
-      .select('user_id')
-      .eq('id', providerId)
-      .single();
+    try {
+      // Check for existing conversation first
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('request_id', requestId)
+        .eq('provider_id', providerId)
+        .eq('user_id', userId)
+        .limit(1);
+        
+      if (fetchError) {
+        console.error('Error checking existing conversations:', fetchError);
+        throw new Error('Could not check for existing conversations');
+      }
       
-    if (providerError) {
-      console.error('Error verifying provider:', providerError);
-      throw new Error('Could not verify service provider');
-    }
-    
-    // Check if we're creating as a provider and if we have permission
-    if (providerData.user_id === user.id) {
-      console.log('Creating conversation as provider - verified ownership');
-    } else if (userId === user.id) {
-      console.log('Creating conversation as requester - verified ownership');
-    } else {
-      throw new Error('You do not have permission to create this conversation');
-    }
-    
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert({
-        request_id: requestId,
-        provider_id: providerId,
-        user_id: userId
-      })
-      .select();
+      if (existingConversations && existingConversations.length > 0) {
+        console.log('Using existing conversation:', existingConversations[0].id);
+        return existingConversations[0] as Conversation;
+      }
+      
+      // Verify the provider belongs to the current user if the request is coming from a provider
+      const { data: providerData, error: providerError } = await supabase
+        .from('service_providers')
+        .select('user_id')
+        .eq('id', providerId)
+        .single();
+        
+      if (providerError) {
+        console.error('Error verifying provider:', providerError);
+        throw new Error('Could not verify service provider');
+      }
+      
+      // Check if we're creating as a provider and if we have permission
+      if (providerData.user_id === user.id) {
+        console.log('Creating conversation as provider - verified ownership');
+      } else if (userId === user.id) {
+        console.log('Creating conversation as requester - verified ownership');
+      } else {
+        throw new Error('You do not have permission to create this conversation');
+      }
+      
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          request_id: requestId,
+          provider_id: providerId,
+          user_id: userId
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating conversation:', error);
+      if (error) {
+        console.error('Error creating conversation:', error);
+        throw error;
+      }
+      
+      console.log('Created new conversation:', data);
+      return data as Conversation;
+    } catch (error) {
+      console.error('Error in createConversationFn:', error);
       throw error;
     }
-    
-    if (!data || data.length === 0) {
-      throw new Error('No conversation data returned');
-    }
-    
-    return data[0] as Conversation;
   };
 
-  // Get conversations for a specific request
+  // Get conversations for a specific request with improved error handling
   const getConversationsForRequest = async (requestId: string) => {
     if (!user) throw new Error('User not authenticated');
     
-    const { data, error } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        service_providers (id, name, user_id)
-      `)
-      .eq('request_id', requestId)
-      .order('last_message_at', { ascending: false });
-
-    if (error) throw error;
+    console.log('Fetching conversations for request:', requestId);
     
-    // Get latest quotations for each conversation
-    const conversationsWithQuotations = await Promise.all(
-      data.map(async (conversation) => {
-        const { data: quotationMessage } = await supabase
-          .from('messages')
-          .select('quotation_price')
-          .eq('conversation_id', conversation.id)
-          .not('quotation_price', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1);
-          
-        const latestQuotation = quotationMessage && quotationMessage.length > 0 
-          ? quotationMessage[0].quotation_price 
-          : undefined;
-          
-        return {
-          ...conversation,
-          latest_quotation: latestQuotation
-        };
-      })
-    );
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          service_providers!inner (id, name, user_id)
+        `)
+        .eq('request_id', requestId)
+        .order('last_message_at', { ascending: false });
 
-    return conversationsWithQuotations as (Conversation & {
-      service_providers: { id: string; name: string; user_id: string };
-      latest_quotation?: number;
-    })[];
+      if (error) {
+        console.error('Error fetching conversations for request:', error);
+        throw error;
+      }
+      
+      console.log('Conversations for request:', data);
+      
+      if (!data || data.length === 0) {
+        console.log('No conversations found for request:', requestId);
+        return [];
+      }
+      
+      // Get latest quotations for each conversation
+      const conversationsWithQuotations = await Promise.all(
+        data.map(async (conversation) => {
+          try {
+            const { data: quotationMessage, error: quotationError } = await supabase
+              .from('messages')
+              .select('quotation_price')
+              .eq('conversation_id', conversation.id)
+              .not('quotation_price', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(1);
+              
+            if (quotationError) {
+              console.error('Error fetching quotation for conversation:', conversation.id, quotationError);
+            }
+            
+            const latestQuotation = quotationMessage && quotationMessage.length > 0 
+              ? quotationMessage[0].quotation_price 
+              : undefined;
+              
+            return {
+              ...conversation,
+              latest_quotation: latestQuotation
+            };
+          } catch (error) {
+            console.error('Error processing conversation quotation:', conversation.id, error);
+            return {
+              ...conversation,
+              latest_quotation: undefined
+            };
+          }
+        })
+      );
+
+      console.log('Conversations with quotations for request:', conversationsWithQuotations);
+      return conversationsWithQuotations as (Conversation & {
+        service_providers: { id: string; name: string; user_id: string };
+        latest_quotation?: number;
+      })[];
+    } catch (error) {
+      console.error('Error in getConversationsForRequest:', error);
+      throw error;
+    }
   };
 
   // Get a single conversation by id with messages
@@ -336,7 +420,7 @@ export const useConversations = () => {
     return data as number;
   };
 
-  // Use queries and mutations
+  // Use queries and mutations with improved error handling
   const {
     data: conversations,
     isLoading: isLoadingConversations,
@@ -345,7 +429,9 @@ export const useConversations = () => {
   } = useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: getUserConversations,
-    enabled: !!user
+    enabled: !!user,
+    retry: 3,
+    retryDelay: 1000
   });
 
   const {
@@ -354,7 +440,9 @@ export const useConversations = () => {
   } = useQuery({
     queryKey: ['unreadCount', user?.id],
     queryFn: getUnreadCount,
-    enabled: !!user
+    enabled: !!user,
+    retry: 3,
+    retryDelay: 1000
   });
 
   // Update sendMessageMutation to improve error handling and success feedback
