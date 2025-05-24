@@ -16,12 +16,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isUser, other
   const hasQuotation = message.quotation_price !== null && message.quotation_price !== undefined;
   const hasAttachments = message.attachments && message.attachments.length > 0;
   
-  // Format large numbers better (e.g., 45,234,523 becomes "₹4.52 Cr")
+  // IMPROVED: Format large numbers better for Indian currency
   const formatPrice = (price: number) => {
     if (price >= 10000000) { // 1 Crore or more
       return `₹${(price / 10000000).toFixed(2)} Cr`;
     } else if (price >= 100000) { // 1 Lakh or more
       return `₹${(price / 100000).toFixed(2)} L`;
+    } else if (price >= 1000) { // Thousands
+      return `₹${(price / 1000).toFixed(1)}K`;
     } else {
       return `₹${price.toLocaleString()}`;
     }
@@ -48,21 +50,42 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isUser, other
         )}>
           {hasQuotation && (
             <div className={cn(
-              "mb-2 rounded-lg p-4 border",
-              isUser ? "bg-primary text-primary-foreground" : "bg-gradient-to-r from-green-50 to-green-100 border-green-200"
+              "mb-2 rounded-lg p-4 border-2",
+              isUser 
+                ? "bg-primary text-primary-foreground border-primary" 
+                : "bg-gradient-to-r from-green-50 to-green-100 border-green-300 shadow-md"
             )}>
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-5 w-5" />
-                <span className="font-semibold">Price Quote</span>
+              <div className="flex items-center gap-2 mb-3">
+                <DollarSign className={cn(
+                  "h-5 w-5",
+                  isUser ? "text-primary-foreground" : "text-green-600"
+                )} />
+                <span className={cn(
+                  "font-semibold text-sm",
+                  isUser ? "text-primary-foreground" : "text-green-800"
+                )}>
+                  {isUser ? "Price Quote Sent" : "Price Quote Received"}
+                </span>
               </div>
-              <div className="text-2xl font-bold mb-2 text-green-700">
+              <div className={cn(
+                "text-3xl font-bold mb-3",
+                isUser ? "text-primary-foreground" : "text-green-700"
+              )}>
                 {formatPrice(message.quotation_price)}
               </div>
-              <div className="text-xs text-gray-600 mb-1">
+              <div className={cn(
+                "text-xs mb-2 font-medium",
+                isUser ? "text-primary-foreground/80" : "text-green-600"
+              )}>
                 Full amount: ₹{message.quotation_price.toLocaleString()}
               </div>
               {message.content && (
-                <div className="text-sm opacity-90 mt-2 p-2 bg-white/50 rounded">
+                <div className={cn(
+                  "text-sm mt-3 p-3 rounded-md",
+                  isUser 
+                    ? "bg-primary-foreground/20 text-primary-foreground" 
+                    : "bg-white/70 text-green-800 border border-green-200"
+                )}>
                   {message.content}
                 </div>
               )}
@@ -119,6 +142,13 @@ const MessagesList: React.FC<MessagesListProps> = ({ messages, userId, otherPart
     // Scroll to bottom when messages change
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+  
+  // Debug logging for messages
+  useEffect(() => {
+    console.log('MessagesList - Messages:', messages);
+    console.log('MessagesList - User ID:', userId);
+    console.log('MessagesList - Is Provider:', isProvider);
+  }, [messages, userId, isProvider]);
   
   return (
     <div className="flex-1 overflow-y-auto p-4">

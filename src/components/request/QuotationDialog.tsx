@@ -130,7 +130,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
       
       console.log('Quotation sent successfully, refreshing conversations');
       
-      // Force refresh conversations with multiple attempts
+      // Force refresh conversations with multiple attempts for better reliability
       await refetchConversations();
       
       // Additional refresh after delays to ensure UI updates
@@ -145,8 +145,8 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
       }, 1500);
       
       toast({
-        title: "Quotation Sent",
-        description: `Your quotation of ₹${numericPrice.toLocaleString()} has been sent to the requester.`
+        title: "Quotation Sent Successfully",
+        description: `Your quotation of ₹${numericPrice.toLocaleString()} has been sent to the requester. They will see it in their inbox.`
       });
       
       // Close dialog and reset form
@@ -157,7 +157,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
     } catch (error: any) {
       console.error('Error in quotation flow:', error);
       toast({
-        title: "Error",
+        title: "Error Sending Quotation",
         description: error.message || "There was a problem sending your quotation. Please try again.",
         variant: "destructive"
       });
@@ -230,7 +230,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
               <>
                 <Send className="h-4 w-4" />
                 Send Quotation
-              </>
+              </Button>
             )}
           </Button>
         </div>

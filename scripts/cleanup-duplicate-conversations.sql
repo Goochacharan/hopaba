@@ -38,3 +38,9 @@ SET last_message_at = (
 WHERE EXISTS (
   SELECT 1 FROM messages WHERE conversation_id = conversations.id
 );
+
+-- Show summary of remaining conversations
+SELECT 
+  COUNT(*) as total_conversations,
+  COUNT(CASE WHEN EXISTS (SELECT 1 FROM messages WHERE conversation_id = conversations.id) THEN 1 END) as conversations_with_messages
+FROM conversations;

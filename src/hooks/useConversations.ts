@@ -10,14 +10,14 @@ export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get user's conversations with fixed SQL query and improved error handling
+  // Get user's conversations with FIXED SQL query syntax
   const getUserConversations = async () => {
     if (!user) throw new Error('User not authenticated');
     
     console.log('Fetching conversations for user:', user.id);
     
     try {
-      // Fixed SQL query syntax - using proper OR condition with parentheses
+      // FIXED: Corrected SQL query syntax for proper PostgREST filtering
       const { data, error } = await supabase
         .from('conversations')
         .select(`
@@ -40,13 +40,13 @@ export const useConversations = () => {
         return [];
       }
       
-      // Get latest quotations for each conversation
+      // Get latest quotations for each conversation with improved error handling
       const conversationsWithQuotations = await Promise.all(
         data.map(async (conversation) => {
           try {
             const { data: quotationMessage, error: quotationError } = await supabase
               .from('messages')
-              .select('quotation_price')
+              .select('quotation_price, created_at')
               .eq('conversation_id', conversation.id)
               .not('quotation_price', 'is', null)
               .order('created_at', { ascending: false })
@@ -65,7 +65,7 @@ export const useConversations = () => {
               latest_quotation: latestQuotation
             };
             
-            console.log('Processed conversation:', result);
+            console.log('Processed conversation with quotation:', result);
             return result;
           } catch (error) {
             console.error('Error processing conversation:', conversation.id, error);
@@ -202,7 +202,7 @@ export const useConversations = () => {
           try {
             const { data: quotationMessage, error: quotationError } = await supabase
               .from('messages')
-              .select('quotation_price')
+              .select('quotation_price, created_at')
               .eq('conversation_id', conversation.id)
               .not('quotation_price', 'is', null)
               .order('created_at', { ascending: false })
