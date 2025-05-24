@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -160,65 +161,65 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     setContactingProviders(prev => new Set([...prev, provider.provider_id]));
     
     try {
-      // Create new conversation
-      const conversation = await new Promise((resolve, reject) => {
-        const originalCreateConversation = createConversation;
+      // Create new conversation with proper error handling
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('request_id', requestId)
+        .eq('provider_id', provider.provider_id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
         
-        // Override the mutation's onSuccess temporarily
-        const tempCreateConversation = async (requestId: string, providerId: string, userId: string) => {
-          try {
-            // Check for existing conversation first
-            const { data: existingConversations, error: fetchError } = await supabase
-              .from('conversations')
-              .select('id')
-              .eq('request_id', requestId)
-              .eq('provider_id', providerId)
-              .eq('user_id', userId)
-              .order('created_at', { ascending: false })
-              .limit(1);
-              
-            if (fetchError) {
-              throw new Error('Failed to check existing conversations');
-            }
-            
-            if (existingConversations && existingConversations.length > 0) {
-              resolve(existingConversations[0]);
-              return;
-            }
-            
-            // Create new conversation
-            const { data: newConversation, error: createError } = await supabase
-              .from('conversations')
-              .insert({
-                request_id: requestId,
-                provider_id: providerId,
-                user_id: userId
-              })
-              .select('id')
-              .single();
-              
-            if (createError) {
-              throw new Error(`Failed to create conversation: ${createError.message}`);
-            }
-            
-            resolve(newConversation);
-          } catch (error) {
-            reject(error);
-          }
-        };
+      if (fetchError) {
+        throw new Error('Failed to check existing conversations');
+      }
+      
+      let conversationId: string;
+      
+      if (existingConversations && existingConversations.length > 0) {
+        // Use existing conversation
+        conversationId = existingConversations[0].id;
+        console.log('Using existing conversation:', conversationId);
+      } else {
+        // Create new conversation
+        console.log('Creating new conversation for:', {
+          request_id: requestId,
+          provider_id: provider.provider_id,
+          user_id: user.id
+        });
         
-        tempCreateConversation(requestId, provider.provider_id, user.id);
+        const { data: newConversation, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            request_id: requestId,
+            provider_id: provider.provider_id,
+            user_id: user.id
+          })
+          .select('id')
+          .single();
+          
+        if (createError) {
+          console.error('Error creating conversation:', createError);
+          throw new Error(`Failed to create conversation: ${createError.message}`);
+        }
+        
+        if (!newConversation) {
+          throw new Error('No conversation data returned');
+        }
+        
+        conversationId = newConversation.id;
+        console.log('Created new conversation:', conversationId);
+      }
+      
+      // Navigate to the chat with the conversation ID
+      navigate(`/messages/${conversationId}`);
+      
+      toast({
+        title: "Chat Started",
+        description: `You can now chat with ${provider.provider_name}`,
       });
       
-      // Navigate to the chat with the new or existing conversation
-      if (conversation && 'id' in conversation) {
-        navigate(`/messages/${conversation.id}`);
-        
-        toast({
-          title: "Chat Started",
-          description: `You can now chat with ${provider.provider_name}`,
-        });
-      }
     } catch (error: any) {
       console.error('Error starting chat:', error);
       toast({
