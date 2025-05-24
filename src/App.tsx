@@ -29,6 +29,7 @@ const Messages = React.lazy(() => import(/* webpackChunkName: "messages" */ "./p
 const ProviderRequests = React.lazy(() => import(/* webpackChunkName: "provider-requests" */ "./pages/ProviderRequests"));
 const ServiceRequests = React.lazy(() => import(/* webpackChunkName: "service-requests" */ "./pages/ServiceRequests"));
 const Inbox = React.lazy(() => import(/* webpackChunkName: "inbox" */ "./pages/Inbox"));
+const DistanceDemo = React.lazy(() => import(/* webpackChunkName: "distance-demo" */ "./pages/DistanceDemo"));
 
 // Configure Query Client with performance optimizations
 const queryClient = new QueryClient({
@@ -154,6 +155,9 @@ const App = () => (
                   
                   {/* New Inbox page */}
                   <Route path="/inbox" element={<Inbox />} />
+                  
+                  {/* Distance Calculator Demo
+                  <Route path="/distance-demo" element={<DistanceDemo />} /> */}
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>

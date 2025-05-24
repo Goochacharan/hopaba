@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,12 @@ import { useNavigate } from 'react-router-dom';
 import StarRating from '@/components/marketplace/StarRating';
 import { SortOption } from '@/components/SortButton'; 
 import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
-import RatingProgressBars from '@/components/RatingProgressBars';
+import { 
+  calculateItemDistance,
+  getDistanceDisplayText,
+  type ProviderWithDistance 
+} from '@/utils/locationFilterUtils';
+import { distanceService } from '@/services/distanceService';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -31,8 +35,12 @@ interface MatchingProviderResult {
   user_id: string;
   city?: string;
   area?: string;
+  postal_code?: string;
+  map_link?: string;
   rating?: number;
   review_count?: number;
+  calculatedDistance?: number;
+  distanceText?: string;
 }
 
 // Export the main dialog component
@@ -41,15 +49,15 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-5xl w-[95vw] h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0 pb-4">
           <DialogTitle className="text-xl">Matching Service Providers</DialogTitle>
           <DialogDescription>
             These providers match your service request category and can help you.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+        <div className="flex-1 overflow-y-auto pr-2">
           {requestId && <MatchingProvidersContent requestId={requestId} />}
         </div>
       </DialogContent>
@@ -63,16 +71,36 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const navigate = useNavigate();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
-  const [currentSort, setCurrentSort] = useState<SortOption>('rating');
   const [filters, setFilters] = useState<ProviderFiltersType>({
     minRating: 0,
     city: null
   });
+  const [currentSort, setCurrentSort] = useState<SortOption>('rating');
+  const [userLocation, setUserLocation] = useState<any>(null);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+  const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
 
   // Function to check if the provider already has a conversation for this request
   const hasExistingConversation = (providerId: string) => {
     if (!conversations) return false;
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
+  };
+
+  // Get user location for distance calculations when sorting by distance
+  const getUserLocationForSorting = async () => {
+    if (userLocation) return userLocation;
+    
+    try {
+      setIsCalculatingDistances(true);
+      const location = await distanceService.getUserLocation();
+      setUserLocation(location);
+      return location;
+    } catch (error) {
+      console.warn('Could not get user location for distance sorting:', error);
+      return null;
+    } finally {
+      setIsCalculatingDistances(false);
+    }
   };
 
   // Fetch matching providers using the database function with expanded details
@@ -93,10 +121,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       // Then fetch additional details for each provider
       const enhancedData = await Promise.all(
         (baseData || []).map(async (provider: MatchingProviderResult) => {
-          // Get detailed provider info including city, area
+          // Get detailed provider info including city, area, postal_code, map_link
           const { data: providerDetail } = await supabase
             .from('service_providers')
-            .select('city, area')
+            .select('city, area, postal_code, map_link')
             .eq('id', provider.provider_id)
             .single();
           
@@ -119,6 +147,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             ...provider,
             city: providerDetail?.city || 'Unknown',
             area: providerDetail?.area || 'Unknown',
+            postal_code: providerDetail?.postal_code || '',
+            map_link: providerDetail?.map_link || '',
             rating,
             review_count: reviewCount
           };
@@ -131,6 +161,47 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     enabled: !!requestId,
     staleTime: 60000, // 1 minute cache
   });
+
+  // Calculate distances when sorting by distance
+  React.useEffect(() => {
+    const calculateDistances = async () => {
+      if (currentSort !== 'distance' || !matchingProviders || matchingProviders.length === 0) {
+        setProvidersWithDistances([]);
+        return;
+      }
+
+      const location = await getUserLocationForSorting();
+      if (!location) {
+        setProvidersWithDistances([]);
+        return;
+      }
+
+      setIsCalculatingDistances(true);
+      try {
+        // Calculate distances for all providers
+        const providersWithDistanceData = await Promise.all(
+          matchingProviders.map(async (provider) => {
+            const distanceData = await calculateItemDistance(location, provider as ProviderWithDistance);
+            
+            return {
+              ...provider,
+              calculatedDistance: distanceData?.distance || null,
+              distanceText: distanceData?.distanceText || null
+            };
+          })
+        );
+
+        setProvidersWithDistances(providersWithDistanceData);
+      } catch (error) {
+        console.error('Error calculating distances:', error);
+        setProvidersWithDistances([]);
+      } finally {
+        setIsCalculatingDistances(false);
+      }
+    };
+
+    calculateDistances();
+  }, [currentSort, matchingProviders, userLocation]);
 
   const handleContactProvider = (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
@@ -162,40 +233,65 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   // Get unique cities for filtering
   const cities = useMemo(() => {
-    if (!matchingProviders) return [];
     const uniqueCities = new Set<string>();
-    matchingProviders.forEach(provider => {
+    (matchingProviders || []).forEach(provider => {
       if (provider.city) uniqueCities.add(provider.city);
     });
     return Array.from(uniqueCities).sort();
   }, [matchingProviders]);
 
-  // Apply sorting and filtering to providers
+  // Apply filters and sorting
   const filteredAndSortedProviders = useMemo(() => {
     if (!matchingProviders) return [];
     
-    // Apply filters
-    let filtered = matchingProviders.filter(provider => {
-      const meetsRatingFilter = provider.rating !== undefined && provider.rating >= filters.minRating;
-      const meetsCityFilter = !filters.city || provider.city === filters.city;
-      return meetsRatingFilter && meetsCityFilter;
-    });
+    // Use providers with distances if sorting by distance and distances are calculated
+    const providersToUse = currentSort === 'distance' && providersWithDistances.length > 0 
+      ? providersWithDistances 
+      : matchingProviders;
     
+    let filtered = providersToUse.filter(provider => {
+      // Apply rating filter
+      if (filters.minRating > 0 && (provider.rating || 0) < filters.minRating) {
+        return false;
+      }
+      
+      // Apply city filter
+      if (filters.city && provider.city !== filters.city) {
+        return false;
+      }
+      
+      return true;
+    });
+
     // Apply sorting
-    return [...filtered].sort((a, b) => {
+    filtered.sort((a, b) => {
       switch (currentSort) {
+        case 'distance':
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to rating if no distance data
+          return (b.rating || 0) - (a.rating || 0);
         case 'rating':
           return (b.rating || 0) - (a.rating || 0);
         case 'reviewCount':
           return (b.review_count || 0) - (a.review_count || 0);
         case 'newest':
-          // Since we don't have a 'created_at' field in our data, we'll use alphabetical order
-          return a.provider_name.localeCompare(b.provider_name);
+          // We don't have creation date, so fall back to rating
+          return (b.rating || 0) - (a.rating || 0);
         default:
-          return 0;
+          return (b.rating || 0) - (a.rating || 0);
       }
     });
-  }, [matchingProviders, filters, currentSort]);
+
+    return filtered;
+  }, [matchingProviders, providersWithDistances, filters, currentSort]);
 
   const getOverallRatingColor = (ratingNum: number) => {
     if (ratingNum <= 30) return '#ea384c'; // dark red
@@ -233,112 +329,112 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   }
 
   return (
-    <>
+    <div className="space-y-4 h-full flex flex-col">
       {/* Add filters and sort buttons */}
-      <ProviderFilters 
-        cities={cities}
-        onFilterChange={setFilters}
-        onSortChange={setCurrentSort}
-        currentSort={currentSort}
-      />
-    
+      <div className="flex-shrink-0">
+        <ProviderFilters 
+          cities={cities}
+          onFilterChange={setFilters}
+          onSortChange={setCurrentSort}
+          currentSort={currentSort}
+        />
+      </div>
+
+      {/* Loading indicator for distance calculations */}
+      {isCalculatingDistances && currentSort === 'distance' && (
+        <div className="flex items-center justify-center py-2 flex-shrink-0">
+          <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
+          <span className="text-sm text-muted-foreground">Calculating distances...</span>
+        </div>
+      )}
+
       {filteredAndSortedProviders.length === 0 ? (
-        <div className="text-center py-4 text-muted-foreground">
+        <div className="text-center py-4 text-muted-foreground flex-1 flex items-center justify-center">
           No providers match your current filters.
         </div>
       ) : (
-        filteredAndSortedProviders.map((provider) => {
-          const isContacted = hasExistingConversation(provider.provider_id) || 
-                            contactedProviders.has(provider.provider_id);
-                            
-          // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
-          let allRatings = [provider.rating || 4.5];
-          const averageRaw = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
-          const ratingScore = Math.round((averageRaw / 10) * 100);  // Update to match RatingProgressBars calculation
-          const ratingColor = getOverallRatingColor(ratingScore);
-                            
-          return (
-            <Card key={provider.provider_id} className="overflow-hidden border-l-4 border-l-primary mb-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Building className="h-5 w-5 text-muted-foreground" />
-                  <button 
-                    onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
-                    className="hover:underline text-primary"
-                  >
-                    {provider.provider_name}
-                  </button>
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid gap-4 pb-4">
+            {filteredAndSortedProviders.map((provider) => {
+              const isContacted = hasExistingConversation(provider.provider_id) || 
+                                contactedProviders.has(provider.provider_id);
+                                
+              // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
+              let allRatings = [provider.rating || 4.5];
+              const averageRaw = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
+              const ratingScore = Math.round((averageRaw / 10) * 100);  // Update to match RatingProgressBars calculation
+              const ratingColor = getOverallRatingColor(ratingScore);
+
+              return (
+                <Card key={provider.provider_id} className="relative flex-shrink-0">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Building className="h-5 w-5 text-primary" />
+                          {provider.provider_name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary">{provider.provider_category}</Badge>
+                          {provider.provider_subcategory && (
+                            <Badge variant="outline">{provider.provider_subcategory}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Distance badge - only show if distance was calculated */}
+                      {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
+                        <Badge variant="outline" className="ml-2">
+                          📍 {getDistanceDisplayText(provider)}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
                   
-                  {/* Add circular rating display with updated calculation */}
-                  <div 
-                    title="Overall rating"
-                    className="flex items-center justify-center border-4 font-bold ml-auto"
-                    style={{
-                      width: 45,
-                      height: 45,
-                      borderRadius: '50%',
-                      color: ratingColor,
-                      borderColor: ratingColor,
-                      fontSize: 18,
-                      background: '#fff',
-                      boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    {ratingScore}
-                  </div>
-                </CardTitle>
-                <div className="flex flex-wrap gap-2 mt-1 items-center">
-                  <Badge variant="secondary">{provider.provider_category}</Badge>
-                  {provider.provider_subcategory && (
-                    <Badge variant="outline">{provider.provider_subcategory}</Badge>
-                  )}
-                  {/* Display star rating with review count */}
-                  <div className="flex items-center gap-1">
-                    <StarRating rating={provider.rating || 4.5} size="small" />
-                    <span className="text-xs text-muted-foreground">
-                      ({provider.review_count || 0})
-                    </span>
-                  </div>
-                </div>
-                {/* Location information */}
-                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                  <MapPin className="h-3 w-3" />
-                  <span>{provider.area}, {provider.city}</span>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-2 text-sm text-muted-foreground">
-                <p>This service provider specializes in {provider.provider_category.toLowerCase()}
-                {provider.provider_subcategory ? ` with focus on ${provider.provider_subcategory.toLowerCase()}` : ''}.
-                </p>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-2 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
-                  className="flex items-center gap-1"
-                >
-                  View Profile
-                </Button>
-                <Button
-                  size="sm"
-                  variant={isContacted ? "outline" : "default"}
-                  onClick={() => handleContactProvider(provider)}
-                  disabled={isCreatingConversation || isContacted}
-                  className="flex items-center gap-1"
-                >
-                  {isCreatingConversation && contactedProviders.has(provider.provider_id) ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <MessageSquare className="h-4 w-4" />
-                  )}
-                  {isContacted ? "Contacted" : "Contact Provider"}
-                </Button>
-              </CardFooter>
-            </Card>
-          );
-        })
+                  <CardContent className="space-y-3">
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>{provider.area}, {provider.city}</span>
+                      {provider.postal_code && (
+                        <span className="text-xs">({provider.postal_code})</span>
+                      )}
+                    </div>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center gap-3">
+                      <StarRating rating={provider.rating || 4.5} size="small" />
+                      <span className="text-sm text-muted-foreground">
+                        {(provider.rating || 4.5).toFixed(1)} ({provider.review_count || 0} reviews)
+                      </span>
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter className="flex gap-2 pt-3">
+                    <Button
+                      onClick={() => handleContactProvider(provider)}
+                      disabled={isContacted || isCreatingConversation}
+                      className="flex-1"
+                      variant={isContacted ? "outline" : "default"}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      {isContacted ? "Already Contacted" : "Contact Provider"}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      View Profile
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 }

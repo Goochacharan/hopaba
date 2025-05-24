@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -13,6 +12,13 @@ import SearchControls from '@/components/search/SearchControls';
 import { SortOption } from '@/components/SortButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PostalCodeSearch from '@/components/search/PostalCodeSearch';
+import LocationFilter, { type LocationFilterData } from '@/components/search/LocationFilter';
+import { 
+  filterBusinessesByLocation, 
+  filterBusinessesByPostalCode,
+  getDistanceDisplayText,
+  type BusinessWithDistance 
+} from '@/utils/locationFilterUtils';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = [
@@ -42,6 +48,16 @@ const Shop = () => {
   const [inputValue, setInputValue] = useState<string>(searchQuery);
   const [selectedCity, setSelectedCity] = useState<string>(cityParam);
   const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
+  
+  // Location filter state
+  const [locationFilter, setLocationFilter] = useState<LocationFilterData>({
+    userLocation: null,
+    postalCode: '',
+    maxDistance: 25,
+    useCurrentLocation: false,
+    filteredItems: []
+  });
+  const [locationFilteredBusinesses, setLocationFilteredBusinesses] = useState<BusinessWithDistance[]>([]);
 
   // Filters
   const {
@@ -70,6 +86,26 @@ const Shop = () => {
     setSearchParams(newParams);
   }, [selectedCategory, selectedSubcategories, searchTerm, selectedCity, postalCode, setSearchParams]);
 
+  // Handle location filter changes
+  const handleLocationFilter = async (filters: LocationFilterData) => {
+    console.log('🔍 Location filter changed:', filters);
+    setLocationFilter(filters);
+    
+    if (!businesses) return;
+    
+    let filtered: BusinessWithDistance[] = businesses as BusinessWithDistance[];
+    
+    // Apply location-based filtering
+    if (filters.userLocation) {
+      filtered = await filterBusinessesByLocation(filtered, filters);
+    } else if (filters.postalCode) {
+      // For postal code search, filter by exact postal code match
+      filtered = filterBusinessesByPostalCode(filtered, filters.postalCode);
+    }
+    
+    setLocationFilteredBusinesses(filtered);
+  };
+
   // Handle category change
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -91,7 +127,7 @@ const Shop = () => {
     setSelectedCity(city);
   };
 
-  // Handle postal code search
+  // Handle postal code search (legacy support)
   const handlePostalCodeSearch = (code: string) => {
     setPostalCode(code);
   };
@@ -104,6 +140,14 @@ const Shop = () => {
     setInputValue('');
     setSelectedCity('All Cities');
     setPostalCode('');
+    setLocationFilter({
+      userLocation: null,
+      postalCode: '',
+      maxDistance: 25,
+      useCurrentLocation: false,
+      filteredItems: []
+    });
+    setLocationFilteredBusinesses([]);
     setters.setMinRating([0]);
     setters.setPriceRange(50000);
     setters.setOpenNowOnly(false);
@@ -119,11 +163,14 @@ const Shop = () => {
 
   // Filter and sort businesses
   const filteredBusinesses = useMemo(() => {
-    if (!businesses) return [];
+    // Use location-filtered businesses if available, otherwise use all businesses
+    const businessesToFilter = locationFilteredBusinesses.length > 0 || locationFilter.userLocation || locationFilter.postalCode 
+      ? locationFilteredBusinesses 
+      : (businesses || []).map(b => b as BusinessWithDistance);
     
-    return businesses.filter(business => {
+    return businessesToFilter.filter(business => {
       // Apply search filter
-      if (searchTerm && !business.name.toLowerCase().includes(searchTerm.toLowerCase()) && !business.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+      if (searchTerm && !business.name.toLowerCase().includes(searchTerm.toLowerCase()) && !business.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
 
@@ -132,7 +179,7 @@ const Shop = () => {
         return false;
       }
 
-      // Apply postal code filter
+      // Apply postal code filter (legacy)
       if (postalCode && business.postal_code !== postalCode) {
         return false;
       }
@@ -158,10 +205,19 @@ const Shop = () => {
       return true;
     }).sort((a, b) => {
       switch (filters.sortBy) {
-        case 'rating':
-          return (b.rating || 0) - (a.rating || 0);
         case 'distance':
-          // We don't have distance data, so fall back to rating
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to rating if no distance data
+          return (b.rating || 0) - (a.rating || 0);
+        case 'rating':
           return (b.rating || 0) - (a.rating || 0);
         case 'reviewCount':
           // We don't have review count, so fall back to rating
@@ -172,12 +228,31 @@ const Shop = () => {
           return (b.rating || 0) - (a.rating || 0);
       }
     });
-  }, [businesses, searchTerm, selectedCity, postalCode, filters]);
+  }, [businesses, locationFilteredBusinesses, locationFilter, searchTerm, selectedCity, postalCode, filters]);
+
+  const hasActiveFilters = selectedCategory !== 'All' || 
+                          selectedSubcategories.length > 0 || 
+                          searchTerm || 
+                          selectedCity !== 'All Cities' || 
+                          postalCode || 
+                          filters.minRating[0] > 0 || 
+                          filters.openNowOnly ||
+                          locationFilter.userLocation ||
+                          locationFilter.postalCode;
 
   return (
     <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* City Filter and Postal Code Filter */}
+        {/* Location Filter */}
+        <div className="mb-6">
+          <LocationFilter 
+            onLocationFilter={handleLocationFilter}
+            initialPostalCode={postalCodeParam}
+            initialMaxDistance={25}
+          />
+        </div>
+
+        {/* City Filter and Postal Code Filter (Legacy) */}
         <div className="flex flex-col md:flex-row gap-3 mb-4">
           <div className="md:w-1/3">
             <Select
@@ -225,9 +300,9 @@ const Shop = () => {
           />
         </div>
         
-        {/* Active Filters */}
+        
         <div className="mb-4 flex flex-wrap gap-2">
-          {(selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly) && (
+          {hasActiveFilters && (
             <>
               <div className="text-sm text-muted-foreground mr-2 flex items-center">Active filters:</div>
               <Button size="sm" variant="destructive" onClick={handleResetFilters} className="h-7 gap-1">
@@ -259,30 +334,47 @@ const Shop = () => {
         </div>
         
         {/* Results */}
-        <div className="mt-4">
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
-            <div className="text-center py-12">
-              <p className="text-destructive">Error loading businesses. Please try again later.</p>
-            </div>
-          ) : filteredBusinesses.length === 0 ? (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium mb-2">No businesses found</h3>
-              <p className="text-muted-foreground">
-                Try changing your filters or search term
-              </p>
-            </div>
-          ) : (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive">Error loading businesses. Please try again later.</p>
+          </div>
+        ) : filteredBusinesses.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-medium mb-2">No businesses found</h3>
+            <p className="text-muted-foreground">
+              Try changing your filters or search term
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Results summary */}
+            {(locationFilter.userLocation || locationFilter.postalCode) && (
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredBusinesses.length} businesses
+                {locationFilter.userLocation && ` within ${locationFilter.maxDistance} km of your location`}
+                {locationFilter.postalCode && ` for postal code ${locationFilter.postalCode}`}
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredBusinesses.map(business => (
-                <BusinessCardPublic key={business.id} business={business} />
+                <div key={business.id} className="relative">
+                  <BusinessCardPublic business={business as any} />
+                  {/* Distance badge */}
+                  {business.calculatedDistance !== null && business.calculatedDistance !== undefined && (
+                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                      {getDistanceDisplayText(business)}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
