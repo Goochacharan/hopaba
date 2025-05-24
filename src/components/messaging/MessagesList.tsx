@@ -16,6 +16,17 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isUser, other
   const hasQuotation = message.quotation_price !== null && message.quotation_price !== undefined;
   const hasAttachments = message.attachments && message.attachments.length > 0;
   
+  // Format large numbers better (e.g., 45,234,523 becomes "₹4.52 Cr")
+  const formatPrice = (price: number) => {
+    if (price >= 10000000) { // 1 Crore or more
+      return `₹${(price / 10000000).toFixed(2)} Cr`;
+    } else if (price >= 100000) { // 1 Lakh or more
+      return `₹${(price / 100000).toFixed(2)} L`;
+    } else {
+      return `₹${price.toLocaleString()}`;
+    }
+  };
+  
   return (
     <div className={cn(
       "flex w-full mb-4",
@@ -37,21 +48,28 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isUser, other
         )}>
           {hasQuotation && (
             <div className={cn(
-              "mb-2 rounded-lg p-3 border",
-              isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+              "mb-2 rounded-lg p-4 border",
+              isUser ? "bg-primary text-primary-foreground" : "bg-gradient-to-r from-green-50 to-green-100 border-green-200"
             )}>
-              <div className="flex items-center gap-1 mb-1">
-                <DollarSign className="h-4 w-4" />
-                <span className="font-medium">Price Quote</span>
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="h-5 w-5" />
+                <span className="font-semibold">Price Quote</span>
               </div>
-              <div className="text-xl font-bold mb-1">₹{message.quotation_price}</div>
-              <div className="text-sm opacity-80">
-                {message.content}
+              <div className="text-2xl font-bold mb-2 text-green-700">
+                {formatPrice(message.quotation_price)}
               </div>
+              <div className="text-xs text-gray-600 mb-1">
+                Full amount: ₹{message.quotation_price.toLocaleString()}
+              </div>
+              {message.content && (
+                <div className="text-sm opacity-90 mt-2 p-2 bg-white/50 rounded">
+                  {message.content}
+                </div>
+              )}
             </div>
           )}
           
-          {!hasQuotation && (
+          {!hasQuotation && message.content && (
             <div className={cn(
               "rounded-lg p-3 text-sm",
               isUser 

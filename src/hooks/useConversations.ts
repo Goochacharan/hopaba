@@ -10,14 +10,14 @@ export const useConversations = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Get user's conversations with improved query and error handling
+  // Get user's conversations with fixed SQL query and improved error handling
   const getUserConversations = async () => {
     if (!user) throw new Error('User not authenticated');
     
     console.log('Fetching conversations for user:', user.id);
     
     try {
-      // Fixed SQL query syntax - using proper OR condition with correct escaping
+      // Fixed SQL query syntax - using proper OR condition with parentheses
       const { data, error } = await supabase
         .from('conversations')
         .select(`
@@ -29,8 +29,8 @@ export const useConversations = () => {
         .order('last_message_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching conversations:', error);
-        throw new Error(`Failed to fetch conversations: ${error.message}`);
+        console.error('Database error fetching conversations:', error);
+        throw new Error(`Database query failed: ${error.message}`);
       }
       
       console.log('Raw conversation data:', data);
@@ -428,8 +428,11 @@ export const useConversations = () => {
     queryKey: ['conversations', user?.id],
     queryFn: getUserConversations,
     enabled: !!user,
-    retry: 2,
-    retryDelay: 1000,
+    retry: (failureCount, error) => {
+      console.log('Retry attempt:', failureCount, 'Error:', error);
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     staleTime: 30000 // 30 seconds
   });
 
@@ -530,7 +533,7 @@ export const useConversations = () => {
             toast({
               title: 'New Message',
               description: message.quotation_price 
-                ? `New quotation received: ₹${message.quotation_price}` 
+                ? `New quotation received: ₹${message.quotation_price.toLocaleString()}` 
                 : 'You have received a new message',
             });
           }

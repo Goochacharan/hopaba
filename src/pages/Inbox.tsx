@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
@@ -18,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
@@ -54,14 +55,20 @@ const Inbox: React.FC = () => {
   const { conversations, isLoadingConversations, conversationsError, refetchConversations } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
+  const [retryCount, setRetryCount] = useState(0);
   
-  // Debug logging for conversations
+  // Enhanced debug logging for conversations
   useEffect(() => {
     console.log('Inbox - Conversations data:', conversations);
     console.log('Inbox - Loading state:', isLoadingConversations);
     console.log('Inbox - Error state:', conversationsError);
     console.log('Inbox - Selected request ID:', selectedRequestId);
-  }, [conversations, isLoadingConversations, conversationsError, selectedRequestId]);
+    console.log('Inbox - User ID:', user?.id);
+    
+    if (conversationsError) {
+      console.error('Detailed conversation error:', conversationsError);
+    }
+  }, [conversations, isLoadingConversations, conversationsError, selectedRequestId, user]);
   
   // Redirect to login if not authenticated
   if (!user) {
@@ -72,11 +79,7 @@ const Inbox: React.FC = () => {
     console.log('Request clicked:', requestId);
     setSelectedRequestId(requestId);
     setActiveTab("messages");
-    
-    // Close sidebar on mobile when a request is selected
-    if (window.innerWidth < 768) {
-      // Will be handled by the SidebarProvider
-    }
+    setRetryCount(0); // Reset retry count when switching requests
   };
   
   // Get the selected request details
@@ -89,10 +92,35 @@ const Inbox: React.FC = () => {
   
   console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
 
-  // Handle retry for conversation loading
+  // Enhanced retry handler with better feedback
   const handleRetryConversations = () => {
-    console.log('Retrying conversation fetch...');
+    console.log('Retrying conversation fetch, attempt:', retryCount + 1);
+    setRetryCount(prev => prev + 1);
     refetchConversations();
+    
+    toast({
+      title: "Retrying...",
+      description: `Attempting to reload conversations (${retryCount + 1}/3)`,
+    });
+  };
+
+  // Enhanced error message based on error type
+  const getErrorMessage = (error: any) => {
+    if (!error) return "Unknown error occurred";
+    
+    const errorMessage = error.message || error.toString();
+    
+    if (errorMessage.includes('syntax error')) {
+      return "Database query error. Please try refreshing or contact support.";
+    }
+    if (errorMessage.includes('timeout')) {
+      return "Request timed out. Please check your connection and try again.";
+    }
+    if (errorMessage.includes('authentication')) {
+      return "Authentication error. Please log in again.";
+    }
+    
+    return errorMessage;
   };
   
   return (
@@ -100,7 +128,6 @@ const Inbox: React.FC = () => {
       <div className="min-h-screen bg-background">
         <SidebarProvider defaultOpen={false}>
           <div className="flex h-full min-h-[calc(100vh-128px)] w-full relative">
-            {/* Use our custom sidebar toggle button that uses the useSidebar hook */}
             <SidebarToggleButton />
             
             <Sidebar side="left">
@@ -192,25 +219,38 @@ const Inbox: React.FC = () => {
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription>
                               <div className="flex flex-col gap-2">
-                                <span className="font-medium">Error loading messages</span>
+                                <span className="font-medium">Failed to load messages</span>
                                 <span className="text-sm">
-                                  {conversationsError.message || 'Failed to load conversations. This may be due to a database connection issue.'}
+                                  {getErrorMessage(conversationsError)}
                                 </span>
-                                <Button 
-                                  onClick={handleRetryConversations} 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="w-fit mt-2"
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Retry Loading
-                                </Button>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Button 
+                                    onClick={handleRetryConversations} 
+                                    variant="outline" 
+                                    size="sm"
+                                    disabled={retryCount >= 3}
+                                  >
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    {retryCount >= 3 ? 'Max retries reached' : `Retry (${retryCount}/3)`}
+                                  </Button>
+                                  <Button 
+                                    onClick={() => window.location.reload()} 
+                                    variant="outline" 
+                                    size="sm"
+                                  >
+                                    <Database className="h-4 w-4 mr-2" />
+                                    Refresh Page
+                                  </Button>
+                                </div>
                               </div>
                             </AlertDescription>
                           </Alert>
                         ) : isLoadingConversations ? (
                           <div className="flex justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                              <span className="text-sm text-muted-foreground">Loading messages...</span>
+                            </div>
                           </div>
                         ) : requestConversations.length === 0 ? (
                           <div className="text-center py-8 border rounded-md">
@@ -267,7 +307,6 @@ const Inbox: React.FC = () => {
                     
                     <TabsContent value="providers">
                       <div className="border rounded-lg p-4 shadow-sm">
-                        {/* Reuse the content from MatchingProvidersDialog without the dialog wrapper */}
                         {selectedRequestId && (
                           <MatchingProvidersContent requestId={selectedRequestId} />
                         )}
