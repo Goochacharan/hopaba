@@ -230,7 +230,7 @@ export function QuotationDialog({ request, open, onOpenChange, providerId }: Quo
               <>
                 <Send className="h-4 w-4" />
                 Send Quotation
-              </Button>
+              </>
             )}
           </Button>
         </div>
