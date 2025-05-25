@@ -132,7 +132,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           />
           
           {/* Post Request Button (middle) */}
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex flex-col items-center justify-center">
             <button 
               onClick={handlePostRequest}
               className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-14 h-14 shadow-lg relative bottom-6"
@@ -140,7 +140,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             >
               <Plus className="h-7 w-7" />
             </button>
-            <span className="text-xs font-medium mt-0.5">Post Request</span>
+            {/* Removed the Post Request text */}
           </div>
           
           {/* Inbox button */}
@@ -160,7 +160,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             isActive={location.pathname === '/inbox'} 
           />
           
-          {/* Messages Button */}
+          {/* Messages Button
           <NavButton 
             to={user ? "/messages" : "/login"}
             icon={(
@@ -179,7 +179,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             )}
             label="Messages" 
             isActive={location.pathname.startsWith('/message')} 
-          />
+          /> */}
           
           {/* Service Requests Button - only show for service providers */}
           {isServiceProvider && (

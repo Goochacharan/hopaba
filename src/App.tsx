@@ -144,7 +144,8 @@ const App = () => (
                   <Route path="/post-request" element={<PostRequest />} />
                   <Route path="/requests" element={<Requests />} />
                   <Route path="/request/:id" element={<RequestDetail />} />
-                  <Route path="/messages" element={<MessagesListing />} />
+                  {/* Messages listing route */}
+                  {/* <Route path="/messages" element={<MessagesListing />} /> */}
                   <Route path="/messages/:id" element={<Messages />} />
                   
                   {/* Provider routes */}
