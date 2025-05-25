@@ -746,7 +746,7 @@ const Inbox: React.FC = () => {
                                         <Button 
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => navigate(`/seller/${conversation.provider_id}`)}
+                                          onClick={() => navigate(`/business/${conversation.provider_id}`)}
                                         >
                                           <Building className="h-4 w-4 mr-1" />
                                           View Profile
