@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
   SidebarProvider, 
@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { NotificationPrompt } from '@/components/notifications/NotificationPrompt';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { distanceService, type Location } from '@/services/distanceService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  calculateItemDistance,
+  getDistanceDisplayText,
+  type ProviderWithDistance 
+} from '@/utils/locationFilterUtils';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -59,6 +66,13 @@ const Inbox: React.FC = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Location and sorting state for messages
+  const [userLocation, setUserLocation] = useState<Location | null>(null);
+  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
+  const [messagesSortBy, setMessagesSortBy] = useState<string>('recent');
+  const [conversationsWithDistance, setConversationsWithDistance] = useState<any[]>([]);
   
   // Enhanced debug logging for conversations
   useEffect(() => {
@@ -180,6 +194,121 @@ const Inbox: React.FC = () => {
     });
   };
 
+  // Handle location enable/disable for messages
+  const handleLocationToggle = async () => {
+    if (isLocationEnabled) {
+      // Disable location
+      setIsLocationEnabled(false);
+      setUserLocation(null);
+      setConversationsWithDistance([]);
+      toast({
+        title: "Location disabled",
+        description: "Distance sorting is now disabled",
+      });
+    } else {
+      // Enable location
+      setIsCalculatingDistances(true);
+      try {
+        console.log('🔍 Getting user location for messages...');
+        const location = await distanceService.getUserLocation();
+        setUserLocation(location);
+        setIsLocationEnabled(true);
+        console.log('📍 User location obtained:', location);
+        
+        toast({
+          title: "Location enabled",
+          description: "Distance calculation enabled for message sorting",
+        });
+
+        // Calculate distances for current conversations
+        if (requestConversations && requestConversations.length > 0) {
+          await calculateDistancesForConversations(requestConversations, location);
+        }
+      } catch (error) {
+        console.error('❌ Failed to get user location:', error);
+        toast({
+          title: "Location access denied",
+          description: "Please allow location access to enable distance sorting",
+          variant: "destructive"
+        });
+      } finally {
+        setIsCalculatingDistances(false);
+      }
+    }
+  };
+
+  // Calculate distances for conversations
+  const calculateDistancesForConversations = async (conversations: any[], userLoc: Location) => {
+    setIsCalculatingDistances(true);
+    try {
+      const conversationsWithDist = await Promise.all(
+        conversations.map(async (conversation) => {
+          let calculatedDistance = null;
+          let distanceText = null;
+
+          // Get provider details for distance calculation
+          const providerDetails = enhancedProviderDetails[conversation.provider_id];
+          
+          if (providerDetails && providerDetails.postal_code) {
+            try {
+              // Get coordinates from postal code (use fallback first as it's more reliable from browser)
+              let providerLocation: Location;
+              try {
+                providerLocation = await distanceService.getCoordinatesFromPostalCodeFallback(providerDetails.postal_code);
+                console.log(`📍 Geocoded ${providerDetails.postal_code} to:`, providerLocation);
+              } catch (error) {
+                console.warn('⚠️ Fallback geocoding failed, trying Google API...');
+                providerLocation = await distanceService.getCoordinatesFromPostalCode(providerDetails.postal_code);
+                console.log(`📍 Geocoded ${providerDetails.postal_code} to:`, providerLocation);
+              }
+
+              // Calculate straight-line distance
+              const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, providerLocation);
+              calculatedDistance = straightLineDistance; // Already in km
+              distanceText = `${straightLineDistance.toFixed(1)} km`;
+              console.log(`📍 Distance calculated for ${conversation.service_providers.name}: ${calculatedDistance.toFixed(2)} km`);
+            } catch (error) {
+              console.warn(`Failed to calculate distance for ${conversation.service_providers.name}:`, error);
+            }
+          } else {
+            console.log(`⚠️ No postal code available for ${conversation.service_providers.name}`);
+          }
+
+          return {
+            ...conversation,
+            calculatedDistance,
+            distanceText
+          };
+        })
+      );
+      
+      setConversationsWithDistance(conversationsWithDist);
+      console.log('✅ Distance calculation completed for', conversationsWithDist.length, 'conversations');
+      
+      // Log summary of distance calculations
+      const withDistance = conversationsWithDist.filter(c => c.calculatedDistance !== null);
+      const withoutDistance = conversationsWithDist.filter(c => c.calculatedDistance === null);
+      console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
+      
+    } catch (error) {
+      console.error('❌ Failed to calculate distances:', error);
+      toast({
+        title: "Distance calculation failed",
+        description: "Using conversations without distance data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCalculatingDistances(false);
+    }
+  };
+
+  // Recalculate distances when conversations change and location is enabled
+  useEffect(() => {
+    if (requestConversations && requestConversations.length > 0 && userLocation && isLocationEnabled) {
+      calculateDistancesForConversations(requestConversations, userLocation);
+    }
+  }, [requestConversations, userLocation, isLocationEnabled, enhancedProviderDetails]);
+
   // Enhanced error message based on error type
   const getErrorMessage = (error: any) => {
     if (!error) return "Unknown error occurred";
@@ -207,6 +336,44 @@ const Inbox: React.FC = () => {
     if (ratingNum <= 85) return '#68cd77'; // light green
     return '#00ee24'; // bright green as requested for highest rating
   };
+
+  // Sort conversations based on selected criteria
+  const sortedConversations = useMemo(() => {
+    // Use conversations with distance if location is enabled, otherwise use regular conversations
+    const conversationsToSort = isLocationEnabled && conversationsWithDistance.length > 0
+      ? conversationsWithDistance 
+      : requestConversations || [];
+
+    const sorted = [...conversationsToSort].sort((a, b) => {
+      switch (messagesSortBy) {
+        case 'distance':
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to recent if no distance data
+          return new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime();
+        case 'rating':
+          const aRating = enhancedProviderDetails[a.provider_id]?.rating || 0;
+          const bRating = enhancedProviderDetails[b.provider_id]?.rating || 0;
+          return bRating - aRating;
+        case 'quotation':
+          const aQuotation = a.latest_quotation || 0;
+          const bQuotation = b.latest_quotation || 0;
+          return aQuotation - bQuotation; // Lowest quotation first
+        case 'recent':
+        default:
+          return new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime();
+      }
+    });
+
+    return sorted;
+  }, [requestConversations, conversationsWithDistance, isLocationEnabled, messagesSortBy, enhancedProviderDetails]);
   
   return (
     <MainLayout>
@@ -304,6 +471,55 @@ const Inbox: React.FC = () => {
                     </TabsList>
                     
                     <TabsContent value="messages">
+                      {/* Location Toggle and Sorting Controls */}
+                      <div className="mb-4 space-y-4">
+                        {/* Location Toggle */}
+                        <div className="bg-white rounded-xl border border-border p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-5 w-5 text-primary" />
+                              <div>
+                                <h3 className="font-medium">Distance Calculation</h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Enable location to sort messages by distance
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant={isLocationEnabled ? "default" : "outline"}
+                              onClick={handleLocationToggle}
+                              disabled={isCalculatingDistances}
+                              className="flex items-center gap-2"
+                            >
+                              {isCalculatingDistances ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Navigation className="h-4 w-4" />
+                              )}
+                              {isLocationEnabled ? "Disable Location" : "Enable Location"}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Sorting Controls */}
+                        <div className="flex items-center gap-4">
+                          <label className="text-sm font-medium">Sort by:</label>
+                          <Select value={messagesSortBy} onValueChange={setMessagesSortBy}>
+                            <SelectTrigger className="w-48">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="recent">Most Recent</SelectItem>
+                              <SelectItem value="rating">Highest Rating</SelectItem>
+                              <SelectItem value="quotation">Lowest Quotation</SelectItem>
+                              {isLocationEnabled && (
+                                <SelectItem value="distance">Nearest Distance</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
                       <div className="space-y-4">
                         {conversationsError ? (
                           <Alert variant="destructive" className="border-red-200 bg-red-50">
@@ -343,7 +559,7 @@ const Inbox: React.FC = () => {
                               <span className="text-sm text-muted-foreground">Loading messages...</span>
                             </div>
                           </div>
-                        ) : requestConversations.length === 0 ? (
+                        ) : sortedConversations.length === 0 ? (
                           <div className="text-center py-8 border rounded-md">
                             <MessageSquare className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
                             <h3 className="text-lg font-medium">No messages yet</h3>
@@ -359,7 +575,7 @@ const Inbox: React.FC = () => {
                             </Button>
                           </div>
                         ) : (
-                          requestConversations.map((conversation) => {
+                          sortedConversations.map((conversation) => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
                             const providerDetails = enhancedProviderDetails[conversation.provider_id];
                             
@@ -409,6 +625,16 @@ const Inbox: React.FC = () => {
                                           {providerDetails.postal_code && (
                                             <span className="text-xs ml-1">({providerDetails.postal_code})</span>
                                           )}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Distance Information */}
+                                    {conversation.calculatedDistance !== null && conversation.calculatedDistance !== undefined && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Navigation className="h-4 w-4 text-primary" />
+                                        <span className="text-primary font-medium">
+                                          {conversation.calculatedDistance.toFixed(1)} km away
                                         </span>
                                       </div>
                                     )}

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Phone, Mail, MessageSquare, MapPin, Building } from 'lucide-react';
+import { Loader2, Phone, Mail, MessageSquare, MapPin, Building, Star } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,12 +33,14 @@ interface MatchingProviderResult {
   provider_category: string;
   provider_subcategory: string;
   user_id: string;
+  address?: string;
   city?: string;
   area?: string;
   postal_code?: string;
   map_link?: string;
   rating?: number;
   review_count?: number;
+  overallScore?: number;
   calculatedDistance?: number;
   distanceText?: string;
 }
@@ -121,18 +123,18 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       // Then fetch additional details for each provider
       const enhancedData = await Promise.all(
         (baseData || []).map(async (provider: MatchingProviderResult) => {
-          // Get detailed provider info including city, area, postal_code, map_link
+          // Get detailed provider info including address, city, area, postal_code, map_link
           const { data: providerDetail } = await supabase
             .from('service_providers')
-            .select('city, area, postal_code, map_link')
+            .select('id, address, area, city, postal_code, map_link')
             .eq('id', provider.provider_id)
             .single();
           
-          // Get reviews for the provider to calculate average rating
+          // Get reviews for the provider from business_reviews table (same as Messages tab)
           const { data: reviews } = await supabase
-            .from('seller_reviews')
-            .select('rating')
-            .eq('seller_id', provider.user_id);
+            .from('business_reviews')
+            .select('business_id, rating')
+            .eq('business_id', provider.provider_id);
           
           // Calculate average rating if reviews exist
           let rating = 4.5; // Default rating
@@ -143,14 +145,20 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             reviewCount = reviews.length;
           }
           
+          // Calculate overall score (out of 100) - same calculation as used in Messages tab
+          const averageRaw = rating;
+          const overallScore = Math.round((averageRaw / 5) * 100); // Convert 5-star rating to 100-point scale
+          
           return {
             ...provider,
+            address: providerDetail?.address || '',
             city: providerDetail?.city || 'Unknown',
             area: providerDetail?.area || 'Unknown',
             postal_code: providerDetail?.postal_code || '',
             map_link: providerDetail?.map_link || '',
             rating,
-            review_count: reviewCount
+            review_count: reviewCount,
+            overallScore
           };
         })
       );
@@ -367,46 +375,64 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
               return (
                 <Card key={provider.provider_id} className="relative flex-shrink-0">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Building className="h-5 w-5 text-primary" />
-                          {provider.provider_name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary">{provider.provider_category}</Badge>
-                          {provider.provider_subcategory && (
-                            <Badge variant="outline">{provider.provider_subcategory}</Badge>
-                          )}
-                        </div>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span>{provider.provider_name}</span>
+                      <div className="flex items-center gap-2">
+                        {/* Distance badge - only show if distance was calculated */}
+                        {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
+                          <Badge variant="outline" className="ml-2">
+                            📍 {getDistanceDisplayText(provider)}
+                          </Badge>
+                        )}
+                        {/* Overall Score Badge (like Messages tab) */}
+                        {provider.overallScore && (
+                          <div 
+                            className="flex items-center justify-center w-12 h-12 rounded-full text-white font-bold text-lg"
+                            style={{ backgroundColor: getOverallRatingColor(provider.overallScore) }}
+                          >
+                            {provider.overallScore}
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Distance badge - only show if distance was calculated */}
-                      {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
-                        <Badge variant="outline" className="ml-2">
-                          📍 {getDistanceDisplayText(provider)}
-                        </Badge>
-                      )}
-                    </div>
+                    </CardTitle>
                   </CardHeader>
                   
-                  <CardContent className="space-y-3">
-                    {/* Location */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{provider.area}, {provider.city}</span>
-                      {provider.postal_code && (
-                        <span className="text-xs">({provider.postal_code})</span>
-                      )}
-                    </div>
-                    
-                    {/* Rating */}
-                    <div className="flex items-center gap-3">
-                      <StarRating rating={provider.rating || 4.5} size="small" />
-                      <span className="text-sm text-muted-foreground">
-                        {(provider.rating || 4.5).toFixed(1)} ({provider.review_count || 0} reviews)
-                      </span>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {/* Category and Subcategory */}
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{provider.provider_category}</Badge>
+                        {provider.provider_subcategory && (
+                          <Badge variant="outline">{provider.provider_subcategory}</Badge>
+                        )}
+                      </div>
+                      
+                      {/* Address Information (like Messages tab) */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>
+                          {provider.address ? 
+                            `${provider.address}, ${provider.area}, ${provider.city}` :
+                            `${provider.area}, ${provider.city}`
+                          }
+                          {provider.postal_code && (
+                            <span className="text-xs ml-1">({provider.postal_code})</span>
+                          )}
+                        </span>
+                      </div>
+                      
+                      {/* Rating and Reviews Information (like Messages tab) */}
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="font-medium">{(provider.rating || 4.5).toFixed(1)}</span>
+                          <span className="text-muted-foreground">Average Rating</span>
+                        </div>
+                        <div className="text-muted-foreground">
+                          <span className="font-medium">{provider.review_count || 0}</span> Reviews
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                   

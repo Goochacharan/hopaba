@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 import { useBusinessesBySubcategory } from '@/hooks/useBusinesses';
 import BusinessCardPublic from '@/components/business/BusinessCardPublic';
-import { Loader2, Search, FilterX } from 'lucide-react';
+import { Loader2, Search, FilterX, MapPin, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -12,9 +12,9 @@ import SearchControls from '@/components/search/SearchControls';
 import { SortOption } from '@/components/SortButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PostalCodeSearch from '@/components/search/PostalCodeSearch';
-import LocationFilter, { type LocationFilterData } from '@/components/search/LocationFilter';
+import { distanceService, type Location } from '@/services/distanceService';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  filterBusinessesByLocation, 
   filterBusinessesByPostalCode,
   getDistanceDisplayText,
   type BusinessWithDistance 
@@ -31,6 +31,7 @@ const INDIAN_CITIES = [
 const Shop = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
 
   // Get URL parameters
   const categoryParam = searchParams.get('category') || 'All';
@@ -49,15 +50,11 @@ const Shop = () => {
   const [selectedCity, setSelectedCity] = useState<string>(cityParam);
   const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
   
-  // Location filter state
-  const [locationFilter, setLocationFilter] = useState<LocationFilterData>({
-    userLocation: null,
-    postalCode: '',
-    maxDistance: 25,
-    useCurrentLocation: false,
-    filteredItems: []
-  });
-  const [locationFilteredBusinesses, setLocationFilteredBusinesses] = useState<BusinessWithDistance[]>([]);
+  // Location state for distance calculation
+  const [userLocation, setUserLocation] = useState<Location | null>(null);
+  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
+  const [businessesWithDistance, setBusinessesWithDistance] = useState<BusinessWithDistance[]>([]);
 
   // Filters
   const {
@@ -86,24 +83,130 @@ const Shop = () => {
     setSearchParams(newParams);
   }, [selectedCategory, selectedSubcategories, searchTerm, selectedCity, postalCode, setSearchParams]);
 
-  // Handle location filter changes
-  const handleLocationFilter = async (filters: LocationFilterData) => {
-    console.log('🔍 Location filter changed:', filters);
-    setLocationFilter(filters);
-    
-    if (!businesses) return;
-    
-    let filtered: BusinessWithDistance[] = businesses as BusinessWithDistance[];
-    
-    // Apply location-based filtering
-    if (filters.userLocation) {
-      filtered = await filterBusinessesByLocation(filtered, filters);
-    } else if (filters.postalCode) {
-      // For postal code search, filter by exact postal code match
-      filtered = filterBusinessesByPostalCode(filtered, filters.postalCode);
+  // Recalculate distances when businesses change and location is enabled
+  useEffect(() => {
+    if (businesses && userLocation && isLocationEnabled) {
+      calculateDistancesForBusinesses(businesses, userLocation);
     }
-    
-    setLocationFilteredBusinesses(filtered);
+  }, [businesses, userLocation, isLocationEnabled]);
+
+  // Handle location enable/disable
+  const handleLocationToggle = async () => {
+    if (isLocationEnabled) {
+      // Disable location
+      setIsLocationEnabled(false);
+      setUserLocation(null);
+      setBusinessesWithDistance([]);
+      toast({
+        title: "Location disabled",
+        description: "Distance sorting is now disabled",
+      });
+    } else {
+      // Enable location
+      setIsCalculatingDistances(true);
+      try {
+        console.log('🔍 Getting user location...');
+        const location = await distanceService.getUserLocation();
+        setUserLocation(location);
+        setIsLocationEnabled(true);
+        console.log('📍 User location obtained:', location);
+        
+        toast({
+          title: "Location enabled",
+          description: "Distance calculation enabled for sorting",
+        });
+
+        // Calculate distances for current businesses
+        if (businesses) {
+          await calculateDistancesForBusinesses(businesses, location);
+        }
+      } catch (error) {
+        console.error('❌ Failed to get user location:', error);
+        toast({
+          title: "Location access denied",
+          description: "Please allow location access to enable distance sorting",
+          variant: "destructive"
+        });
+      } finally {
+        setIsCalculatingDistances(false);
+      }
+    }
+  };
+
+  // Calculate distances for businesses
+  const calculateDistancesForBusinesses = async (businessList: any[], userLoc: Location) => {
+    setIsCalculatingDistances(true);
+    try {
+      const businessesWithDist = await Promise.all(
+        businessList.map(async (business) => {
+          let calculatedDistance = null;
+          let distanceText = null;
+
+          // Try to calculate distance using available location data
+          if (business.latitude && business.longitude) {
+            // Use coordinates if available - calculate straight-line distance
+            const straightLineDistance = distanceService.calculateStraightLineDistance(
+              userLoc,
+              { lat: business.latitude, lng: business.longitude }
+            );
+            calculatedDistance = straightLineDistance; // Already in km
+            distanceText = `${straightLineDistance.toFixed(1)} km`;
+            console.log(`📍 Distance calculated for ${business.name} using coordinates: ${calculatedDistance.toFixed(2)} km`);
+          } else if (business.postal_code) {
+            // Use postal code if coordinates are not available
+            try {
+              console.log(`🔍 Calculating distance for ${business.name} using postal code: ${business.postal_code}`);
+              
+              // Get coordinates from postal code (use fallback first as it's more reliable from browser)
+              let businessLocation: Location;
+              try {
+                businessLocation = await distanceService.getCoordinatesFromPostalCodeFallback(business.postal_code);
+                console.log(`📍 Geocoded ${business.postal_code} to:`, businessLocation);
+              } catch (error) {
+                console.warn('⚠️ Fallback geocoding failed, trying Google API...');
+                businessLocation = await distanceService.getCoordinatesFromPostalCode(business.postal_code);
+                console.log(`📍 Geocoded ${business.postal_code} to:`, businessLocation);
+              }
+
+              // Calculate straight-line distance (more reliable than API calls from browser)
+              const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, businessLocation);
+              calculatedDistance = straightLineDistance; // Already in km
+              distanceText = `${straightLineDistance.toFixed(1)} km`;
+              console.log(`📍 Distance calculated for ${business.name} using postal code: ${calculatedDistance.toFixed(2)} km`);
+            } catch (error) {
+              console.warn(`Failed to calculate distance for ${business.name} using postal code ${business.postal_code}:`, error);
+              // Don't set distance if postal code geocoding fails
+            }
+          } else {
+            console.log(`⚠️ No location data available for ${business.name} (no coordinates or postal code)`);
+          }
+
+          return {
+            ...business,
+            calculatedDistance,
+            distanceText
+          } as BusinessWithDistance;
+        })
+      );
+      
+      setBusinessesWithDistance(businessesWithDist);
+      console.log('✅ Distance calculation completed for', businessesWithDist.length, 'businesses');
+      
+      // Log summary of distance calculations
+      const withDistance = businessesWithDist.filter(b => b.calculatedDistance !== null);
+      const withoutDistance = businessesWithDist.filter(b => b.calculatedDistance === null);
+      console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
+      
+    } catch (error) {
+      console.error('❌ Failed to calculate distances:', error);
+      toast({
+        title: "Distance calculation failed",
+        description: "Using businesses without distance data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCalculatingDistances(false);
+    }
   };
 
   // Handle category change
@@ -140,14 +243,9 @@ const Shop = () => {
     setInputValue('');
     setSelectedCity('All Cities');
     setPostalCode('');
-    setLocationFilter({
-      userLocation: null,
-      postalCode: '',
-      maxDistance: 25,
-      useCurrentLocation: false,
-      filteredItems: []
-    });
-    setLocationFilteredBusinesses([]);
+    setIsLocationEnabled(false);
+    setUserLocation(null);
+    setBusinessesWithDistance([]);
     setters.setMinRating([0]);
     setters.setPriceRange(50000);
     setters.setOpenNowOnly(false);
@@ -163,10 +261,25 @@ const Shop = () => {
 
   // Filter and sort businesses
   const filteredBusinesses = useMemo(() => {
-    // Use location-filtered businesses if available, otherwise use all businesses
-    const businessesToFilter = locationFilteredBusinesses.length > 0 || locationFilter.userLocation || locationFilter.postalCode 
-      ? locationFilteredBusinesses 
+    // Use businesses with distance if location is enabled, otherwise use all businesses
+    const businessesToFilter = isLocationEnabled && businessesWithDistance.length > 0
+      ? businessesWithDistance 
       : (businesses || []).map(b => b as BusinessWithDistance);
+    
+    // Log distance calculation for each business
+    businessesToFilter.forEach(business => {
+      if (business.calculatedDistance !== null && business.calculatedDistance !== undefined) {
+        const locationInfo = business.latitude && business.longitude 
+          ? `${business.latitude}, ${business.longitude}` 
+          : `Postal Code: ${business.postal_code || 'N/A'}`;
+        console.log(`🏪 Business: ${business.name} | Distance: ${business.calculatedDistance.toFixed(2)} km | Location: ${locationInfo}`);
+      } else {
+        const locationInfo = business.latitude && business.longitude 
+          ? `${business.latitude}, ${business.longitude}` 
+          : `Postal Code: ${business.postal_code || 'N/A'}`;
+        console.log(`🏪 Business: ${business.name} | Distance: Not calculated | Location: ${locationInfo}`);
+      }
+    });
     
     return businessesToFilter.filter(business => {
       // Apply search filter
@@ -228,7 +341,7 @@ const Shop = () => {
           return (b.rating || 0) - (a.rating || 0);
       }
     });
-  }, [businesses, locationFilteredBusinesses, locationFilter, searchTerm, selectedCity, postalCode, filters]);
+  }, [businesses, businessesWithDistance, isLocationEnabled, searchTerm, selectedCity, postalCode, filters]);
 
   const hasActiveFilters = selectedCategory !== 'All' || 
                           selectedSubcategories.length > 0 || 
@@ -237,19 +350,40 @@ const Shop = () => {
                           postalCode || 
                           filters.minRating[0] > 0 || 
                           filters.openNowOnly ||
-                          locationFilter.userLocation ||
-                          locationFilter.postalCode;
+                          isLocationEnabled;
 
   return (
     <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* Location Filter */}
+        {/* Location Toggle */}
         <div className="mb-6">
-          <LocationFilter 
-            onLocationFilter={handleLocationFilter}
-            initialPostalCode={postalCodeParam}
-            initialMaxDistance={25}
-          />
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="font-medium">Distance Calculation</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Enable location to sort businesses by distance
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={isLocationEnabled ? "default" : "outline"}
+                onClick={handleLocationToggle}
+                disabled={isCalculatingDistances}
+                className="flex items-center gap-2"
+              >
+                {isCalculatingDistances ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Navigation className="h-4 w-4" />
+                )}
+                {isLocationEnabled ? "Disable Location" : "Enable Location"}
+              </Button>
+            </div>
+
+          </div>
         </div>
 
         {/* City Filter and Postal Code Filter (Legacy) */}
@@ -352,25 +486,15 @@ const Shop = () => {
         ) : (
           <div className="space-y-4">
             {/* Results summary */}
-            {(locationFilter.userLocation || locationFilter.postalCode) && (
+            {isLocationEnabled && userLocation && (
               <div className="text-sm text-muted-foreground">
-                Showing {filteredBusinesses.length} businesses
-                {locationFilter.userLocation && ` within ${locationFilter.maxDistance} km of your location`}
-                {locationFilter.postalCode && ` for postal code ${locationFilter.postalCode}`}
+                Showing {filteredBusinesses.length} businesses sorted by distance from your location
               </div>
             )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredBusinesses.map(business => (
-                <div key={business.id} className="relative">
-                  <BusinessCardPublic business={business as any} />
-                  {/* Distance badge */}
-                  {business.calculatedDistance !== null && business.calculatedDistance !== undefined && (
-                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
-                      {getDistanceDisplayText(business)}
-                    </div>
-                  )}
-                </div>
+                <BusinessCardPublic key={business.id} business={business as any} />
               ))}
             </div>
           </div>

@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, IndianRupee, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2, Mail } from 'lucide-react';
+import { Loader2, Calendar, IndianRupee, MapPin, MessageSquare, AlertCircle, Eye, CheckCircle2, Mail, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
@@ -16,6 +16,8 @@ import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog'
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
+import { distanceService, type Location } from '@/services/distanceService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -40,6 +42,13 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
+  
+  // Location and sorting state for requests
+  const [userLocation, setUserLocation] = useState<Location | null>(null);
+  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
+  const [requestsSortBy, setRequestsSortBy] = useState<string>('recent');
+  const [requestsWithDistance, setRequestsWithDistance] = useState<any[]>([]);
   
   // Define a fallback empty array
   const emptyArray = useMemo<ServiceRequest[]>(() => [], []);
@@ -388,6 +397,181 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       </Badge>
     );
   }, [unreadCounts, getConversationId]);
+
+  // Handle location enable/disable for requests
+  const handleLocationToggle = async () => {
+    if (isLocationEnabled) {
+      // Disable location
+      setIsLocationEnabled(false);
+      setUserLocation(null);
+      setRequestsWithDistance([]);
+      toast({
+        title: "Location disabled",
+        description: "Distance sorting is now disabled",
+      });
+    } else {
+      // Enable location
+      setIsCalculatingDistances(true);
+      try {
+        console.log('🔍 Getting user location for requests...');
+        const location = await distanceService.getUserLocation();
+        setUserLocation(location);
+        setIsLocationEnabled(true);
+        console.log('📍 User location obtained:', location);
+        
+        toast({
+          title: "Location enabled",
+          description: "Distance calculation enabled for request sorting",
+        });
+
+        // Calculate distances for current requests
+        if (matchingRequests && matchingRequests.length > 0) {
+          await calculateDistancesForRequests(matchingRequests, location);
+        }
+      } catch (error) {
+        console.error('❌ Failed to get user location:', error);
+        toast({
+          title: "Location access denied",
+          description: "Please allow location access to enable distance sorting",
+          variant: "destructive"
+        });
+      } finally {
+        setIsCalculatingDistances(false);
+      }
+    }
+  };
+
+  // Calculate distances for requests
+  const calculateDistancesForRequests = async (requests: any[], userLoc: Location) => {
+    setIsCalculatingDistances(true);
+    try {
+      const requestsWithDist = await Promise.all(
+        requests.map(async (request) => {
+          let calculatedDistance = null;
+          let distanceText = null;
+
+          if (request.postal_code) {
+            try {
+              // Get coordinates from postal code (use fallback first as it's more reliable from browser)
+              let requestLocation: Location;
+              try {
+                requestLocation = await distanceService.getCoordinatesFromPostalCodeFallback(request.postal_code);
+                console.log(`📍 Geocoded ${request.postal_code} to:`, requestLocation);
+              } catch (error) {
+                console.warn('⚠️ Fallback geocoding failed, trying Google API...');
+                requestLocation = await distanceService.getCoordinatesFromPostalCode(request.postal_code);
+                console.log(`📍 Geocoded ${request.postal_code} to:`, requestLocation);
+              }
+
+              // Calculate straight-line distance
+              const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, requestLocation);
+              calculatedDistance = straightLineDistance; // Already in km
+              distanceText = `${straightLineDistance.toFixed(1)} km`;
+              console.log(`📍 Distance calculated for ${request.title}: ${calculatedDistance.toFixed(2)} km`);
+            } catch (error) {
+              console.warn(`Failed to calculate distance for ${request.title}:`, error);
+            }
+          } else {
+            console.log(`⚠️ No postal code available for ${request.title}`);
+          }
+
+          return {
+            ...request,
+            calculatedDistance,
+            distanceText
+          };
+        })
+      );
+      
+      setRequestsWithDistance(requestsWithDist);
+      console.log('✅ Distance calculation completed for', requestsWithDist.length, 'requests');
+      
+      // Log summary of distance calculations
+      const withDistance = requestsWithDist.filter(r => r.calculatedDistance !== null);
+      const withoutDistance = requestsWithDist.filter(r => r.calculatedDistance === null);
+      console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
+      
+    } catch (error) {
+      console.error('❌ Failed to calculate distances:', error);
+      toast({
+        title: "Distance calculation failed",
+        description: "Using requests without distance data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCalculatingDistances(false);
+    }
+  };
+
+  // Recalculate distances when requests change and location is enabled
+  useEffect(() => {
+    if (matchingRequests && matchingRequests.length > 0 && userLocation && isLocationEnabled) {
+      calculateDistancesForRequests(matchingRequests, userLocation);
+    }
+  }, [matchingRequests, userLocation, isLocationEnabled]);
+
+  // Sort requests based on selected criteria
+  const sortedNewRequests = useMemo(() => {
+    // Use requests with distance if location is enabled, otherwise use regular requests
+    const requestsToSort = isLocationEnabled && requestsWithDistance.length > 0
+      ? requestsWithDistance.filter(req => !hasExistingConversation(req.id))
+      : newRequests;
+
+    const sorted = [...requestsToSort].sort((a, b) => {
+      switch (requestsSortBy) {
+        case 'distance':
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to recent if no distance data
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'budget':
+          return (b.budget || 0) - (a.budget || 0); // Highest budget first
+        case 'recent':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return sorted;
+  }, [newRequests, requestsWithDistance, isLocationEnabled, requestsSortBy, hasExistingConversation]);
+
+  const sortedRespondedRequests = useMemo(() => {
+    // Use requests with distance if location is enabled, otherwise use regular requests
+    const requestsToSort = isLocationEnabled && requestsWithDistance.length > 0
+      ? requestsWithDistance.filter(req => hasExistingConversation(req.id))
+      : respondedRequests;
+
+    const sorted = [...requestsToSort].sort((a, b) => {
+      switch (requestsSortBy) {
+        case 'distance':
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to recent if no distance data
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'budget':
+          return (b.budget || 0) - (a.budget || 0); // Highest budget first
+        case 'recent':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+
+    return sorted;
+  }, [respondedRequests, requestsWithDistance, isLocationEnabled, requestsSortBy, hasExistingConversation]);
   
   if (isLoading) {
     return (
@@ -633,14 +817,67 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        {newRequests.length > 0 && (
+        {/* Location Toggle and Sorting Controls */}
+        <div className="mb-4 space-y-4">
+          {/* Location Toggle */}
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="font-medium">Distance Calculation</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Enable location to sort requests by distance
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant={isLocationEnabled ? "default" : "outline"}
+                onClick={handleLocationToggle}
+                disabled={isCalculatingDistances}
+                className="flex items-center gap-2"
+              >
+                {isCalculatingDistances ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Navigation className="h-4 w-4" />
+                )}
+                {isLocationEnabled ? "Disable Location" : "Enable Location"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Sorting Controls */}
+          <div className="flex items-center gap-4">
+            <label className="text-sm font-medium">Sort by:</label>
+            <Select value={requestsSortBy} onValueChange={setRequestsSortBy}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="budget">Highest Budget</SelectItem>
+                {isLocationEnabled && (
+                  <SelectItem value="distance">Nearest Distance</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {isCalculatingDistances && requestsSortBy === 'distance' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Calculating distances...
+              </div>
+            )}
+          </div>
+        </div>
+        {sortedNewRequests.length > 0 && (
           <div>
             <h3 className="font-medium mb-3">
               New Requests 
-              <Badge variant="secondary" className="ml-2">{newRequests.length}</Badge>
+              <Badge variant="secondary" className="ml-2">{sortedNewRequests.length}</Badge>
             </h3>
             <div className="space-y-4">
-              {newRequests.slice(0, 5).map(request => (
+              {sortedNewRequests.slice(0, 5).map(request => (
                 <Card key={request.id} className="border-l-4 border-l-primary">
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
@@ -677,6 +914,14 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span>{request.area}, {request.city}</span>
                       </div>
+                      {request.calculatedDistance !== null && request.calculatedDistance !== undefined && (
+                        <div className="flex items-center gap-1">
+                          <Navigation className="h-4 w-4 text-primary" />
+                          <span className="text-primary font-medium">
+                            {request.calculatedDistance.toFixed(1)} km away
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -702,10 +947,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   </CardFooter>
                 </Card>
               ))}
-              {newRequests.length > 5 && (
+              {sortedNewRequests.length > 5 && (
                 <div className="text-center pt-2">
                   <p className="text-sm text-muted-foreground">
-                    Showing 5 of {newRequests.length} requests
+                    Showing 5 of {sortedNewRequests.length} requests
                   </p>
                 </div>
               )}
@@ -713,11 +958,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
           </div>
         )}
         
-        {respondedRequests.length > 0 && (
+        {sortedRespondedRequests.length > 0 && (
           <div className="mt-8">
             <h3 className="font-medium mb-3 flex items-center gap-2">
               Responded Requests
-              <Badge variant="outline" className="ml-2">{respondedRequests.length}</Badge>
+              <Badge variant="outline" className="ml-2">{sortedRespondedRequests.length}</Badge>
               {totalUnreadCount > 0 && (
                 <Badge variant="destructive" className="flex items-center gap-1">
                   <MessageSquare className="h-3 w-3" />
@@ -726,7 +971,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
               )}
             </h3>
             <div className="space-y-4">
-              {respondedRequests.slice(0, 3).map(request => (
+              {sortedRespondedRequests.slice(0, 3).map(request => (
                 <Card key={request.id}>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
@@ -781,13 +1026,13 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   </CardFooter>
                 </Card>
               ))}
-              {respondedRequests.length > 3 && (
+              {sortedRespondedRequests.length > 3 && (
                 <div className="text-center pt-2">
                   <Button 
                     variant="link" 
                     onClick={() => navigate('/messages')}
                   >
-                    View all {respondedRequests.length} conversations
+                    View all {sortedRespondedRequests.length} conversations
                   </Button>
                 </div>
               )}
@@ -795,7 +1040,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
           </div>
         )}
 
-        {newRequests.length === 0 && respondedRequests.length === 0 && (
+        {sortedNewRequests.length === 0 && sortedRespondedRequests.length === 0 && (
           <div className="text-center py-6">
             <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
             <h3 className="text-lg font-medium mb-1">No matching requests</h3>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film } from 'lucide-react';
+import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 import { supabase } from '@/integrations/supabase/client';
@@ -163,6 +163,16 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
                   <Film className="h-3.5 w-3.5 text-white" />
                 </button>
               )}
+            </div>
+          )}
+          
+          {/* Distance display */}
+          {(business as any).calculatedDistance !== null && (business as any).calculatedDistance !== undefined && (
+            <div className="flex items-center gap-2">
+              <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
+              <span className="text-primary font-medium">
+                {(business as any).calculatedDistance.toFixed(1)} km away
+              </span>
             </div>
           )}
           
