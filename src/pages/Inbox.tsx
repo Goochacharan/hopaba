@@ -15,7 +15,7 @@ import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation } from 'lucide-react';
@@ -62,6 +62,7 @@ const SidebarToggleButton = () => {
 
 const Inbox: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
   const { conversations, isLoadingConversations, conversationsError, refetchConversations, unreadCount } = useConversations();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -114,6 +115,27 @@ const Inbox: React.FC = () => {
   
   // Calculate total unread count for the selected request
   const requestUnreadCount = Object.values(conversationUnreadCounts).reduce((total, count) => total + count, 0);
+
+  // Get unread counts for ALL conversations to show in sidebar
+  const allConversationIds = conversations?.map(conv => conv.id) || [];
+  const { data: allConversationUnreadCounts = {} } = useMultipleConversationUnreadCounts(allConversationIds);
+  
+  // Calculate unread counts per request for sidebar display
+  const requestUnreadCounts = useMemo(() => {
+    if (!userRequests || !conversations || !allConversationUnreadCounts) return {};
+    
+    const counts: Record<string, number> = {};
+    
+    userRequests.forEach(request => {
+      const requestConvs = conversations.filter(conv => conv.request_id === request.id);
+      const totalUnread = requestConvs.reduce((total, conv) => {
+        return total + (allConversationUnreadCounts[conv.id] || 0);
+      }, 0);
+      counts[request.id] = totalUnread;
+    });
+    
+    return counts;
+  }, [userRequests, conversations, allConversationUnreadCounts]);
   
   console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
   console.log('Conversation unread counts:', conversationUnreadCounts);
@@ -419,11 +441,20 @@ const Inbox: React.FC = () => {
                       <button
                         key={request.id}
                         onClick={() => handleRequestClick(request.id)}
-                        className={`w-full text-left p-3 rounded-md transition-colors hover:bg-accent ${
+                        className={`w-full text-left p-3 rounded-md transition-colors hover:bg-accent relative ${
                           selectedRequestId === request.id ? 'bg-accent' : ''
                         }`}
                       >
-                        <div className="flex justify-between items-start mb-1">
+                        {/* Unread count badge */}
+                        {requestUnreadCounts[request.id] > 0 && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                              {requestUnreadCounts[request.id]}
+                            </Badge>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-start mb-1 pr-8">
                           <h3 className="font-medium truncate">{request.title}</h3>
                           <Badge variant={request.status === 'open' ? 'default' : 'secondary'} className="ml-2">
                             {request.status}
@@ -437,6 +468,18 @@ const Inbox: React.FC = () => {
                           <span className="font-medium">Category:</span> {request.category}
                           {request.subcategory && (
                             <span> / {request.subcategory}</span>
+                          )}
+                        </div>
+                        
+                        {/* Show conversation count and unread indicator */}
+                        <div className="flex items-center justify-between mt-2 text-xs">
+                          <span className="text-muted-foreground">
+                            {conversations?.filter(conv => conv.request_id === request.id).length || 0} conversations
+                          </span>
+                          {requestUnreadCounts[request.id] > 0 && (
+                            <span className="text-blue-600 font-medium">
+                              {requestUnreadCounts[request.id]} unread
+                            </span>
                           )}
                         </div>
                       </button>
@@ -701,9 +744,16 @@ const Inbox: React.FC = () => {
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <Button 
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => navigate(`/seller/${conversation.provider_id}`)}
+                                        >
+                                          <Building className="h-4 w-4 mr-1" />
+                                          View Profile
+                                        </Button>
+                                        <Button 
                                           size="sm" 
                                           className={cn(
-                                            "ml-2",
                                             unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
                                           )}
                                           onClick={() => {

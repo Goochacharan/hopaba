@@ -132,18 +132,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             label="Shop" 
             isActive={location.pathname === '/shop'} 
           />
-          
-          {/* Post Request Button (middle) */}
-          <div className="relative flex flex-col items-center justify-center">
-            <button 
-              onClick={handlePostRequest}
-              className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-14 h-14 shadow-lg relative bottom-6"
-              aria-label="Post a request"
-            >
-              <Plus className="h-7 w-7" />
-            </button>
-            {/* Removed the Post Request text */}
-          </div>
+     
           
           {/* Inbox button */}
           <NavButton 
@@ -161,7 +150,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             label="Inbox" 
             isActive={location.pathname === '/inbox'} 
           />
-          
+               
+          {/* Post Request Button (middle) */}
+          <div className="relative flex flex-col items-center justify-center">
+            <button 
+              onClick={handlePostRequest}
+              className="bg-primary text-primary-foreground flex items-center justify-center rounded-full w-14 h-14 shadow-lg relative bottom-6"
+              aria-label="Post a request"
+            >
+              <Plus className="h-7 w-7" />
+            </button>
+            {/* Removed the Post Request text */}
+          </div>
           {/* Messages Button
           <NavButton 
             to={user ? "/messages" : "/login"}
