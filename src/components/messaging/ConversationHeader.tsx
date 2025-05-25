@@ -74,12 +74,122 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   const otherPartyOnline = otherPartyUserId ? isUserOnline(otherPartyUserId) : false;
   const bothPartiesOnline = currentUserOnline && otherPartyOnline;
   
-  // Navigate to appropriate page based on user type
+  // Navigate back to the appropriate page based on where user came from
   const handleBackNavigation = () => {
-    if (isServiceProvider) {
-      navigate('/service-requests');
-    } else {
+    console.log('🔙 Back navigation triggered');
+    console.log('📊 Navigation context:', {
+      isServiceProvider,
+      userId: user?.id,
+      conversationUserId: conversation.user_id,
+      serviceProviderUserId: conversation.service_providers?.user_id,
+      referrer: document.referrer
+    });
+    
+    try {
+      // Check for navigation source stored in sessionStorage (most reliable)
+      const navigationSource = sessionStorage.getItem('conversationNavigationSource');
+      console.log('🔍 Navigation source from sessionStorage:', navigationSource);
+      
+      if (navigationSource) {
+        // Clear the stored source after using it
+        sessionStorage.removeItem('conversationNavigationSource');
+        
+        if (navigationSource === 'service-requests') {
+          console.log('➡️ Navigating to /service-requests (from sessionStorage)');
+          navigate('/service-requests');
+          return;
+        } else if (navigationSource === 'inbox') {
+          console.log('➡️ Navigating to /inbox (from sessionStorage)');
+          navigate('/inbox');
+          return;
+        } else if (navigationSource.startsWith('request-')) {
+          const requestId = navigationSource.replace('request-', '');
+          console.log('➡️ Navigating to request page (from sessionStorage):', requestId);
+          navigate(`/request/${requestId}`);
+          return;
+        }
+      }
+      
+      // Fallback: Try to determine from referrer, but be smarter about inbox routing
+      const referrer = document.referrer;
+      const currentOrigin = window.location.origin;
+      
+      if (referrer && referrer.startsWith(currentOrigin)) {
+        const referrerPath = new URL(referrer).pathname;
+        console.log('🔍 Referrer path detected:', referrerPath);
+        
+        // If referrer is inbox, check conversation context to determine original source
+        if (referrerPath.includes('/inbox')) {
+          const isCurrentUserTheProvider = conversation.service_providers?.user_id === user?.id;
+          
+          // If user is a service provider AND they're the provider in this conversation,
+          // they likely came from service-requests (even if routed through inbox)
+          if (isServiceProvider && isCurrentUserTheProvider) {
+            console.log('➡️ Navigating to /service-requests (inbox referrer but user is provider)');
+            navigate('/service-requests');
+            return;
+          } else {
+            console.log('➡️ Navigating to /inbox (inbox referrer and user is requester)');
+            navigate('/inbox');
+            return;
+          }
+        } else if (referrerPath.includes('/service-requests')) {
+          console.log('➡️ Navigating to /service-requests (from referrer)');
+          navigate('/service-requests');
+          return;
+        } else if (referrerPath.includes('/request/')) {
+          // Extract request ID from referrer and navigate back to that request
+          const requestIdMatch = referrerPath.match(/\/request\/([^\/]+)/);
+          if (requestIdMatch) {
+            console.log('➡️ Navigating to request page (from referrer):', requestIdMatch[1]);
+            navigate(`/request/${requestIdMatch[1]}`);
+            return;
+          }
+        }
+      }
+      
+      console.log('🔄 Using conversation context fallback');
+      
+      // Final fallback: Use conversation context
+      const isCurrentUserTheProvider = conversation.service_providers?.user_id === user?.id;
+      const isCurrentUserTheRequester = conversation.user_id === user?.id;
+      
+      console.log('🎯 Conversation roles for fallback:', {
+        isCurrentUserTheProvider,
+        isCurrentUserTheRequester,
+        isServiceProvider
+      });
+      
+      // If user is a service provider AND they're the provider in this conversation
+      if (isServiceProvider && isCurrentUserTheProvider) {
+        console.log('➡️ Navigating to /service-requests (fallback - provider viewing their service)');
+        navigate('/service-requests');
+        return;
+      }
+      
+      // If user is the requester in this conversation
+      if (isCurrentUserTheRequester) {
+        console.log('➡️ Navigating to /inbox (fallback - requester viewing their request)');
+        navigate('/inbox');
+        return;
+      }
+      
+      // Final fallback for edge cases
+      console.log('➡️ Navigating to /inbox (final fallback)');
       navigate('/inbox');
+      
+    } catch (error) {
+      console.warn('❌ Error in back navigation, using fallback:', error);
+      // Error fallback: navigate based on user type with conversation context
+      const isCurrentUserTheProvider = conversation.service_providers?.user_id === user?.id;
+      
+      if (isServiceProvider && isCurrentUserTheProvider) {
+        console.log('➡️ Error fallback: Navigating to /service-requests');
+        navigate('/service-requests');
+      } else {
+        console.log('➡️ Error fallback: Navigating to /inbox');
+        navigate('/inbox');
+      }
     }
   };
   

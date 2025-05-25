@@ -1014,6 +1014,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       onClick={() => {
                         const conversationId = getConversationId(request.id);
                         if (conversationId) {
+                          // Set navigation source for back button
+                          sessionStorage.setItem('conversationNavigationSource', 'service-requests');
                           navigate(`/messages/${conversationId}`);
                         } else {
                           navigate('/messages');

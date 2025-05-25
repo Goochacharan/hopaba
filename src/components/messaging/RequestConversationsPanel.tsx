@@ -219,7 +219,11 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({ s
             <ConversationCard
               key={conversation.id}
               conversation={conversation}
-              onViewClick={() => navigate(`/messages/${conversation.id}`)}
+              onViewClick={() => {
+                // Set navigation source for back button
+                sessionStorage.setItem('conversationNavigationSource', 'inbox');
+                navigate(`/messages/${conversation.id}`);
+              }}
               isProvider={isProvider(conversation)}
             />
           ))}
@@ -366,7 +370,11 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({ s
                               providerName={providerName}
                               amount={quotation}
                               lastMessageTime={conversation.last_message_at}
-                              onViewClick={() => navigate(`/messages/${conversation.id}`)}
+                              onViewClick={() => {
+                                // Set navigation source for back button
+                                sessionStorage.setItem('conversationNavigationSource', 'inbox');
+                                navigate(`/messages/${conversation.id}`);
+                              }}
                             />
                           );
                         })}

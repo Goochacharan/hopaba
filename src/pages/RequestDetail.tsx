@@ -323,7 +323,11 @@ const RequestDetail: React.FC = () => {
                                 Started {format(parseISO(conversation.created_at), 'PPP')}
                               </p>
                             </div>
-                            <Button onClick={() => navigate(`/messages/${conversation.id}`)}>
+                            <Button onClick={() => {
+                              // Set navigation source for back button
+                              sessionStorage.setItem('conversationNavigationSource', `request-${id}`);
+                              navigate(`/messages/${conversation.id}`);
+                            }}>
                               <MessageSquare className="h-4 w-4 mr-2" />
                               View Messages
                             </Button>

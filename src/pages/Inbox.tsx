@@ -35,6 +35,7 @@ import {
   getDistanceDisplayText,
   type ProviderWithDistance 
 } from '@/utils/locationFilterUtils';
+import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -131,10 +132,10 @@ const Inbox: React.FC = () => {
         .select('id, address, area, city, postal_code')
         .in('id', providerIds);
       
-      // Fetch reviews for all providers from business_reviews table
+      // Fetch reviews for all providers from business_reviews table with criteria ratings
       const { data: reviews } = await supabase
         .from('business_reviews')
-        .select('business_id, rating')
+        .select('business_id, rating, criteria_ratings')
         .in('business_id', providerIds);
       
       // Process the data to create enhanced provider details
@@ -155,15 +156,36 @@ const Inbox: React.FC = () => {
         // Calculate average rating
         let rating = 4.5; // Default rating
         let reviewCount = 0;
+        let overallScore = 0;
         
         if (providerReviews.length > 0) {
           rating = providerReviews.reduce((sum, review) => sum + review.rating, 0) / providerReviews.length;
           reviewCount = providerReviews.length;
+          
+          // Calculate overall score using criteria ratings (same as home page)
+          const aggregatedCriteriaRatings: Record<string, number[]> = {};
+          
+          providerReviews.forEach(review => {
+            if (review.criteria_ratings) {
+              Object.entries(review.criteria_ratings).forEach(([criterionId, criteriaRating]) => {
+                if (!aggregatedCriteriaRatings[criterionId]) {
+                  aggregatedCriteriaRatings[criterionId] = [];
+                }
+                aggregatedCriteriaRatings[criterionId].push(criteriaRating as number);
+              });
+            }
+          });
+          
+          // Calculate average for each criterion
+          const averageCriteriaRatings: Record<string, number> = {};
+          Object.entries(aggregatedCriteriaRatings).forEach(([criterionId, ratings]) => {
+            const sum = ratings.reduce((acc, val) => acc + val, 0);
+            averageCriteriaRatings[criterionId] = sum / ratings.length;
+          });
+          
+          // Use the same calculation as home page (RatingProgressBars)
+          overallScore = calculateOverallRating(averageCriteriaRatings);
         }
-        
-        // Calculate overall score (out of 100) - same calculation as used in MatchingProvidersDialog
-        const averageRaw = rating;
-        const overallScore = Math.round((averageRaw / 5) * 100); // Convert 5-star rating to 100-point scale
         
         enhancedDetails[conv.provider_id] = {
           address: providerDetail?.address || '',
@@ -328,14 +350,7 @@ const Inbox: React.FC = () => {
     return errorMessage;
   };
 
-  // Function to get overall rating color
-  const getOverallRatingColor = (ratingNum: number) => {
-    if (ratingNum <= 30) return '#ea384c'; // dark red
-    if (ratingNum <= 50) return '#F97316'; // orange
-    if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
-    if (ratingNum <= 85) return '#68cd77'; // light green
-    return '#00ee24'; // bright green as requested for highest rating
-  };
+
 
   // Sort conversations based on selected criteria
   const sortedConversations = useMemo(() => {
@@ -602,8 +617,20 @@ const Inbox: React.FC = () => {
                                       )}
                                       {providerDetails && (
                                         <div 
-                                          className="flex items-center justify-center w-12 h-12 rounded-full text-white font-bold text-lg"
-                                          style={{ backgroundColor: getOverallRatingColor(providerDetails.overallScore) }}
+                                          className="flex items-center justify-center font-bold"
+                                          style={{
+                                            width: 48,
+                                            height: 48,
+                                            borderRadius: '50%',
+                                            color: getRatingColor(providerDetails.overallScore),
+                                            borderColor: getRatingColor(providerDetails.overallScore),
+                                            borderWidth: 3,
+                                            borderStyle: 'solid',
+                                            fontSize: 20,
+                                            background: '#fff',
+                                            boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
+                                          }}
+                                          title={`Overall rating: ${providerDetails.overallScore}`}
                                         >
                                           {providerDetails.overallScore}
                                         </div>
@@ -679,7 +706,11 @@ const Inbox: React.FC = () => {
                                             "ml-2",
                                             unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
                                           )}
-                                          onClick={() => window.location.href = `/messages/${conversation.id}`}
+                                          onClick={() => {
+                                            // Set navigation source for back button
+                                            sessionStorage.setItem('conversationNavigationSource', 'inbox');
+                                            window.location.href = `/messages/${conversation.id}`;
+                                          }}
                                         >
                                           <MessageSquare className="h-4 w-4 mr-1" />
                                           {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
