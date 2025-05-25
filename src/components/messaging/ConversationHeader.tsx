@@ -9,6 +9,8 @@ import { Conversation } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { usePresence } from '@/hooks/usePresence';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConversationHeaderProps {
   otherPartyName: string;
@@ -46,6 +48,22 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   // Use presence tracking for this specific conversation
   const { isUserOnline } = usePresence(`conversation-${conversation.id}`);
   
+  // Check if user is a service provider
+  const { data: isServiceProvider = false } = useQuery({
+    queryKey: ['isServiceProvider', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('service_providers')
+        .select('id')
+        .eq('user_id', user.id);
+      
+      return data && data.length > 0;
+    },
+    enabled: !!user,
+    staleTime: 300000, // Cache for 5 minutes
+  });
+  
   // Determine the other party's user ID
   const otherPartyUserId = conversation.service_providers?.user_id === user?.id 
     ? conversation.user_id  // If current user is provider, other party is the requester
@@ -56,6 +74,15 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   const otherPartyOnline = otherPartyUserId ? isUserOnline(otherPartyUserId) : false;
   const bothPartiesOnline = currentUserOnline && otherPartyOnline;
   
+  // Navigate to appropriate page based on user type
+  const handleBackNavigation = () => {
+    if (isServiceProvider) {
+      navigate('/service-requests');
+    } else {
+      navigate('/inbox');
+    }
+  };
+  
   return (
     <div className="p-4 border-b">
       <div className="flex items-center gap-2">
@@ -63,7 +90,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
           variant="ghost" 
           size="icon" 
           className="mr-1"
-          onClick={() => navigate('/service-requests')}
+          onClick={handleBackNavigation}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>

@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,8 @@ import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { NotificationPrompt } from '@/components/notifications/NotificationPrompt';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -101,6 +103,71 @@ const Inbox: React.FC = () => {
   console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
   console.log('Conversation unread counts:', conversationUnreadCounts);
 
+  // Fetch enhanced provider details for conversations
+  const { data: enhancedProviderDetails = {} } = useQuery({
+    queryKey: ['enhancedProviderDetails', requestConversations.map(c => c.provider_id)],
+    queryFn: async () => {
+      if (!requestConversations.length) return {};
+      
+      const providerIds = requestConversations.map(c => c.provider_id);
+      
+      // Fetch provider details including address information
+      const { data: providerDetails } = await supabase
+        .from('service_providers')
+        .select('id, address, area, city, postal_code')
+        .in('id', providerIds);
+      
+      // Fetch reviews for all providers from business_reviews table
+      const { data: reviews } = await supabase
+        .from('business_reviews')
+        .select('business_id, rating')
+        .in('business_id', providerIds);
+      
+      // Process the data to create enhanced provider details
+      const enhancedDetails: Record<string, {
+        address: string;
+        area: string;
+        city: string;
+        postal_code: string;
+        rating: number;
+        reviewCount: number;
+        overallScore: number;
+      }> = {};
+      
+      requestConversations.forEach(conv => {
+        const providerDetail = providerDetails?.find(p => p.id === conv.provider_id);
+        const providerReviews = reviews?.filter(r => r.business_id === conv.provider_id) || [];
+        
+        // Calculate average rating
+        let rating = 4.5; // Default rating
+        let reviewCount = 0;
+        
+        if (providerReviews.length > 0) {
+          rating = providerReviews.reduce((sum, review) => sum + review.rating, 0) / providerReviews.length;
+          reviewCount = providerReviews.length;
+        }
+        
+        // Calculate overall score (out of 100) - same calculation as used in MatchingProvidersDialog
+        const averageRaw = rating;
+        const overallScore = Math.round((averageRaw / 5) * 100); // Convert 5-star rating to 100-point scale
+        
+        enhancedDetails[conv.provider_id] = {
+          address: providerDetail?.address || '',
+          area: providerDetail?.area || 'Unknown',
+          city: providerDetail?.city || 'Unknown',
+          postal_code: providerDetail?.postal_code || '',
+          rating,
+          reviewCount,
+          overallScore
+        };
+      });
+      
+      return enhancedDetails;
+    },
+    enabled: requestConversations.length > 0,
+    staleTime: 60000, // 1 minute cache
+  });
+
   // Enhanced retry handler with better feedback
   const handleRetryConversations = () => {
     console.log('Retrying conversation fetch, attempt:', retryCount + 1);
@@ -131,6 +198,15 @@ const Inbox: React.FC = () => {
     
     return errorMessage;
   };
+
+  // Function to get overall rating color
+  const getOverallRatingColor = (ratingNum: number) => {
+    if (ratingNum <= 30) return '#ea384c'; // dark red
+    if (ratingNum <= 50) return '#F97316'; // orange
+    if (ratingNum <= 70) return '#d9a404'; // dark yellow (custom, close to golden)
+    if (ratingNum <= 85) return '#68cd77'; // light green
+    return '#00ee24'; // bright green as requested for highest rating
+  };
   
   return (
     <MainLayout>
@@ -147,12 +223,11 @@ const Inbox: React.FC = () => {
                 <h2 className="text-lg font-semibold">Your Requests</h2>
               </SidebarHeader>
               <SidebarContent>
-                {
-                  isLoadingUserRequests ? (
+                {isLoadingUserRequests ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
-                ) : !userRequests?.length ? (
+                ) : !userRequests || userRequests.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground">
                     <p>No service requests yet.</p>
                   </div>
@@ -185,8 +260,7 @@ const Inbox: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                )
-                }
+                )}
               </SidebarContent>
               <SidebarRail />
             </Sidebar>
@@ -287,6 +361,7 @@ const Inbox: React.FC = () => {
                         ) : (
                           requestConversations.map((conversation) => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
+                            const providerDetails = enhancedProviderDetails[conversation.provider_id];
                             
                             return (
                               <Card key={conversation.id} className={cn(
@@ -309,40 +384,81 @@ const Inbox: React.FC = () => {
                                           ₹{conversation.latest_quotation.toLocaleString()}
                                         </Badge>
                                       )}
+                                      {providerDetails && (
+                                        <div 
+                                          className="flex items-center justify-center w-12 h-12 rounded-full text-white font-bold text-lg"
+                                          style={{ backgroundColor: getOverallRatingColor(providerDetails.overallScore) }}
+                                        >
+                                          {providerDetails.overallScore}
+                                        </div>
+                                      )}
                                     </div>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <p className="text-sm text-muted-foreground">
-                                        Last message: {conversation.last_message_at ? 
-                                          format(new Date(conversation.last_message_at), 'MMM d, yyyy, h:mm a') : 
-                                          "No messages yet"}
-                                      </p>
-                                      {conversation.latest_quotation && (
-                                        <p className="text-sm font-medium mt-1 text-green-600">
-                                          Latest quotation: ₹{conversation.latest_quotation.toLocaleString()}
+                                  <div className="space-y-3">
+                                    {/* Address Information */}
+                                    {providerDetails && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>
+                                          {providerDetails.address ? 
+                                            `${providerDetails.address}, ${providerDetails.area}, ${providerDetails.city}` :
+                                            `${providerDetails.area}, ${providerDetails.city}`
+                                          }
+                                          {providerDetails.postal_code && (
+                                            <span className="text-xs ml-1">({providerDetails.postal_code})</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Rating and Reviews Information */}
+                                    {providerDetails && (
+                                      <div className="flex items-center gap-4 text-sm">
+                                        <div className="flex items-center gap-1">
+                                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                          <span className="font-medium">{providerDetails.rating.toFixed(1)}</span>
+                                          <span className="text-muted-foreground">Average Rating</span>
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          <span className="font-medium">{providerDetails.reviewCount}</span> Reviews
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Existing message information */}
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <p className="text-sm text-muted-foreground">
+                                          Last message: {conversation.last_message_at ? 
+                                            format(new Date(conversation.last_message_at), 'MMM d, yyyy, h:mm a') : 
+                                            "No messages yet"}
                                         </p>
-                                      )}
-                                      {unreadCount > 0 && (
-                                        <p className="text-sm font-medium mt-1 text-blue-600">
-                                          {unreadCount} unread message{unreadCount > 1 ? 's' : ''}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        className={cn(
-                                          "ml-2",
-                                          unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
+                                        {conversation.latest_quotation && (
+                                          <p className="text-sm font-medium mt-1 text-green-600">
+                                            Latest quotation: ₹{conversation.latest_quotation.toLocaleString()}
+                                          </p>
                                         )}
-                                        onClick={() => window.location.href = `/messages/${conversation.id}`}
-                                      >
-                                        <MessageSquare className="h-4 w-4 mr-1" />
-                                        {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
-                                      </Button>
+                                        {unreadCount > 0 && (
+                                          <p className="text-sm font-medium mt-1 text-blue-600">
+                                            {unreadCount} unread message{unreadCount > 1 ? 's' : ''}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Button 
+                                          size="sm" 
+                                          className={cn(
+                                            "ml-2",
+                                            unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
+                                          )}
+                                          onClick={() => window.location.href = `/messages/${conversation.id}`}
+                                        >
+                                          <MessageSquare className="h-4 w-4 mr-1" />
+                                          {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
+                                        </Button>
+                                      </div>
                                     </div>
                                   </div>
                                 </CardContent>
