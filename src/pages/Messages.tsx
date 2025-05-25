@@ -122,7 +122,7 @@ const Messages: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
-  const handleSendMessage = () => {
+  const handleSendMessage = (attachments: string[] = []) => {
     if (!id || !user) {
       console.error('Cannot send message: Missing conversation ID or user');
       return;
@@ -137,13 +137,24 @@ const Messages: React.FC = () => {
       return;
     }
     
+    // Validate that we have either content or attachments
+    const messageContent = message.trim();
+    if (!messageContent && attachments.length === 0 && !quotationMode) {
+      toast({
+        title: "Empty message",
+        description: "Please enter a message or attach images.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     console.log('Sending message:', { 
       conversationId: id,
       senderType: isProvider ? 'provider' : 'user',
-      hasQuotation: quotationMode && !!quotationPrice
+      hasQuotation: quotationMode && !!quotationPrice,
+      hasAttachments: attachments.length > 0
     });
     
-    const messageContent = message.trim();
     let parsedQuotationPrice: number | undefined = undefined;
     
     if (quotationMode && quotationPrice.trim()) {
@@ -159,7 +170,8 @@ const Messages: React.FC = () => {
         conversationId: id,
         content: messageContent,
         senderType: isProvider ? 'provider' : 'user',
-        quotationPrice: parsedQuotationPrice
+        quotationPrice: parsedQuotationPrice,
+        attachments: attachments
       });
       
       setMessage('');

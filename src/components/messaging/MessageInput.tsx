@@ -1,10 +1,12 @@
-
 import React, { useState } from 'react';
-import { Loader2, Send, DollarSign, FileText } from 'lucide-react';
+import { Loader2, Send, DollarSign, FileText, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
   message: string;
@@ -13,7 +15,7 @@ interface MessageInputProps {
   setQuotationMode: React.Dispatch<React.SetStateAction<boolean>>;
   quotationPrice: string;
   setQuotationPrice: React.Dispatch<React.SetStateAction<string>>;
-  handleSendMessage: () => void;
+  handleSendMessage: (attachments?: string[]) => void;
   isSendingMessage: boolean;
   isProvider: boolean;
   requestDetails?: {
@@ -36,11 +38,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
   isProvider,
   requestDetails
 }) => {
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   // Handle keypress event for sending messages
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSendMessageWithAttachments();
     }
   };
   
@@ -63,10 +70,128 @@ const MessageInput: React.FC<MessageInputProps> = ({
     const newValue = validatePrice(e.target.value);
     setQuotationPrice(newValue);
   };
+
+  // Handle image upload
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check if adding these images would exceed the limit
+    if (attachments.length + files.length > 5) {
+      toast({
+        title: "Too many images",
+        description: "You can upload a maximum of 5 images per message.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsUploadingImages(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Invalid file type",
+            description: "Please upload only image files.",
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: "Please upload images smaller than 5MB.",
+            variant: "destructive"
+          });
+          continue;
+        }
+
+        const fileExt = file.name.split('.').pop();
+        const fileName = `message-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `messages/${fileName}`;
+
+        console.log('Uploading file:', { fileName, filePath, size: file.size, type: file.type });
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          
+          // Provide more specific error messages
+          if (uploadError.message.includes('Bucket not found')) {
+            toast({
+              title: "Storage bucket missing",
+              description: "The images storage bucket needs to be configured. Please check your Supabase Storage settings.",
+              variant: "destructive"
+            });
+          } else if (uploadError.message.includes('not allowed') || uploadError.message.includes('policy')) {
+            toast({
+              title: "Upload permission denied",
+              description: "You don't have permission to upload images. Please check storage policies.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Upload failed",
+              description: `Failed to upload ${file.name}: ${uploadError.message}`,
+              variant: "destructive"
+            });
+          }
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrl);
+        console.log('Successfully uploaded:', { fileName, publicUrl });
+      }
+
+      if (uploadedUrls.length > 0) {
+        setAttachments(prev => [...prev, ...uploadedUrls]);
+
+        toast({
+          title: "Images uploaded",
+          description: `Successfully uploaded ${uploadedUrls.length} image(s).`
+        });
+      }
+    } catch (error) {
+      console.error('Error in image upload:', error);
+      toast({
+        title: "Upload error",
+        description: "An error occurred while uploading images.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploadingImages(false);
+      // Reset the input
+      event.target.value = '';
+    }
+  };
+
+  // Remove an attachment
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle sending message with attachments
+  const handleSendMessageWithAttachments = () => {
+    handleSendMessage(attachments);
+    // Clear attachments after sending
+    setAttachments([]);
+  };
   
   // Check if the send button should be enabled
   const isButtonDisabled = () => {
-    if (isSendingMessage) return true;
+    if (isSendingMessage || isUploadingImages) return true;
     
     if (quotationMode) {
       // In quotation mode, require a valid price (not empty and is a number)
@@ -74,8 +199,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       return !priceIsValid;
     }
     
-    // In regular mode, require a non-empty message
-    return !message.trim();
+    // In regular mode, require a non-empty message or at least one attachment
+    return !message.trim() && attachments.length === 0;
   };
   
   return (
@@ -131,6 +256,34 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
+      {/* Image Attachments Preview */}
+      {attachments.length > 0 && (
+        <div className="mb-3 p-3 bg-muted/50 rounded-md">
+          <div className="flex items-center gap-2 mb-2">
+            <ImageIcon className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Attached Images ({attachments.length})</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {attachments.map((url, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={url}
+                  alt={`Attachment ${index + 1}`}
+                  className="w-full h-16 object-cover rounded border"
+                />
+                <button
+                  onClick={() => removeAttachment(index)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  type="button"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <Textarea
@@ -142,6 +295,34 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
         </div>
         <div className="flex flex-col gap-2">
+          {/* Image Upload Button */}
+          <div className="relative">
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="message-images"
+              disabled={isUploadingImages || attachments.length >= 5}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => document.getElementById('message-images')?.click()}
+              disabled={isUploadingImages || attachments.length >= 5}
+              title={attachments.length >= 5 ? "Maximum 5 images allowed" : "Add images"}
+              type="button"
+            >
+              {isUploadingImages ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          
+          {/* Quote Button */}
           {isProvider && !quotationMode && (
             <Button 
               variant="outline" 
@@ -156,11 +337,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
               <DollarSign className="h-4 w-4" />
             </Button>
           )}
+          
+          {/* Send Button */}
           <Button 
             onClick={(e) => {
               e.preventDefault();
               if (!isButtonDisabled()) {
-                handleSendMessage();
+                handleSendMessageWithAttachments();
               }
             }}
             type="button"

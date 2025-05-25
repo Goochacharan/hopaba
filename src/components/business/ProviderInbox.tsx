@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
+import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
@@ -40,22 +41,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false);
   
-  // Fetch business name for the provider
-  const { data: businessData } = useQuery({
-    queryKey: ['business-name', providerId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('service_providers')
-        .select('name')
-        .eq('id', providerId)
-        .single();
-      return data;
-    },
-    enabled: !!providerId
-  });
+  // Define a fallback empty array
+  const emptyArray = useMemo<ServiceRequest[]>(() => [], []);
   
   // Helper function for normalized subcategory comparison with improved debugging
-  const isSubcategoryMatch = (requestSubcategory?: string | string[], providerSubcategories?: string[]) => {
+  const isSubcategoryMatch = useCallback((requestSubcategory?: string | string[], providerSubcategories?: string[]) => {
     console.log(`Checking subcategory match - Request: "${requestSubcategory}", Provider: ${JSON.stringify(providerSubcategories)}`);
     console.log(`Request subcategory type: ${typeof requestSubcategory}`, requestSubcategory);
     
@@ -136,7 +126,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     
     console.log('No matching subcategory found - NO MATCH');
     return false;
-  };
+  }, []);
   
   // Fetch matching requests for this provider's category/subcategory
   const { 
@@ -206,19 +196,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
           // Don't throw here, try to continue
         }
         
-        // Try a special approach with service_providers table to get around RLS
-        console.log('Trying approach through service providers junction...');
-        const serviceProviderQuery = await supabase
-          .from('service_providers')
-          .select(`
-            id,
-            service_requests (
-              id, title, description, budget, area, city, created_at, subcategory, user_id, status, category
-            )
-          `)
-          .eq('id', providerId);
-
-        console.log('Service provider query result:', serviceProviderQuery);
+        // We don't attempt to join service_providers with service_requests
+        // as there's no relationship defined between these tables in Supabase
+        console.log('Skipping service_providers join - no relationship exists');
         
         // Now try regular query but get ALL requests regardless of category first
         const rawRequests = await supabase
@@ -272,28 +252,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         
         console.log(`Requests matching category "${category}" (JS filter, case insensitive):`, categoryMatches);
         
-        // Also check if we got any requests from the service provider query
+        // We don't query service_providers for service_requests anymore
+        // since there's no relationship defined in Supabase
         let serviceProviderRequests: any[] = [];
-        if (serviceProviderQuery.data && serviceProviderQuery.data[0]?.service_requests) {
-          serviceProviderRequests = serviceProviderQuery.data[0].service_requests;
-          console.log('Service requests from provider query:', serviceProviderRequests);
-          
-          // Filter these requests by category
-          const spCategoryMatches = serviceProviderRequests.filter(req => 
-            req.category && req.category.toLowerCase() === category.toLowerCase()
-          );
-          
-          console.log(`Service provider requests matching category "${category}":`, spCategoryMatches);
-          
-          // Add unique items from spCategoryMatches to categoryMatches
-          spCategoryMatches.forEach(spReq => {
-            if (!categoryMatches.some(cm => cm.id === spReq.id)) {
-              categoryMatches.push(spReq);
-            }
-          });
-          
-          console.log('Combined category matches after merging:', categoryMatches);
-        }
         
         // Now filter by subcategory
         let finalResults = categoryMatches;
@@ -326,14 +287,35 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     retry: false // We'll handle retries manually
   });
   
+  // Fetch business name for the provider
+  const { data: businessData } = useQuery({
+    queryKey: ['business-name', providerId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('service_providers')
+        .select('name')
+        .eq('id', providerId)
+        .single();
+      return data;
+    },
+    enabled: !!providerId
+  });
+  
   // Check if the provider already has a conversation for a request
-  const hasExistingConversation = (requestId: string) => {
+  const hasExistingConversation = useCallback((requestId: string) => {
     if (!conversations) return false;
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
-  };
+  }, [conversations, providerId]);
+  
+  // Get the conversation ID for a specific request
+  const getConversationId = useCallback((requestId: string) => {
+    if (!conversations) return null;
+    const conversation = conversations.find(c => c.request_id === requestId && c.provider_id === providerId);
+    return conversation ? conversation.id : null;
+  }, [conversations, providerId]);
   
   // Handle opening the quotation dialog
-  const handleContactRequester = (request: ServiceRequest) => {
+  const handleContactRequester = useCallback((request: ServiceRequest) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -345,21 +327,67 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     
     setSelectedRequest(request);
     setIsQuotationDialogOpen(true);
-  };
+  }, [user, setSelectedRequest, setIsQuotationDialogOpen]);
 
   // Handle viewing request details
-  const handleViewDetails = (request: ServiceRequest) => {
+  const handleViewDetails = useCallback((request: ServiceRequest) => {
     setSelectedRequest(request);
     setIsDetailsOpen(true);
-  };
+  }, [setSelectedRequest, setIsDetailsOpen]);
   
   // Retry fetching data
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     if (retryCount < MAX_RETRIES) {
       setRetryCount(prev => prev + 1);
       refetch();
     }
-  };
+  }, [retryCount, MAX_RETRIES, refetch]);
+  
+  // Group requests into "new" and "responded" using normal variables, not hooks
+  const respondedRequests = useMemo(() => {
+    if (!matchingRequests) return emptyArray;
+    return matchingRequests.filter(req => hasExistingConversation(req.id)) || emptyArray;
+  }, [matchingRequests, hasExistingConversation, emptyArray]);
+  
+  const newRequests = useMemo(() => {
+    if (!matchingRequests) return emptyArray;
+    return matchingRequests.filter(req => !hasExistingConversation(req.id)) || emptyArray;
+  }, [matchingRequests, hasExistingConversation, emptyArray]);
+  
+  // Get conversation IDs for all responded requests - ensure this array is always defined
+  const respondedRequestConversationIds = useMemo(() => {
+    if (!respondedRequests || !conversations) return [];
+    
+    return respondedRequests
+      .map(req => {
+        const conversation = conversations.find(c => c.request_id === req.id && c.provider_id === providerId);
+        return conversation ? conversation.id : '';
+      })
+      .filter(id => id !== '');
+  }, [respondedRequests, conversations, providerId]);
+
+  // Get unread counts for all conversations - MUST be called unconditionally at top level
+  const { data: unreadCounts = {} } = useMultipleConversationUnreadCounts(respondedRequestConversationIds);
+  
+  // Calculate total unread count for all responded requests
+  const totalUnreadCount = useMemo(() => {
+    return Object.values(unreadCounts).reduce((total, count) => total + count, 0);
+  }, [unreadCounts]);
+  
+  // Create the unread badge rendering function
+  const renderUnreadBadge = useCallback((requestId: string) => {
+    const conversationId = getConversationId(requestId);
+    if (!conversationId) return null;
+    
+    const unreadCount = unreadCounts[conversationId] || 0;
+    if (unreadCount <= 0) return null;
+    
+    return (
+      <Badge variant="destructive" className="ml-2 px-1.5 py-0 text-xs">
+        {unreadCount}
+      </Badge>
+    );
+  }, [unreadCounts, getConversationId]);
   
   if (isLoading) {
     return (
@@ -602,10 +630,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     );
   }
   
-  // Group requests into "new" and "responded"
-  const respondedRequests = matchingRequests?.filter(req => hasExistingConversation(req.id)) || [];
-  const newRequests = matchingRequests?.filter(req => !hasExistingConversation(req.id)) || [];
-  
   return (
     <TooltipProvider>
       <div className="space-y-4">
@@ -691,9 +715,15 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
         
         {respondedRequests.length > 0 && (
           <div className="mt-8">
-            <h3 className="font-medium mb-3">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
               Responded Requests
               <Badge variant="outline" className="ml-2">{respondedRequests.length}</Badge>
+              {totalUnreadCount > 0 && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {totalUnreadCount} unread
+                </Badge>
+              )}
             </h3>
             <div className="space-y-4">
               {respondedRequests.slice(0, 3).map(request => (
@@ -736,9 +766,17 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       variant="secondary" 
                       size="sm"
                       className="w-full"
-                      onClick={() => navigate('/messages')}
+                      onClick={() => {
+                        const conversationId = getConversationId(request.id);
+                        if (conversationId) {
+                          navigate(`/messages/${conversationId}`);
+                        } else {
+                          navigate('/messages');
+                        }
+                      }}
                     >
                       View Conversation
+                      {renderUnreadBadge(request.id)}
                     </Button>
                   </CardFooter>
                 </Card>

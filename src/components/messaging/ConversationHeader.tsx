@@ -63,7 +63,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
           variant="ghost" 
           size="icon" 
           className="mr-1"
-          onClick={() => navigate('/messages')}
+          onClick={() => navigate('/service-requests')}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>

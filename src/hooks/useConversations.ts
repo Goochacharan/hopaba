@@ -520,6 +520,10 @@ export const useConversations = () => {
         queryKey: ['unreadCount'],
         refetchType: 'none' // Don't trigger refetch
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ['serviceProviderUnreadCount'],
+        refetchType: 'none' // Don't trigger refetch
+      });
       
       // No forced immediate refetch - the real-time subscription will handle this
       // This prevents duplicate API calls
@@ -560,6 +564,7 @@ export const useConversations = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
       queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+      queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount'] });
     }
   });
 
@@ -588,6 +593,7 @@ export const useConversations = () => {
         // Always refetch the conversations list and unread count
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
         queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+        queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount'] });
       }, 1000); // 1 second debounce
     };
 

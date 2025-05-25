@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useServiceProviderUnreadCount } from '@/hooks/useServiceProviderUnreadCount';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,6 +29,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   
   const { unreadCount } = useConversations();
   const { isNotificationsEnabled } = useNotifications();
+  const { data: serviceProviderUnreadCount = 0 } = useServiceProviderUnreadCount();
   
   // Check if user is a service provider with longer cache time to prevent refetching
   const { data: isServiceProvider, isLoading: isLoadingProvider } = useQuery({
@@ -185,7 +187,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           {isServiceProvider && (
             <NavButton 
               to="/service-requests" 
-              icon={<Briefcase className="h-5 w-5" />} 
+              icon={(
+                <div className="relative">
+                  <Briefcase className="h-5 w-5" />
+                  {serviceProviderUnreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                      {serviceProviderUnreadCount > 99 ? '99+' : serviceProviderUnreadCount}
+                    </span>
+                  )}
+                </div>
+              )}
               label="Service Requests" 
               isActive={location.pathname === '/service-requests'} 
             />
