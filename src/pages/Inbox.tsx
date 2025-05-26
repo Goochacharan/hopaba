@@ -36,6 +36,7 @@ import {
   type ProviderWithDistance 
 } from '@/utils/locationFilterUtils';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
+import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -109,7 +110,7 @@ const Inbox: React.FC = () => {
     conv => conv.request_id === selectedRequestId
   ) || [];
   
-  // Get unread counts for all conversations in the selected request
+  // Get unread counts for the selected request
   const conversationIds = requestConversations.map(conv => conv.id);
   const { data: conversationUnreadCounts = {} } = useMultipleConversationUnreadCounts(conversationIds);
   
@@ -148,10 +149,10 @@ const Inbox: React.FC = () => {
       
       const providerIds = requestConversations.map(c => c.provider_id);
       
-      // Fetch provider details including address information
+      // Fetch provider details including address information and images
       const { data: providerDetails } = await supabase
         .from('service_providers')
-        .select('id, address, area, city, postal_code')
+        .select('id, address, area, city, postal_code, images')
         .in('id', providerIds);
       
       // Fetch reviews for all providers from business_reviews table with criteria ratings
@@ -166,6 +167,7 @@ const Inbox: React.FC = () => {
         area: string;
         city: string;
         postal_code: string;
+        images: string[];
         rating: number;
         reviewCount: number;
         overallScore: number;
@@ -214,6 +216,7 @@ const Inbox: React.FC = () => {
           area: providerDetail?.area || 'Unknown',
           city: providerDetail?.city || 'Unknown',
           postal_code: providerDetail?.postal_code || '',
+          images: providerDetail?.images || [],
           rating,
           reviewCount,
           overallScore
@@ -627,7 +630,7 @@ const Inbox: React.FC = () => {
                                 unreadCount > 0 && "border-blue-200 bg-blue-50/30"
                               )}>
                                 {unreadCount > 0 && (
-                                  <div className="absolute top-2 right-2">
+                                  <div className="absolute top-2 right-2 z-10">
                                     <Badge variant="destructive" className="h-5 px-1.5 text-xs">
                                       {unreadCount} new
                                     </Badge>
@@ -660,6 +663,15 @@ const Inbox: React.FC = () => {
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
+                                    {/* Shop Images Carousel */}
+                                    {providerDetails && (
+                                      <ProviderImageCarousel 
+                                        images={providerDetails.images}
+                                        providerName={conversation.service_providers.name || "Service Provider"}
+                                        className="mb-3"
+                                      />
+                                    )}
+                                    
                                     {/* Address Information - single display */}
                                     {providerDetails && (
                                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

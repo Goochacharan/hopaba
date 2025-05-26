@@ -21,6 +21,7 @@ import {
 import { distanceService } from '@/services/distanceService';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import { cn } from '@/lib/utils';
+import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -131,10 +132,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       // Then fetch additional details for each provider
       const enhancedData = await Promise.all(
         (baseData || []).map(async (provider: MatchingProviderResult) => {
-          // Get detailed provider info including address, city, area, postal_code, map_link
+          // Get detailed provider info including address, city, area, postal_code, map_link, and images
           const { data: providerDetail } = await supabase
             .from('service_providers')
-            .select('id, address, area, city, postal_code, map_link')
+            .select('id, address, area, city, postal_code, map_link, images')
             .eq('id', provider.provider_id)
             .single();
           
@@ -185,6 +186,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             area: providerDetail?.area || 'Unknown',
             postal_code: providerDetail?.postal_code || '',
             map_link: providerDetail?.map_link || '',
+            images: providerDetail?.images || [],
             rating,
             review_count: reviewCount,
             overallScore
@@ -454,6 +456,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                   
                   <CardContent>
                     <div className="space-y-3">
+                      {/* Shop Images Carousel */}
+                      <ProviderImageCarousel 
+                        images={provider.images || []}
+                        providerName={provider.provider_name}
+                        className="mb-3"
+                      />
+                      
                       {/* Category and Subcategory */}
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">{provider.provider_category}</Badge>
