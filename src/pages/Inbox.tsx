@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone } from 'lucide-react';
 import { useConversations } from '@/hooks/useConversations';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -149,10 +149,10 @@ const Inbox: React.FC = () => {
       
       const providerIds = requestConversations.map(c => c.provider_id);
       
-      // Fetch provider details including address information and images
+      // Fetch provider details including address information, images, and contact_phone
       const { data: providerDetails } = await supabase
         .from('service_providers')
-        .select('id, address, area, city, postal_code, images')
+        .select('id, address, area, city, postal_code, images, contact_phone')
         .in('id', providerIds);
       
       // Fetch reviews for all providers from business_reviews table with criteria ratings
@@ -160,6 +160,14 @@ const Inbox: React.FC = () => {
         .from('business_reviews')
         .select('business_id, rating, criteria_ratings')
         .in('business_id', providerIds);
+
+      // Fetch latest message with pricing info for each conversation
+      const { data: latestMessages } = await supabase
+        .from('messages')
+        .select('conversation_id, pricing_type, quotation_price, wholesale_price, negotiable_price')
+        .in('conversation_id', requestConversations.map(c => c.id))
+        .not('quotation_price', 'is', null)
+        .order('created_at', { ascending: false });
       
       // Process the data to create enhanced provider details
       const enhancedDetails: Record<string, {
@@ -168,14 +176,22 @@ const Inbox: React.FC = () => {
         city: string;
         postal_code: string;
         images: string[];
+        contact_phone: string;
         rating: number;
         reviewCount: number;
         overallScore: number;
+        latestPricing?: {
+          pricing_type?: string;
+          quotation_price?: number;
+          wholesale_price?: number;
+          negotiable_price?: number;
+        };
       }> = {};
       
       requestConversations.forEach(conv => {
         const providerDetail = providerDetails?.find(p => p.id === conv.provider_id);
         const providerReviews = reviews?.filter(r => r.business_id === conv.provider_id) || [];
+        const latestMessage = latestMessages?.find(m => m.conversation_id === conv.id);
         
         // Calculate average rating
         let rating = 4.5; // Default rating
@@ -186,7 +202,7 @@ const Inbox: React.FC = () => {
           rating = providerReviews.reduce((sum, review) => sum + review.rating, 0) / providerReviews.length;
           reviewCount = providerReviews.length;
           
-          // Calculate overall score using criteria ratings (same as home page)
+          // Calculate overall score using criteria ratings
           const aggregatedCriteriaRatings: Record<string, number[]> = {};
           
           providerReviews.forEach(review => {
@@ -207,9 +223,16 @@ const Inbox: React.FC = () => {
             averageCriteriaRatings[criterionId] = sum / ratings.length;
           });
           
-          // Use the same calculation as home page (RatingProgressBars)
           overallScore = calculateOverallRating(averageCriteriaRatings);
         }
+
+        // Set all pricing related fields
+        const pricingInfo = latestMessage ? {
+          pricing_type: latestMessage.pricing_type,
+          quotation_price: latestMessage.quotation_price,
+          wholesale_price: latestMessage.wholesale_price,
+          negotiable_price: latestMessage.negotiable_price
+        } : undefined;
         
         enhancedDetails[conv.provider_id] = {
           address: providerDetail?.address || '',
@@ -217,9 +240,11 @@ const Inbox: React.FC = () => {
           city: providerDetail?.city || 'Unknown',
           postal_code: providerDetail?.postal_code || '',
           images: providerDetail?.images || [],
+          contact_phone: providerDetail?.contact_phone || '',
           rating,
           reviewCount,
-          overallScore
+          overallScore,
+          latestPricing: pricingInfo
         };
       });
       
@@ -413,6 +438,50 @@ const Inbox: React.FC = () => {
     return sorted;
   }, [requestConversations, conversationsWithDistance, isLocationEnabled, messagesSortBy, enhancedProviderDetails]);
   
+  // Helper function to get pricing type badge
+  const getPricingTypeBadge = (pricingType: string | undefined) => {
+    if (!pricingType) return null;
+    
+    switch (pricingType.toLowerCase()) {
+      case 'fixed':
+        return <Badge variant="default" className="ml-2">Fixed Price</Badge>;
+      case 'negotiable':
+        return <Badge variant="condition" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
+      case 'wholesale':
+        return <Badge variant="secondary" className="ml-2 bg-purple-200 text-purple-800">Wholesale</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  // Helper function to get pricing display
+  const getPricingDisplay = (pricing: any) => {
+    if (!pricing) return null;
+    
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-center">
+          <Badge variant="secondary" className="bg-green-50 text-green-700 text-lg px-3 py-1">
+            ₹{pricing.quotation_price?.toLocaleString()}
+          </Badge>
+          {getPricingTypeBadge(pricing.pricing_type)}
+        </div>
+        
+        {pricing.pricing_type === 'negotiable' && pricing.negotiable_price && (
+          <div className="text-xs text-center text-muted-foreground">
+            Negotiable from ₹{pricing.negotiable_price.toLocaleString()}
+          </div>
+        )}
+        
+        {pricing.pricing_type === 'wholesale' && pricing.wholesale_price && (
+          <div className="text-xs text-center text-muted-foreground">
+            Wholesale: ₹{pricing.wholesale_price.toLocaleString()}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-background">
@@ -639,7 +708,7 @@ const Inbox: React.FC = () => {
                                 <CardHeader className="pb-2">
                                   <CardTitle className="text-lg flex items-center justify-between">
                                     <span>{conversation.service_providers.name || "Service Provider"}</span>
-                                    {providerDetails && (
+                                    {providerDetails?.overallScore && (
                                       <div 
                                         className="flex items-center justify-center font-bold"
                                         style={{
@@ -666,7 +735,7 @@ const Inbox: React.FC = () => {
                                     {/* Shop Images Carousel */}
                                     {providerDetails && (
                                       <ProviderImageCarousel 
-                                        images={providerDetails.images}
+                                        images={providerDetails.images || []}
                                         providerName={conversation.service_providers.name || "Service Provider"}
                                         className="mb-3"
                                       />
@@ -698,36 +767,43 @@ const Inbox: React.FC = () => {
                                       </div>
                                     )}
                                     
-                                    {/* Fixed Star Rating with Review Count */}
+                                    {/* Fixed Star Rating with Review Count + Call Button */}
                                     {providerDetails && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <div className="flex items-center">
-                                          {[1, 2, 3, 4, 5].map((star) => (
-                                            <Star 
-                                              key={star} 
-                                              className={cn(
-                                                "h-4 w-4",
-                                                star <= Math.round(providerDetails.rating) 
-                                                  ? "fill-yellow-400 text-yellow-400" 
-                                                  : "text-gray-300"
-                                              )} 
-                                            />
-                                          ))}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm">
+                                          <div className="flex items-center">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                              <Star 
+                                                key={star} 
+                                                className={cn(
+                                                  "h-4 w-4",
+                                                  star <= Math.round(providerDetails.rating) 
+                                                    ? "fill-yellow-400 text-yellow-400" 
+                                                    : "text-gray-300"
+                                                )} 
+                                              />
+                                            ))}
+                                          </div>
+                                          <span className="text-muted-foreground">
+                                            ({providerDetails.reviewCount})
+                                          </span>
                                         </div>
-                                        <span className="text-muted-foreground">
-                                          ({providerDetails.reviewCount})
-                                        </span>
+                                        
+                                        {/* Add Call Button */}
+                                        {providerDetails.contact_phone && (
+                                          <a 
+                                            href={`tel:${providerDetails.contact_phone}`}
+                                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                                          >
+                                            <Phone className="h-3 w-3" />
+                                            Call
+                                          </a>
+                                        )}
                                       </div>
                                     )}
                                     
-                                    {/* Quotation Price - moved above buttons */}
-                                    {conversation.latest_quotation && (
-                                      <div className="flex justify-center mb-2">
-                                        <Badge variant="secondary" className="bg-green-50 text-green-700 text-lg px-3 py-1">
-                                          ₹{conversation.latest_quotation.toLocaleString()}
-                                        </Badge>
-                                      </div>
-                                    )}
+                                    {/* Enhanced Quotation Price with Type */}
+                                    {providerDetails?.latestPricing && getPricingDisplay(providerDetails.latestPricing)}
                                   </div>
                                 </CardContent>
                                 

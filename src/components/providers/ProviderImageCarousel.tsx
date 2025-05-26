@@ -31,12 +31,25 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
     );
   }
 
-  const nextImage = () => {
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Next image clicked, current:', currentImageIndex);
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
-  const previousImage = () => {
+  const previousImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Previous image clicked, current:', currentImageIndex);
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const goToImage = (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Go to image clicked, index:', index);
+    setCurrentImageIndex(index);
   };
 
   return (
@@ -57,8 +70,9 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 z-20 pointer-events-auto"
               onClick={previousImage}
+              type="button"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -66,8 +80,9 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 z-20 pointer-events-auto"
               onClick={nextImage}
+              type="button"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -76,17 +91,18 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
         
         {/* Dots indicator - only show if more than one image */}
         {images.length > 1 && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
             {images.map((_, index) => (
               <button
                 key={index}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-all",
+                  "w-2 h-2 rounded-full transition-all pointer-events-auto",
                   index === currentImageIndex 
                     ? "bg-white" 
                     : "bg-white/50 hover:bg-white/75"
                 )}
-                onClick={() => setCurrentImageIndex(index)}
+                onClick={(e) => goToImage(index, e)}
+                type="button"
               />
             ))}
           </div>

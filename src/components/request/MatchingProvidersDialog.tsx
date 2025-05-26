@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MessageSquare, MapPin, Star } from 'lucide-react';
+import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,6 +47,13 @@ interface MatchingProviderResult {
   overallScore?: number;
   calculatedDistance?: number;
   distanceText?: string;
+  contact_phone?: string;
+  latest_pricing?: {
+    pricing_type?: string;
+    quotation_price?: number;
+    wholesale_price?: number;
+    negotiable_price?: number;
+  };
 }
 
 // Export the main dialog component
@@ -69,6 +77,50 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
     </Dialog>
   );
 }
+
+// Helper function to get pricing type badge
+const getPricingTypeBadge = (pricingType: string | undefined) => {
+  if (!pricingType) return null;
+  
+  switch (pricingType.toLowerCase()) {
+    case 'fixed':
+      return <Badge variant="default" className="ml-2">Fixed Price</Badge>;
+    case 'negotiable':
+      return <Badge variant="condition" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
+    case 'wholesale':
+      return <Badge variant="secondary" className="ml-2 bg-purple-200 text-purple-800">Wholesale</Badge>;
+    default:
+      return null;
+  }
+};
+
+// Helper function to get pricing display
+const getPricingDisplay = (pricing: any) => {
+  if (!pricing) return null;
+  
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-center">
+        <Badge variant="secondary" className="bg-green-50 text-green-700 text-lg px-3 py-1">
+          ₹{pricing.quotation_price?.toLocaleString()}
+        </Badge>
+        {getPricingTypeBadge(pricing.pricing_type)}
+      </div>
+      
+      {pricing.pricing_type === 'negotiable' && pricing.negotiable_price && (
+        <div className="text-xs text-center text-muted-foreground">
+          Negotiable from ₹{pricing.negotiable_price.toLocaleString()}
+        </div>
+      )}
+      
+      {pricing.pricing_type === 'wholesale' && pricing.wholesale_price && (
+        <div className="text-xs text-center text-muted-foreground">
+          Wholesale: ₹{pricing.wholesale_price.toLocaleString()}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Export the content component so it can be used directly without the dialog wrapper
 export function MatchingProvidersContent({ requestId }: { requestId: string }) {
@@ -133,10 +185,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       // Then fetch additional details for each provider
       const enhancedData = await Promise.all(
         (baseData || []).map(async (provider: MatchingProviderResult) => {
-          // Get detailed provider info including address, city, area, postal_code, map_link, and images
+          // Get detailed provider info including address, city, area, postal_code, map_link, images, and contact_phone
           const { data: providerDetail } = await supabase
             .from('service_providers')
-            .select('id, address, area, city, postal_code, map_link, images')
+            .select('id, address, area, city, postal_code, map_link, images, contact_phone')
             .eq('id', provider.provider_id)
             .single();
           
@@ -145,6 +197,34 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             .from('business_reviews')
             .select('business_id, rating, criteria_ratings')
             .eq('business_id', provider.provider_id);
+
+          // Get latest quotation message for this provider and request
+          let latestPricing = null;
+          if (conversations) {
+            const conversation = conversations.find(
+              c => c.request_id === requestId && c.provider_id === provider.provider_id
+            );
+            
+            if (conversation) {
+              const { data: latestQuotation } = await supabase
+                .from('messages')
+                .select('pricing_type, quotation_price, wholesale_price, negotiable_price')
+                .eq('conversation_id', conversation.id)
+                .not('quotation_price', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+              
+              if (latestQuotation) {
+                latestPricing = {
+                  pricing_type: latestQuotation.pricing_type,
+                  quotation_price: latestQuotation.quotation_price,
+                  wholesale_price: latestQuotation.wholesale_price,
+                  negotiable_price: latestQuotation.negotiable_price
+                };
+              }
+            }
+          }
           
           // Calculate average rating if reviews exist
           let rating = 4.5; // Default rating
@@ -188,9 +268,11 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             postal_code: providerDetail?.postal_code || '',
             map_link: providerDetail?.map_link || '',
             images: providerDetail?.images || [],
+            contact_phone: providerDetail?.contact_phone || '',
             rating,
             review_count: reviewCount,
-            overallScore
+            overallScore,
+            latest_pricing: latestPricing
           };
         })
       );
@@ -486,25 +568,41 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         </span>
                       </div>
                       
-                      {/* Five Star Rating with Review Count in Brackets */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="flex items-center">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star 
-                              key={star} 
-                              className={cn(
-                                "h-4 w-4",
-                                star <= Math.round(provider.rating || 4.5) 
-                                  ? "fill-yellow-400 text-yellow-400" 
-                                  : "text-gray-300"
-                              )} 
-                            />
-                          ))}
+                      {/* Five Star Rating with Review Count + Call Button */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star 
+                                key={star} 
+                                className={cn(
+                                  "h-4 w-4",
+                                  star <= Math.round(provider.rating || 4.5) 
+                                    ? "fill-yellow-400 text-yellow-400" 
+                                    : "text-gray-300"
+                                )} 
+                              />
+                            ))}
+                          </div>
+                          <span className="text-muted-foreground">
+                            ({provider.review_count || 0})
+                          </span>
                         </div>
-                        <span className="text-muted-foreground">
-                          ({provider.review_count || 0})
-                        </span>
+                        
+                        {/* Add Call Button */}
+                        {provider.contact_phone && (
+                          <a 
+                            href={`tel:${provider.contact_phone}`}
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                          >
+                            <Phone className="h-3 w-3" />
+                            Call
+                          </a>
+                        )}
                       </div>
+
+                      {/* Pricing Display with Type Badge */}
+                      {provider.latest_pricing && getPricingDisplay(provider.latest_pricing)}
                     </div>
                   </CardContent>
                   
