@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -61,9 +62,6 @@ const requestFormSchema = z.object({
   }).max(6, {
     message: "Postal code must not exceed 6 characters."
   }),
-  contact_phone: z.string().regex(/^\d{10}$/, {
-    message: "Please enter a valid 10-digit phone number.",
-  }),
   images: z.array(z.string()).optional(),
 });
 
@@ -97,7 +95,6 @@ const PostRequestForm: React.FC = () => {
       city: "",
       area: "",
       postal_code: "",
-      contact_phone: "",
       images: [],
     },
   });
@@ -110,7 +107,7 @@ const PostRequestForm: React.FC = () => {
   });
 
   const onSubmit = (values: RequestFormValues) => {
-    const requestData: Omit<ServiceRequest, 'id' | 'user_id' | 'created_at' | 'status'> = {
+    const requestData: Omit<ServiceRequest, 'id' | 'user_id' | 'created_at' | 'status' | 'contact_phone'> = {
       title: values.title,
       description: values.description,
       category: values.category,
@@ -121,7 +118,6 @@ const PostRequestForm: React.FC = () => {
       city: values.city,
       area: values.area,
       postal_code: values.postal_code,
-      contact_phone: values.contact_phone,
       images: values.images || []
     };
     
@@ -140,13 +136,6 @@ const PostRequestForm: React.FC = () => {
     // Fetch subcategories if needed
     if (categoryId) {
       getSubcategoriesByCategoryName(categoryName);
-    }
-  };
-
-  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 10) {
-      form.setValue("contact_phone", value);
     }
   };
 
@@ -451,29 +440,6 @@ const PostRequestForm: React.FC = () => {
               )}
             />
           </div>
-
-          <FormField
-            control={form.control}
-            name="contact_phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="flex">
-                    <div className="bg-muted flex items-center px-3 rounded-l-md border border-r-0 border-input">
-                      +91
-                    </div>
-                    <Input 
-                      placeholder="10-digit phone number" 
-                      value={field.value} 
-                      onChange={handlePhoneInput}
-                      className="rounded-l-none"
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <div className="pt-4">
             <Button 

@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, IndianRupee, MapPin, Phone, MessageSquare } from 'lucide-react';
+import { CalendarIcon, IndianRupee, MapPin, MessageSquare } from 'lucide-react';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
@@ -120,14 +121,6 @@ export function RequestDetailsDialog({ request, open, onOpenChange, providerId }
                     <p className="text-sm flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
                       {request.area}, {request.city}, {request.postal_code}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-medium mb-1">Contact</h3>
-                    <p className="text-sm flex items-center gap-1">
-                      <Phone className="h-4 w-4" />
-                      {request.contact_phone}
                     </p>
                   </div>
                 </div>

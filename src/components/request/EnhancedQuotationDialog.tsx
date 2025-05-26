@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -359,10 +360,10 @@ export function EnhancedQuotationDialog({
           <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
             <DialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Send Enhanced Quotation
+              Send Quotation
             </DialogTitle>
             <DialogDescription>
-              Send a detailed price quote to the requester for "{request?.title || 'Unknown Request'}"
+              Send your price quote for "{request?.title || 'Unknown Request'}"
             </DialogDescription>
           </DialogHeader>
 
