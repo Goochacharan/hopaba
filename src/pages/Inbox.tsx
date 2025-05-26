@@ -372,8 +372,6 @@ const Inbox: React.FC = () => {
     return errorMessage;
   };
 
-
-
   // Sort conversations based on selected criteria
   const sortedConversations = useMemo(() => {
     // Use conversations with distance if location is enabled, otherwise use regular conversations
@@ -511,6 +509,23 @@ const Inbox: React.FC = () => {
                     <SidebarTrigger className="md:hidden" />
                   </div>
                   
+                  {/* Location Toggle - moved above tabs */}
+                  <div className="mb-4">
+                    <Button
+                      variant={isLocationEnabled ? "default" : "outline"}
+                      onClick={handleLocationToggle}
+                      disabled={isCalculatingDistances}
+                      className="flex items-center gap-2"
+                    >
+                      {isCalculatingDistances ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Navigation className="h-4 w-4" />
+                      )}
+                      {isLocationEnabled ? "Disable Location" : "Enable Location"}
+                    </Button>
+                  </div>
+                  
                   <Tabs defaultValue="messages" value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
                       <TabsTrigger value="messages">
@@ -529,53 +544,22 @@ const Inbox: React.FC = () => {
                     </TabsList>
                     
                     <TabsContent value="messages">
-                      {/* Location Toggle and Sorting Controls */}
-                      <div className="mb-4 space-y-4">
-                        {/* Location Toggle */}
-                        <div className="bg-white rounded-xl border border-border p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-5 w-5 text-primary" />
-                              <div>
-                                <h3 className="font-medium">Distance Calculation</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Enable location to sort messages by distance
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant={isLocationEnabled ? "default" : "outline"}
-                              onClick={handleLocationToggle}
-                              disabled={isCalculatingDistances}
-                              className="flex items-center gap-2"
-                            >
-                              {isCalculatingDistances ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Navigation className="h-4 w-4" />
-                              )}
-                              {isLocationEnabled ? "Disable Location" : "Enable Location"}
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Sorting Controls */}
-                        <div className="flex items-center gap-4">
-                          <label className="text-sm font-medium">Sort by:</label>
-                          <Select value={messagesSortBy} onValueChange={setMessagesSortBy}>
-                            <SelectTrigger className="w-48">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="recent">Most Recent</SelectItem>
-                              <SelectItem value="rating">Highest Rating</SelectItem>
-                              <SelectItem value="quotation">Lowest Quotation</SelectItem>
-                              {isLocationEnabled && (
-                                <SelectItem value="distance">Nearest Distance</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      {/* Sorting Controls */}
+                      <div className="mb-4 flex items-center gap-4">
+                        <label className="text-sm font-medium">Sort by:</label>
+                        <Select value={messagesSortBy} onValueChange={setMessagesSortBy}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="recent">Most Recent</SelectItem>
+                            <SelectItem value="rating">Highest Rating</SelectItem>
+                            <SelectItem value="quotation">Lowest Quotation</SelectItem>
+                            {isLocationEnabled && (
+                              <SelectItem value="distance">Nearest Distance</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-4">
@@ -652,38 +636,31 @@ const Inbox: React.FC = () => {
                                 <CardHeader className="pb-2">
                                   <CardTitle className="text-lg flex items-center justify-between">
                                     <span>{conversation.service_providers.name || "Service Provider"}</span>
-                                    <div className="flex items-center gap-2">
-                                      {conversation.latest_quotation && (
-                                        <Badge variant="secondary" className="bg-green-50 text-green-700">
-                                          ₹{conversation.latest_quotation.toLocaleString()}
-                                        </Badge>
-                                      )}
-                                      {providerDetails && (
-                                        <div 
-                                          className="flex items-center justify-center font-bold"
-                                          style={{
-                                            width: 48,
-                                            height: 48,
-                                            borderRadius: '50%',
-                                            color: getRatingColor(providerDetails.overallScore),
-                                            borderColor: getRatingColor(providerDetails.overallScore),
-                                            borderWidth: 3,
-                                            borderStyle: 'solid',
-                                            fontSize: 20,
-                                            background: '#fff',
-                                            boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
-                                          }}
-                                          title={`Overall rating: ${providerDetails.overallScore}`}
-                                        >
-                                          {providerDetails.overallScore}
-                                        </div>
-                                      )}
-                                    </div>
+                                    {providerDetails && (
+                                      <div 
+                                        className="flex items-center justify-center font-bold"
+                                        style={{
+                                          width: 48,
+                                          height: 48,
+                                          borderRadius: '50%',
+                                          color: getRatingColor(providerDetails.overallScore),
+                                          borderColor: getRatingColor(providerDetails.overallScore),
+                                          borderWidth: 3,
+                                          borderStyle: 'solid',
+                                          fontSize: 20,
+                                          background: '#fff',
+                                          boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
+                                        }}
+                                        title={`Overall rating: ${providerDetails.overallScore}`}
+                                      >
+                                        {providerDetails.overallScore}
+                                      </div>
+                                    )}
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
-                                    {/* Address Information */}
+                                    {/* Address Information - single display */}
                                     {providerDetails && (
                                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <MapPin className="h-4 w-4" />
@@ -709,66 +686,68 @@ const Inbox: React.FC = () => {
                                       </div>
                                     )}
                                     
-                                    {/* Rating and Reviews Information */}
+                                    {/* Fixed Star Rating with Review Count */}
                                     {providerDetails && (
-                                      <div className="flex items-center gap-4 text-sm">
-                                        <div className="flex items-center gap-1">
-                                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                          <span className="font-medium">{providerDetails.rating.toFixed(1)}</span>
-                                          <span className="text-muted-foreground">Average Rating</span>
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <div className="flex items-center">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <Star 
+                                              key={star} 
+                                              className={cn(
+                                                "h-4 w-4",
+                                                star <= Math.round(providerDetails.rating) 
+                                                  ? "fill-yellow-400 text-yellow-400" 
+                                                  : "text-gray-300"
+                                              )} 
+                                            />
+                                          ))}
                                         </div>
-                                        <div className="text-muted-foreground">
-                                          <span className="font-medium">{providerDetails.reviewCount}</span> Reviews
-                                        </div>
+                                        <span className="text-muted-foreground">
+                                          ({providerDetails.reviewCount})
+                                        </span>
                                       </div>
                                     )}
                                     
-                                    {/* Existing message information */}
-                                    <div className="flex justify-between items-center">
-                                      <div>
-                                        <p className="text-sm text-muted-foreground">
-                                          Last message: {conversation.last_message_at ? 
-                                            format(new Date(conversation.last_message_at), 'MMM d, yyyy, h:mm a') : 
-                                            "No messages yet"}
-                                        </p>
-                                        {conversation.latest_quotation && (
-                                          <p className="text-sm font-medium mt-1 text-green-600">
-                                            Latest quotation: ₹{conversation.latest_quotation.toLocaleString()}
-                                          </p>
-                                        )}
-                                        {unreadCount > 0 && (
-                                          <p className="text-sm font-medium mt-1 text-blue-600">
-                                            {unreadCount} unread message{unreadCount > 1 ? 's' : ''}
-                                          </p>
-                                        )}
+                                    {/* Quotation Price - moved above buttons */}
+                                    {conversation.latest_quotation && (
+                                      <div className="flex justify-center mb-2">
+                                        <Badge variant="secondary" className="bg-green-50 text-green-700 text-lg px-3 py-1">
+                                          ₹{conversation.latest_quotation.toLocaleString()}
+                                        </Badge>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        <Button 
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => navigate(`/business/${conversation.provider_id}`)}
-                                        >
-                                          <Building className="h-4 w-4 mr-1" />
-                                          View Profile
-                                        </Button>
-                                        <Button 
-                                          size="sm" 
-                                          className={cn(
-                                            unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
-                                          )}
-                                          onClick={() => {
-                                            // Set navigation source for back button
-                                            sessionStorage.setItem('conversationNavigationSource', 'inbox');
-                                            window.location.href = `/messages/${conversation.id}`;
-                                          }}
-                                        >
-                                          <MessageSquare className="h-4 w-4 mr-1" />
-                                          {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
-                                        </Button>
-                                      </div>
-                                    </div>
+                                    )}
                                   </div>
                                 </CardContent>
+                                
+                                {/* Bottom Navigation Bar */}
+                                <CardFooter className="border-t pt-4 pb-4">
+                                  <div className="flex w-full gap-2">
+                                    <Button 
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex-1"
+                                      onClick={() => navigate(`/business/${conversation.provider_id}`)}
+                                    >
+                                      <Building className="h-4 w-4 mr-1" />
+                                      View Profile
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      className={cn(
+                                        "flex-1",
+                                        unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
+                                      )}
+                                      onClick={() => {
+                                        // Set navigation source for back button
+                                        sessionStorage.setItem('conversationNavigationSource', 'inbox');
+                                        window.location.href = `/messages/${conversation.id}`;
+                                      }}
+                                    >
+                                      <MessageSquare className="h-4 w-4 mr-1" />
+                                      {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
+                                    </Button>
+                                  </div>
+                                </CardFooter>
                               </Card>
                             );
                           })
