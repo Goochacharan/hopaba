@@ -261,22 +261,22 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     }
     
     try {
-      // Create new conversation
-      const conversation = await createConversation(requestId, provider.provider_id, user.id);
+      // Create new conversation - this returns void, so we handle it differently
+      await createConversation(requestId, provider.provider_id, user.id);
       
-      if (conversation) {
-        // Add to local state
-        setContactedProviders(prev => new Set([...prev, provider.provider_id]));
-        
-        toast({
-          title: "Chat started",
-          description: `You can now chat with ${provider.provider_name}.`,
-        });
-        
-        // Navigate to the new conversation
-        sessionStorage.setItem('conversationNavigationSource', 'inbox');
-        navigate(`/messages/${conversation.id}`);
-      }
+      // Add to local state
+      setContactedProviders(prev => new Set([...prev, provider.provider_id]));
+      
+      toast({
+        title: "Chat started",
+        description: `You can now chat with ${provider.provider_name}.`,
+      });
+      
+      // After creating conversation, find the new conversation ID
+      // We'll need to refetch conversations or find it in the updated list
+      // For now, navigate to inbox where user can see the new conversation
+      navigate('/inbox');
+      
     } catch (error) {
       console.error('Failed to create conversation:', error);
       toast({
