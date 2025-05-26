@@ -262,62 +262,69 @@ const Messages: React.FC = () => {
   
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-180px)]">
+      <div className="flex flex-col h-screen">
         {/* Notification Prompt */}
-        <NotificationPrompt className="mx-4 mt-4 mb-2" />
+        <NotificationPrompt className="mx-4 mt-4 mb-2 flex-shrink-0" />
         
-        {/* Header */}
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : conversationData ? (
-          <>
-            <ConversationHeader 
-              otherPartyName={otherPartyName}
-              conversation={conversationData.conversation}
-              requestInfo={conversationData.conversation.service_requests}
-            />
-            
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto">
-              {conversationData.messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <div className="text-center p-8">
-                    <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <h3 className="text-lg font-medium mb-1">No messages yet</h3>
-                    <p className="text-muted-foreground">
-                      Start the conversation by sending a message.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <MessagesList 
-                  messages={conversationData.messages} 
-                  userId={user?.id || ''}
-                  otherPartyName={otherPartyName}
-                  isProvider={isProvider}
-                  businessName={conversationData.conversation.service_providers?.name}
-                  providerId={conversationData.conversation.provider_id}
-                />
-              )}
+        {/* Content Area - flex container that takes remaining space */}
+        <div className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full">
+          {/* Header */}
+          {isLoading ? (
+            <div className="flex justify-center py-8 flex-shrink-0">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-            
-            {/* Message Input */}
-            <MessageInput 
-              message={message}
-              setMessage={setMessage}
-              quotationMode={quotationMode}
-              setQuotationMode={setQuotationMode}
-              quotationPrice={quotationPrice}
-              setQuotationPrice={setQuotationPrice}
-              handleSendMessage={handleSendMessage}
-              isSendingMessage={isSendingMessage}
-              isProvider={isProvider}
-              requestDetails={conversationData.conversation.service_requests}
-            />
-          </>
-        ) : null}
+          ) : conversationData ? (
+            <>
+              <div className="flex-shrink-0">
+                <ConversationHeader 
+                  otherPartyName={otherPartyName}
+                  conversation={conversationData.conversation}
+                  requestInfo={conversationData.conversation.service_requests}
+                />
+              </div>
+              
+              {/* Messages Container - takes remaining space */}
+              <div className="flex-1 overflow-hidden">
+                {conversationData.messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="text-center p-8">
+                      <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      <h3 className="text-lg font-medium mb-1">No messages yet</h3>
+                      <p className="text-muted-foreground">
+                        Start the conversation by sending a message.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <MessagesList 
+                    messages={conversationData.messages} 
+                    userId={user?.id || ''}
+                    otherPartyName={otherPartyName}
+                    isProvider={isProvider}
+                    businessName={conversationData.conversation.service_providers?.name}
+                    providerId={conversationData.conversation.provider_id}
+                  />
+                )}
+              </div>
+              
+              {/* Message Input - fixed at bottom */}
+              <div className="flex-shrink-0">
+                <MessageInput 
+                  message={message}
+                  setMessage={setMessage}
+                  quotationMode={quotationMode}
+                  setQuotationMode={setQuotationMode}
+                  quotationPrice={quotationPrice}
+                  setQuotationPrice={setQuotationPrice}
+                  handleSendMessage={handleSendMessage}
+                  isSendingMessage={isSendingMessage}
+                  isProvider={isProvider}
+                  requestDetails={conversationData.conversation.service_requests}
+                />
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
     </MainLayout>
   );
