@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, PlusCircle, Calendar, DollarSign, MapPin, Phone } from 'lucide-react';
+import { Loader2, PlusCircle, Calendar, DollarSign, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { useConversations } from '@/hooks/useConversations';
@@ -62,11 +61,7 @@ const RequestCard: React.FC<{
           <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
         </div>
       </CardContent>
-      <CardFooter className="border-t pt-4 flex justify-between">
-        <div className="text-sm text-muted-foreground flex items-center gap-1">
-          <Phone className="h-4 w-4" />
-          {request.contact_phone}
-        </div>
+      <CardFooter className="border-t pt-4 flex justify-end">
         <div className="flex items-center gap-2">
           {conversationCount > 0 && (
             <Badge variant="secondary">{conversationCount} {conversationCount === 1 ? 'response' : 'responses'}</Badge>
