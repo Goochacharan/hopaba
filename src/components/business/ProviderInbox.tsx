@@ -458,6 +458,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
             open={requestDetailsOpen}
             onOpenChange={setRequestDetailsOpen}
             request={selectedRequest}
+            providerId={providerId}
           />
         </>
       )}

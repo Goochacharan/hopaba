@@ -1,5 +1,6 @@
 import { distanceService, type Location } from '@/services/distanceService';
 import type { LocationFilterData } from '@/components/search/LocationFilter';
+import type { ServiceRequest } from '@/types/serviceRequestTypes';
 
 export interface BusinessWithDistance {
   id: string;
@@ -28,6 +29,11 @@ export interface ProviderWithDistance {
   calculatedDistance?: number;
   distanceText?: string;
   [key: string]: any; // Allow other provider properties
+}
+
+export interface ServiceRequestWithDistance extends ServiceRequest {
+  calculatedDistance?: number | null;
+  distanceText?: string | null;
 }
 
 /**
@@ -284,4 +290,4 @@ export function hasLocationData(item: BusinessWithDistance | ProviderWithDistanc
     item.map_link ||
     item.postal_code
   );
-} 
+}
