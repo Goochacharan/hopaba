@@ -162,28 +162,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             </button>
             {/* Removed the Post Request text */}
           </div>
-          {/* Messages Button
-          <NavButton 
-            to={user ? "/messages" : "/login"}
-            icon={(
-              <div className="relative">
-                <MessageSquare className="h-5 w-5" />
-                {user && unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-                {user && isNotificationsEnabled && (
-                  <span className="absolute -bottom-1 -right-1 bg-green-500 rounded-full w-2 h-2 border border-background" 
-                        title="Push notifications enabled" />
-                )}
-              </div>
-            )}
-            label="Messages" 
-            isActive={location.pathname.startsWith('/message')} 
-          /> */}
           
-          {/* Service Requests Button - only show for service providers */}
+          {/* Vault Button - only show for service providers */}
           {isServiceProvider && (
             <NavButton 
               to="/service-requests" 
@@ -197,7 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
                   )}
                 </div>
               )}
-              label="Service Requests" 
+              label="Vault" 
               isActive={location.pathname === '/service-requests'} 
             />
           )}
