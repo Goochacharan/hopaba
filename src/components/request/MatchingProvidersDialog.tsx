@@ -40,6 +40,7 @@ interface MatchingProviderResult {
   area?: string;
   postal_code?: string;
   map_link?: string;
+  images?: string[];
   rating?: number;
   review_count?: number;
   overallScore?: number;
