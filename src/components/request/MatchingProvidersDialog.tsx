@@ -5,13 +5,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Phone, Mail, MessageSquare, MapPin, Building, Star } from 'lucide-react';
+import { Loader2, MessageSquare, MapPin, Star } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
-import StarRating from '@/components/marketplace/StarRating';
 import { SortOption } from '@/components/SortButton'; 
 import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
 import { 
@@ -21,6 +20,7 @@ import {
 } from '@/utils/locationFilterUtils';
 import { distanceService } from '@/services/distanceService';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
+import { cn } from '@/lib/utils';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -87,6 +87,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const hasExistingConversation = (providerId: string) => {
     if (!conversations) return false;
     return conversations.some(c => c.request_id === requestId && c.provider_id === providerId);
+  };
+
+  // Get existing conversation ID for a provider
+  const getExistingConversationId = (providerId: string) => {
+    if (!conversations) return null;
+    const conversation = conversations.find(c => c.request_id === requestId && c.provider_id === providerId);
+    return conversation?.id || null;
   };
 
   // Get user location for distance calculations when sorting by distance
@@ -233,26 +240,51 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     calculateDistances();
   }, [currentSort, matchingProviders, userLocation]);
 
-  const handleContactProvider = (provider: MatchingProviderResult) => {
+  const handleChatWithProvider = async (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
       toast({
         title: "Authentication required",
-        description: "You must be logged in to contact a service provider.",
+        description: "You must be logged in to chat with a service provider.",
         variant: "destructive"
       });
       return;
     }
     
-    // Call the createConversation function
-    createConversation(requestId, provider.provider_id, user.id);
+    // Check if conversation already exists
+    const existingConversationId = getExistingConversationId(provider.provider_id);
     
-    // Add to local state to show as contacted
-    setContactedProviders(prev => new Set([...prev, provider.provider_id]));
+    if (existingConversationId) {
+      // Navigate to existing conversation
+      sessionStorage.setItem('conversationNavigationSource', 'inbox');
+      navigate(`/messages/${existingConversationId}`);
+      return;
+    }
     
-    toast({
-      title: "Provider contacted",
-      description: `You've initiated a conversation with ${provider.provider_name}.`,
-    });
+    try {
+      // Create new conversation
+      const conversation = await createConversation(requestId, provider.provider_id, user.id);
+      
+      if (conversation) {
+        // Add to local state
+        setContactedProviders(prev => new Set([...prev, provider.provider_id]));
+        
+        toast({
+          title: "Chat started",
+          description: `You can now chat with ${provider.provider_name}.`,
+        });
+        
+        // Navigate to the new conversation
+        sessionStorage.setItem('conversationNavigationSource', 'inbox');
+        navigate(`/messages/${conversation.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+      toast({
+        title: "Failed to start chat",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Navigate to provider's business profile page
@@ -380,14 +412,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
         <div className="flex-1 overflow-y-auto">
           <div className="grid gap-4 pb-4">
             {filteredAndSortedProviders.map((provider) => {
-              const isContacted = hasExistingConversation(provider.provider_id) || 
-                                contactedProviders.has(provider.provider_id);
-                                
-              // Calculate numerical rating score (out of 100) - same calculation as used in RatingProgressBars
-              let allRatings = [provider.rating || 4.5];
-              const averageRaw = allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
-              const ratingScore = Math.round((averageRaw / 10) * 100);  // Update to match RatingProgressBars calculation
-              const ratingColor = getRatingColor(ratingScore);
+              const hasConversation = hasExistingConversation(provider.provider_id);
+              const isProcessing = isCreatingConversation && contactedProviders.has(provider.provider_id);
 
               return (
                 <Card key={provider.provider_id} className="relative flex-shrink-0">
@@ -436,7 +462,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         )}
                       </div>
                       
-                      {/* Address Information (like Messages tab) */}
+                      {/* Address Information */}
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <MapPin className="h-4 w-4" />
                         <span>
@@ -450,29 +476,41 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         </span>
                       </div>
                       
-                      {/* Rating and Reviews Information (like Messages tab) */}
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">{(provider.rating || 4.5).toFixed(1)}</span>
-                          <span className="text-muted-foreground">Average Rating</span>
+                      {/* Five Star Rating with Review Count in Brackets */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={cn(
+                                "h-4 w-4",
+                                star <= Math.round(provider.rating || 4.5) 
+                                  ? "fill-yellow-400 text-yellow-400" 
+                                  : "text-gray-300"
+                              )} 
+                            />
+                          ))}
                         </div>
-                        <div className="text-muted-foreground">
-                          <span className="font-medium">{provider.review_count || 0}</span> Reviews
-                        </div>
+                        <span className="text-muted-foreground">
+                          ({provider.review_count || 0})
+                        </span>
                       </div>
                     </div>
                   </CardContent>
                   
                   <CardFooter className="flex gap-2 pt-3">
                     <Button
-                      onClick={() => handleContactProvider(provider)}
-                      disabled={isContacted || isCreatingConversation}
+                      onClick={() => handleChatWithProvider(provider)}
+                      disabled={isProcessing}
                       className="flex-1"
-                      variant={isContacted ? "outline" : "default"}
+                      variant={hasConversation ? "outline" : "default"}
                     >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      {isContacted ? "Already Contacted" : "Contact Provider"}
+                      {isProcessing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                      )}
+                      {hasConversation ? "Open Chat" : "Chat"}
                     </Button>
                     
                     <Button
