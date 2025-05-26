@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Loader2, Send, DollarSign, FileText, ImageIcon, X } from 'lucide-react';
+import { Loader2, Send, IndianRupee, FileText, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -204,17 +205,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
   
   return (
-    <div className="border-t p-4">
+    <div className="border-t p-2">
       {quotationMode && isProvider && (
-        <div className="mb-3 p-3 bg-muted rounded-md">
+        <div className="mb-2 p-2 bg-muted rounded-md">
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <h3 className="font-medium">Send a Price Quote</h3>
+            <IndianRupee className="h-4 w-4 text-primary" />
+            <h3 className="font-medium text-sm">Send a Price Quote</h3>
           </div>
           
           {requestDetails && (
-            <div className="mb-2 text-sm bg-accent/20 p-2 rounded flex items-start gap-2">
-              <FileText className="h-4 w-4 mt-0.5" />
+            <div className="mb-2 text-xs bg-accent/20 p-2 rounded flex items-start gap-2">
+              <FileText className="h-3 w-3 mt-0.5" />
               <div>
                 <p className="font-medium">{requestDetails.title}</p>
                 <div className="flex items-center gap-2">
@@ -234,49 +235,51 @@ const MessageInput: React.FC<MessageInputProps> = ({
           
           <div className="flex gap-2 mb-2">
             <div className="flex items-center flex-1">
-              <span className="px-3 bg-background border rounded-l-md h-10 flex items-center">₹</span>
+              <span className="px-2 bg-background border rounded-l-md h-8 flex items-center text-sm">₹</span>
               <Input 
                 type="text" 
                 inputMode="decimal"
                 placeholder="Amount"
-                className="rounded-l-none"
+                className="rounded-l-none h-8 text-sm"
                 value={quotationPrice}
                 onChange={handlePriceChange}
               />
             </div>
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => setQuotationMode(false)}
-              type="button" // Explicitly set type to button
+              type="button"
+              className="h-8 text-xs"
             >
               Cancel
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground">Add details about your services, availability, or any special terms below.</p>
+          <p className="text-xs text-muted-foreground">Add details about your services, availability, or any special terms below.</p>
         </div>
       )}
 
       {/* Image Attachments Preview */}
       {attachments.length > 0 && (
-        <div className="mb-3 p-3 bg-muted/50 rounded-md">
-          <div className="flex items-center gap-2 mb-2">
-            <ImageIcon className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Attached Images ({attachments.length})</span>
+        <div className="mb-2 p-2 bg-muted/50 rounded-md">
+          <div className="flex items-center gap-2 mb-1">
+            <ImageIcon className="h-3 w-3 text-primary" />
+            <span className="text-xs font-medium">Attached Images ({attachments.length})</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-1">
             {attachments.map((url, index) => (
               <div key={index} className="relative group">
                 <img
                   src={url}
                   alt={`Attachment ${index + 1}`}
-                  className="w-full h-16 object-cover rounded border"
+                  className="w-full h-12 object-cover rounded border"
                 />
                 <button
                   onClick={() => removeAttachment(index)}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                   type="button"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2 w-2" />
                 </button>
               </div>
             ))}
@@ -284,78 +287,85 @@ const MessageInput: React.FC<MessageInputProps> = ({
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
+      {/* Main input area with inline buttons */}
+      <div className="flex items-end gap-1">
+        <div className="flex-1 relative">
           <Textarea
             placeholder={quotationMode ? "Add details about your quote..." : "Type your message"}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyPress}
-            className="min-h-[80px]"
+            className="min-h-[40px] pr-20 resize-none"
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          {/* Image Upload Button */}
-          <div className="relative">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              id="message-images"
-              disabled={isUploadingImages || attachments.length >= 5}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => document.getElementById('message-images')?.click()}
-              disabled={isUploadingImages || attachments.length >= 5}
-              title={attachments.length >= 5 ? "Maximum 5 images allowed" : "Add images"}
-              type="button"
-            >
-              {isUploadingImages ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ImageIcon className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
           
-          {/* Quote Button */}
-          {isProvider && !quotationMode && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={(e) => {
-                e.preventDefault();
-                setQuotationMode(true);
-              }}
-              title="Send price quote"
-              type="button"
-            >
-              <DollarSign className="h-4 w-4" />
-            </Button>
-          )}
-          
-          {/* Send Button */}
-          <Button 
-            onClick={(e) => {
-              e.preventDefault();
-              if (!isButtonDisabled()) {
-                handleSendMessageWithAttachments();
-              }
-            }}
-            type="button"
-            disabled={isButtonDisabled()}
-          >
-            {isSendingMessage ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
+          {/* Inline action buttons */}
+          <div className="absolute bottom-1 right-1 flex gap-1">
+            {/* Image Upload Button */}
+            <div className="relative">
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="message-images"
+                disabled={isUploadingImages || attachments.length >= 5}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => document.getElementById('message-images')?.click()}
+                disabled={isUploadingImages || attachments.length >= 5}
+                title={attachments.length >= 5 ? "Maximum 5 images allowed" : "Add images"}
+                type="button"
+                className="h-6 w-6 p-0"
+              >
+                {isUploadingImages ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <ImageIcon className="h-3 w-3" />
+                )}
+              </Button>
+            </div>
+            
+            {/* Quote Button */}
+            {isProvider && !quotationMode && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setQuotationMode(true);
+                }}
+                title="Send price quote"
+                type="button"
+                className="h-6 w-6 p-0"
+              >
+                <IndianRupee className="h-3 w-3" />
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
+        
+        {/* Send Button */}
+        <Button 
+          onClick={(e) => {
+            e.preventDefault();
+            if (!isButtonDisabled()) {
+              handleSendMessageWithAttachments();
+            }
+          }}
+          type="button"
+          disabled={isButtonDisabled()}
+          size="sm"
+          className="h-10"
+        >
+          {isSendingMessage ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
       </div>
     </div>
   );
