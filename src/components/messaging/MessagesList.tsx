@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -160,7 +161,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
   }, [messages, userId, isProvider]);
   
   return (
-    <div className="flex-1 overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto p-4">
       {messages.map(message => {
         // Check if this message has enhanced quotation features
         const hasEnhancedFeatures = message.quotation_images || 

@@ -262,12 +262,12 @@ const Messages: React.FC = () => {
   
   return (
     <MainLayout>
-      <div className="flex flex-col h-screen">
+      <div className="h-[calc(100vh-80px)] flex flex-col">
         {/* Notification Prompt */}
         <NotificationPrompt className="mx-4 mt-4 mb-2 flex-shrink-0" />
         
         {/* Content Area - flex container that takes remaining space */}
-        <div className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full">
+        <div className="flex-1 flex flex-col min-h-0 max-w-4xl mx-auto w-full">
           {/* Header */}
           {isLoading ? (
             <div className="flex justify-center py-8 flex-shrink-0">
@@ -283,8 +283,8 @@ const Messages: React.FC = () => {
                 />
               </div>
               
-              {/* Messages Container - takes remaining space */}
-              <div className="flex-1 overflow-hidden">
+              {/* Messages Container - takes remaining space and allows scrolling */}
+              <div className="flex-1 min-h-0">
                 {conversationData.messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full">
                     <div className="text-center p-8">
