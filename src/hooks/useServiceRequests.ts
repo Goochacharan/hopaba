@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,7 +25,7 @@ export const useServiceRequests = () => {
   };
 
   // Create a new service request
-  const createRequest = async (request: Omit<ServiceRequest, 'id' | 'user_id' | 'created_at' | 'status'>) => {
+  const createRequest = async (request: Omit<ServiceRequest, 'id' | 'user_id' | 'created_at' | 'status' | 'contact_phone'>) => {
     if (!user) throw new Error('User not authenticated');
 
     const { data, error } = await supabase
@@ -34,6 +33,7 @@ export const useServiceRequests = () => {
       .insert({
         ...request,
         user_id: user.id,
+        contact_phone: '', // Provide default empty value for contact_phone
       })
       .select();
 
