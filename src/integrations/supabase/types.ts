@@ -24,6 +24,48 @@ export type Database = {
         }
         Relationships: []
       }
+      business_reviews: {
+        Row: {
+          business_id: string
+          created_at: string
+          criteria_ratings: Json | null
+          id: string
+          is_hidden_gem: boolean | null
+          is_must_visit: boolean | null
+          rating: number
+          reviewer_name: string
+          text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          criteria_ratings?: Json | null
+          id?: string
+          is_hidden_gem?: boolean | null
+          is_must_visit?: boolean | null
+          rating: number
+          reviewer_name: string
+          text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          criteria_ratings?: Json | null
+          id?: string
+          is_hidden_gem?: boolean | null
+          is_must_visit?: boolean | null
+          rating?: number
+          reviewer_name?: string
+          text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -177,6 +219,48 @@ export type Database = {
         }
         Relationships: []
       }
+      location_reviews: {
+        Row: {
+          created_at: string
+          criteria_ratings: Json | null
+          id: string
+          is_hidden_gem: boolean | null
+          is_must_visit: boolean | null
+          location_id: string
+          rating: number
+          reviewer_name: string
+          text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          criteria_ratings?: Json | null
+          id?: string
+          is_hidden_gem?: boolean | null
+          is_must_visit?: boolean | null
+          location_id: string
+          rating: number
+          reviewer_name: string
+          text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          criteria_ratings?: Json | null
+          id?: string
+          is_hidden_gem?: boolean | null
+          is_must_visit?: boolean | null
+          location_id?: string
+          rating?: number
+          reviewer_name?: string
+          text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketplace_listings: {
         Row: {
           approval_status: string
@@ -288,33 +372,48 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          delivery_available: boolean | null
           id: string
+          negotiable_price: number | null
+          pricing_type: string | null
+          quotation_images: string[] | null
           quotation_price: number | null
           read: boolean
           sender_id: string
           sender_type: string
+          wholesale_price: number | null
         }
         Insert: {
           attachments?: string[] | null
           content: string
           conversation_id: string
           created_at?: string
+          delivery_available?: boolean | null
           id?: string
+          negotiable_price?: number | null
+          pricing_type?: string | null
+          quotation_images?: string[] | null
           quotation_price?: number | null
           read?: boolean
           sender_id: string
           sender_type: string
+          wholesale_price?: number | null
         }
         Update: {
           attachments?: string[] | null
           content?: string
           conversation_id?: string
           created_at?: string
+          delivery_available?: boolean | null
           id?: string
+          negotiable_price?: number | null
+          pricing_type?: string | null
+          quotation_images?: string[] | null
           quotation_price?: number | null
           read?: boolean
           sender_id?: string
           sender_type?: string
+          wholesale_price?: number | null
         }
         Relationships: [
           {
@@ -744,106 +843,6 @@ export type Database = {
           },
         ]
       }
-      business_reviews: {
-        Row: {
-          business_id: string
-          created_at: string
-          criteria_ratings: Json | null
-          id: string
-          is_hidden_gem: boolean | null
-          is_must_visit: boolean | null
-          rating: number
-          reviewer_name: string
-          text: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          criteria_ratings?: Json | null
-          id?: string
-          is_hidden_gem?: boolean | null
-          is_must_visit?: boolean | null
-          rating: number
-          reviewer_name: string
-          text?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          criteria_ratings?: Json | null
-          id?: string
-          is_hidden_gem?: boolean | null
-          is_must_visit?: boolean | null
-          rating?: number
-          reviewer_name?: string
-          text?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_reviews_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      location_reviews: {
-        Row: {
-          created_at: string
-          criteria_ratings: Json | null
-          id: string
-          is_hidden_gem: boolean | null
-          is_must_visit: boolean | null
-          location_id: string
-          rating: number
-          reviewer_name: string
-          text: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          criteria_ratings?: Json | null
-          id?: string
-          is_hidden_gem?: boolean | null
-          is_must_visit?: boolean | null
-          location_id: string
-          rating: number
-          reviewer_name: string
-          text?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          criteria_ratings?: Json | null
-          id?: string
-          is_hidden_gem?: boolean | null
-          is_must_visit?: boolean | null
-          location_id?: string
-          rating?: number
-          reviewer_name?: string
-          text?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "location_reviews_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
     Views: {
       high_limit_sellers: {
@@ -885,6 +884,10 @@ export type Database = {
         }[]
       }
       get_unread_message_count: {
+        Args: { user_uuid: string }
+        Returns: number
+      }
+      get_unread_message_count_for_user_requests: {
         Args: { user_uuid: string }
         Returns: number
       }
