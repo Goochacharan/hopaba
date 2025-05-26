@@ -140,7 +140,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const calculateDistancesForRequests = async (requests: ServiceRequest[], userLoc: Location) => {
     setIsCalculatingDistances(true);
     try {
-      const requestsWithDist = await Promise.all(
+      const requestsWithDist: ServiceRequestWithDistance[] = await Promise.all(
         requests.map(async (request) => {
           let calculatedDistance = null;
           let distanceText = null;
@@ -200,9 +200,9 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 
   // Sort requests
   const sortedRequests = useMemo(() => {
-    const requestsToSort = isLocationEnabled && requestsWithDistance.length > 0
+    const requestsToSort: ServiceRequestWithDistance[] = isLocationEnabled && requestsWithDistance.length > 0
       ? requestsWithDistance 
-      : filteredRequests || [];
+      : filteredRequests.map(req => ({ ...req, calculatedDistance: null, distanceText: null }));
 
     const sorted = [...requestsToSort].sort((a, b) => {
       switch (sortBy) {
