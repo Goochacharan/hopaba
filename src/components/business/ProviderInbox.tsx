@@ -15,26 +15,25 @@ import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog'
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { toast } from '@/components/ui/use-toast';
 import { useConversations } from '@/hooks/useConversations';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { distanceService, type Location } from '@/services/distanceService';
-import { 
-  calculateItemDistance,
-  getDistanceDisplayText,
-  type ServiceRequestWithDistance 
-} from '@/utils/locationFilterUtils';
+import { ServiceRequestWithDistance } from '@/utils/locationFilterUtils';
 
 interface ProviderInboxProps {
   providerId: string;
   category: string;
   subcategory: string[];
   section?: 'new' | 'responded';
+  userLocation?: Location | null;
+  isLocationEnabled?: boolean;
 }
 
 const ProviderInbox: React.FC<ProviderInboxProps> = ({ 
   providerId, 
   category, 
   subcategory,
-  section = 'new'
+  section = 'new',
+  userLocation,
+  isLocationEnabled = false
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -43,11 +42,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [quotationDialogOpen, setQuotationDialogOpen] = useState(false);
   const [requestDetailsOpen, setRequestDetailsOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<string>('recent');
   
   // Location state
-  const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
   const [requestsWithDistance, setRequestsWithDistance] = useState<ServiceRequestWithDistance[]>([]);
 
@@ -96,46 +92,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       return allRequests.filter(request => respondedRequestIds.has(request.id));
     }
   }, [allRequests, respondedRequestIds, section]);
-
-  // Location handling functions
-  const handleLocationToggle = async () => {
-    if (isLocationEnabled) {
-      setIsLocationEnabled(false);
-      setUserLocation(null);
-      setRequestsWithDistance([]);
-      toast({
-        title: "Location disabled",
-        description: "Distance sorting is now disabled",
-      });
-    } else {
-      setIsCalculatingDistances(true);
-      try {
-        console.log('🔍 Getting user location...');
-        const location = await distanceService.getUserLocation();
-        setUserLocation(location);
-        setIsLocationEnabled(true);
-        console.log('📍 User location obtained:', location);
-        
-        toast({
-          title: "Location enabled",
-          description: "Distance calculation enabled for request sorting",
-        });
-
-        if (filteredRequests && filteredRequests.length > 0) {
-          await calculateDistancesForRequests(filteredRequests, location);
-        }
-      } catch (error) {
-        console.error('❌ Failed to get user location:', error);
-        toast({
-          title: "Location access denied",
-          description: "Please allow location access to enable distance sorting",
-          variant: "destructive"
-        });
-      } finally {
-        setIsCalculatingDistances(false);
-      }
-    }
-  };
 
   const calculateDistancesForRequests = async (requests: ServiceRequest[], userLoc: Location) => {
     setIsCalculatingDistances(true);
@@ -198,36 +154,19 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     }
   }, [filteredRequests, userLocation, isLocationEnabled]);
 
-  // Sort requests
+  // Sort requests by most recent first (no sorting controls)
   const sortedRequests = useMemo(() => {
     const requestsToSort: ServiceRequestWithDistance[] = isLocationEnabled && requestsWithDistance.length > 0
       ? requestsWithDistance 
       : filteredRequests.map(req => ({ ...req, calculatedDistance: null, distanceText: null }));
 
+    // Simply sort by most recent first
     const sorted = [...requestsToSort].sort((a, b) => {
-      switch (sortBy) {
-        case 'distance':
-          const aDistance = a.calculatedDistance ?? null;
-          const bDistance = b.calculatedDistance ?? null;
-          
-          if (aDistance !== null && bDistance !== null) {
-            return aDistance - bDistance;
-          }
-          if (aDistance !== null) return -1;
-          if (bDistance !== null) return 1;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'budget_high':
-          return (b.budget || 0) - (a.budget || 0);
-        case 'budget_low':
-          return (a.budget || 0) - (b.budget || 0);
-        case 'recent':
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
     return sorted;
-  }, [filteredRequests, requestsWithDistance, isLocationEnabled, sortBy]);
+  }, [filteredRequests, requestsWithDistance, isLocationEnabled]);
 
   // Handle conversation creation and navigation
   const handleSendQuotation = (request: ServiceRequest) => {
@@ -291,55 +230,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
-      <div className="space-y-4">
-        {/* Location Toggle */}
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-primary" />
-              <div>
-                <h3 className="font-medium">Distance Calculation</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enable location to sort requests by distance
-                </p>
-              </div>
-            </div>
-            <Button
-              variant={isLocationEnabled ? "default" : "outline"}
-              onClick={handleLocationToggle}
-              disabled={isCalculatingDistances}
-              className="flex items-center gap-2"
-            >
-              {isCalculatingDistances ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Navigation className="h-4 w-4" />
-              )}
-              {isLocationEnabled ? "Disable Location" : "Enable Location"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Sorting Controls */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium">Sort by:</label>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Most Recent</SelectItem>
-              <SelectItem value="budget_high">Highest Budget</SelectItem>
-              <SelectItem value="budget_low">Lowest Budget</SelectItem>
-              {isLocationEnabled && (
-                <SelectItem value="distance">Nearest Distance</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       {/* Request Cards */}
       <div className="grid gap-4">
         {sortedRequests.map((request) => (
