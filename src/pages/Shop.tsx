@@ -320,7 +320,7 @@ const Shop = () => {
       <div className="px-4 py-6 max-w-7xl mx-auto">
         {/* Location Toggle */}
         <div className="mb-6">
-          <div className="bg-white rounded-xl border border-border p-4">
+          <div className="bg-white rounded-xl border border-border p-4 py-[3px] px-[169px]">
             <div className="flex items-center justify-between">
               
               <Button variant={isLocationEnabled ? "default" : "outline"} onClick={handleLocationToggle} disabled={isCalculatingDistances} className="flex items-center gap-2">
