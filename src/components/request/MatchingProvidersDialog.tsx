@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +22,8 @@ import { distanceService } from '@/services/distanceService';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import { cn } from '@/lib/utils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
+import { usePresence } from '@/hooks/usePresence';
+import { OnlineIndicator } from '@/components/ui/online-indicator';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -134,6 +135,9 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const [userLocation, setUserLocation] = useState<any>(null);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
+
+  // Add presence tracking for online status
+  const { isUserOnline } = usePresence('general');
 
   // Updated handleCall function to trigger device call interface
   const handleCall = (e: React.MouseEvent, phone?: string, providerName?: string) => {
@@ -527,12 +531,22 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             {filteredAndSortedProviders.map((provider) => {
               const hasConversation = hasExistingConversation(provider.provider_id);
               const isProcessing = isCreatingConversation && contactedProviders.has(provider.provider_id);
+              const isProviderOnline = isUserOnline(provider.user_id);
 
               return (
                 <Card key={provider.provider_id} className="flex flex-col h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-start justify-between gap-2">
-                      <span className="line-clamp-2">{provider.provider_name}</span>
+                      <div className="flex flex-col gap-1">
+                        <span className="line-clamp-2">{provider.provider_name}</span>
+                        {isProviderOnline && (
+                          <OnlineIndicator 
+                            isOnline={isProviderOnline} 
+                            size="sm" 
+                            className="self-start"
+                          />
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Distance badge - only show if distance was calculated */}
                         {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (

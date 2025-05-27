@@ -1,399 +1,277 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useConversations } from '@/hooks/useConversations';
-import { usePresence } from '@/hooks/usePresence';
-import { Loader2, ChevronDown, ChevronUp, Calendar, MessageSquare } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useServiceProviderUnreadCount } from '@/hooks/useServiceProviderUnreadCount';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { MessageSquare, Building2, Clock, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
-import { format, parseISO, formatDistanceToNow } from 'date-fns';
-import { ServiceRequest } from '@/types/serviceRequestTypes';
 
-// New component for displaying a quotation summary
-interface QuotationSummaryProps {
-  providerId: string;
-  providerName: string;
-  amount?: number;
-  lastMessageTime: string;
-  onViewClick: () => void;
-}
-
-const QuotationSummary: React.FC<QuotationSummaryProps> = ({ 
-  providerId, 
-  providerName, 
-  amount, 
-  lastMessageTime, 
-  onViewClick 
-}) => {
-  return (
-    <Card key={providerId} className="hover:bg-accent/10 transition-colors">
-      <div className="p-3 flex items-center gap-3">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>{providerName.substring(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1">
-          <h5 className="font-medium">{providerName}</h5>
-          <div className="flex items-center gap-2 text-sm">
-            {amount && (
-              <Badge variant="secondary" className="bg-green-50 text-green-700">
-                Quoted: ₹{amount}
-              </Badge>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {formatDistanceToNow(parseISO(lastMessageTime), { addSuffix: true })}
-            </p>
-          </div>
-        </div>
-        
-        <Button size="sm" onClick={onViewClick}>
-          View Messages
-        </Button>
-      </div>
-    </Card>
-  );
-};
-
-// Conversation card component for showing all conversations
-interface ConversationCardProps {
-  conversation: any;
-  onViewClick: () => void;
-  isProvider: boolean;
-}
-
-const ConversationCard: React.FC<ConversationCardProps> = ({
-  conversation,
-  onViewClick,
-  isProvider
-}) => {
-  const { user } = useAuth();
-  const { isUserOnline } = usePresence(`conversation-${conversation.id}`);
-  
-  // Determine if this is a service request conversation
-  const isServiceRequest = !!conversation.service_requests;
-  const name = isProvider ? "Requester" : conversation.service_providers?.name || "Provider";
-  
-  // Determine the other party's user ID
-  const otherPartyUserId = conversation.service_providers?.user_id === user?.id 
-    ? conversation.user_id  // If current user is provider, other party is the requester
-    : conversation.service_providers?.user_id; // Otherwise, other party is the provider
-  
-  // Check if both parties are online
-  const currentUserOnline = user ? isUserOnline(user.id) : false;
-  const otherPartyOnline = otherPartyUserId ? isUserOnline(otherPartyUserId) : false;
-  const bothPartiesOnline = currentUserOnline && otherPartyOnline;
-  
-  return (
-    <Card className="hover:bg-accent/10 transition-colors">
-      <div className="p-3 flex items-center gap-3">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>{name.substring(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h5 className="font-medium">{name}</h5>
-            {isServiceRequest && (
-              <Badge variant="outline">
-                {conversation.service_requests.title}
-              </Badge>
-            )}
-            {/* Online indicator when both parties are online */}
-            <OnlineIndicator 
-              isOnline={bothPartiesOnline} 
-              size="sm"
-              className="ml-1"
-            />
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            {conversation.latest_quotation && (
-              <Badge variant="secondary" className="bg-green-50 text-green-700">
-                Quoted: ₹{conversation.latest_quotation}
-              </Badge>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {formatDistanceToNow(parseISO(conversation.last_message_at), { addSuffix: true })}
-            </p>
-          </div>
-        </div>
-        
-        <Button size="sm" variant="outline" onClick={onViewClick}>
-          <MessageSquare className="h-4 w-4 mr-1" />
-          View
-        </Button>
-      </div>
-    </Card>
-  );
-};
-
-// Enhanced RequestConversationsPanel with sorting and expanded quotation view
 interface RequestConversationsPanelProps {
-  showAllConversations?: boolean;
+  onConversationSelect?: (conversationId: string) => void;
+  showCreateRequestButton?: boolean;
 }
 
-const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({ showAllConversations = false }) => {
-  const navigate = useNavigate();
+interface ConversationWithDetails {
+  id: string;
+  request_id: string;
+  provider_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string | null;
+  request_title: string;
+  request_description: string;
+  request_category: string;
+  request_budget: number | null;
+  provider_name: string;
+  provider_category: string;
+  provider_user_id: string;
+  unread_count: number;
+  last_message_preview: string | null;
+  last_message_created_at: string | null;
+}
+
+const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
+  onConversationSelect,
+  showCreateRequestButton = true
+}) => {
   const { user } = useAuth();
-  const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'date' | 'responses'>('date');
+  const navigate = useNavigate();
+  const { conversations } = useConversations();
+  const { unreadCount: totalUnreadCount } = useServiceProviderUnreadCount();
   
-  const { userRequests, isLoadingUserRequests } = useServiceRequests();
-  const { conversations, isLoadingConversations } = useConversations();
-  
-  // Get conversations for a specific request
-  const getConversationsForRequest = (requestId: string) => {
-    if (!conversations) return [];
-    return conversations.filter(conv => conv.request_id === requestId);
-  };
-  
-  // Get the latest quotation amount from a conversation
-  const getLatestQuotation = (conversationId: string) => {
-    if (!conversations) return undefined;
-    
-    const conversation = conversations.find(conv => conv.id === conversationId);
-    if (!conversation || !conversation.latest_quotation) return undefined;
-    
-    return conversation.latest_quotation;
-  };
-  
-  // Toggle expand/collapse for a request
-  const toggleRequestExpand = (requestId: string) => {
-    setExpandedRequest(expandedRequest === requestId ? null : requestId);
-  };
-  
-  // Sort requests based on selected criteria
-  const getSortedRequests = (requests: ServiceRequest[]) => {
-    if (!requests) return [];
-    
-    if (sortBy === 'responses') {
-      return [...requests].sort((a, b) => {
-        const aResponses = getConversationsForRequest(a.id).length;
-        const bResponses = getConversationsForRequest(b.id).length;
-        return bResponses - aResponses;
+  // Add presence tracking for online status
+  const { isUserOnline } = usePresence('general');
+
+  const { data: conversationsWithDetails, isLoading, error } = useQuery(
+    ['conversationsWithDetails'],
+    async () => {
+      if (!user) return null;
+
+      // Fetch conversations with additional details
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          id,
+          request_id,
+          provider_id,
+          user_id,
+          created_at,
+          updated_at,
+          last_message_at,
+          service_requests (
+            title,
+            description,
+            category,
+            budget
+          ),
+          service_providers (
+            business_name,
+            category,
+            user_id
+          ),
+          messages (
+            created_at,
+            content
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('last_message_at', { ascending: false, nullsFirst: false });
+
+      if (error) {
+        console.error('Error fetching conversations with details:', error);
+        throw error;
+      }
+
+      if (!data) return null;
+
+      // Map the data to the desired format
+      const mappedData = data.map((conversation: any) => {
+        const request = conversation.service_requests ? conversation.service_requests[0] : null;
+        const provider = conversation.service_providers ? conversation.service_providers[0] : null;
+        const lastMessage = conversation.messages ? conversation.messages[0] : null;
+
+        return {
+          id: conversation.id,
+          request_id: conversation.request_id,
+          provider_id: conversation.provider_id,
+          user_id: conversation.user_id,
+          created_at: conversation.created_at,
+          updated_at: conversation.updated_at,
+          last_message_at: conversation.last_message_at,
+          request_title: request ? request.title : 'Unknown Request',
+          request_description: request ? request.description : 'No Description',
+          request_category: request ? request.category : 'Unknown Category',
+          request_budget: request ? request.budget : null,
+          provider_name: provider ? provider.business_name : 'Unknown Provider',
+          provider_category: provider ? provider.category : 'Unknown Category',
+          provider_user_id: provider ? provider.user_id : 'Unknown User',
+          unread_count: 0, // You'll need to fetch this separately
+          last_message_preview: lastMessage ? lastMessage.content : null,
+          last_message_created_at: lastMessage ? lastMessage.created_at : null,
+        };
       });
+
+      return mappedData as ConversationWithDetails[];
+    },
+    {
+      enabled: !!user,
+      staleTime: 60000, // 1 minute
     }
-    
-    // Default sort by date (newest first)
-    return [...requests].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+  );
+
+  const handleConversationClick = (conversationId: string) => {
+    if (onConversationSelect) {
+      onConversationSelect(conversationId);
+    } else {
+      sessionStorage.setItem('conversationNavigationSource', 'inbox');
+      navigate(`/messages/${conversationId}`);
+    }
   };
-  
-  // Check if the current user is a provider
-  const isProvider = (conversation: any) => {
-    return conversation.service_providers?.user_id === user?.id;
+
+  const handleCreateRequest = () => {
+    navigate('/post-request');
   };
-  
-  // Render all conversations view
-  if (showAllConversations) {
-    if (isLoadingConversations) {
-      return (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
-    
-    if (!conversations || conversations.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-          <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
-          <p className="text-muted-foreground mb-6">
-            Your conversations with service providers will appear here.
-          </p>
-        </div>
-      );
-    }
-    
+
+  if (isLoading) {
     return (
-      <div>
-        <h2 className="text-lg font-medium mb-4">All Conversations</h2>
-        <div className="space-y-3">
-          {conversations.map(conversation => (
-            <ConversationCard
-              key={conversation.id}
-              conversation={conversation}
-              onViewClick={() => {
-                // Set navigation source for back button
-                sessionStorage.setItem('conversationNavigationSource', 'inbox');
-                navigate(`/messages/${conversation.id}`);
-              }}
-              isProvider={isProvider(conversation)}
-            />
+      <div className="p-4">
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
           ))}
         </div>
       </div>
     );
   }
-  
-  // Original requests view
-  if (isLoadingUserRequests || isLoadingConversations) {
+
+  if (error) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!userRequests || userRequests.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-medium mb-2">No requests found</h3>
-        <p className="text-muted-foreground mb-6">
-          You haven't created any service requests yet.
-        </p>
-        <Button onClick={() => navigate('/post-request')}>
-          Create a Request
+      <div className="p-4 text-center text-red-600">
+        <p>Error loading conversations</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Retry
         </Button>
       </div>
     );
   }
-  
-  const sortedRequests = getSortedRequests(userRequests);
-  
+
+  const conversationsList = conversationsWithDetails || [];
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium">Your Service Requests</h2>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={sortBy === 'date' ? 'bg-accent' : ''} 
-            onClick={() => setSortBy('date')}
-          >
-            Newest
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={sortBy === 'responses' ? 'bg-accent' : ''} 
-            onClick={() => setSortBy('responses')}
-          >
-            Most Responses
-          </Button>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 p-4 border-b bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold">Service Requests</h2>
+          {totalUnreadCount > 0 && (
+            <Badge variant="destructive" className="rounded-full">
+              {totalUnreadCount}
+            </Badge>
+          )}
         </div>
+        {showCreateRequestButton && (
+          <Button 
+            onClick={handleCreateRequest}
+            className="w-full"
+            size="sm"
+          >
+            + Post New Request
+          </Button>
+        )}
       </div>
-    
-      <div className="space-y-4">
-        {sortedRequests.map(request => {
-          const requestConversations = getConversationsForRequest(request.id);
-          const hasResponses = requestConversations.length > 0;
-          const responseCount = requestConversations.length;
-          
-          return (
-            <Card key={request.id} className="overflow-hidden">
-              <div 
-                className="p-4 cursor-pointer border-b hover:bg-accent/5 transition-colors" 
-                onClick={() => toggleRequestExpand(request.id)}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">{request.title}</h3>
-                      <Badge variant={request.status === 'open' ? 'default' : 'outline'}>
-                        {request.status === 'open' ? 'Open' : 'Closed'}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {request.category}
-                      {request.subcategory && ` / ${request.subcategory}`}
-                      {request.budget && ` • Budget: ₹${request.budget}`}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {hasResponses && (
-                      <Badge variant={responseCount > 0 ? "success" : "secondary"}>
-                        {responseCount} {responseCount === 1 ? 'response' : 'responses'}
-                      </Badge>
-                    )}
-                    <Button variant="ghost" size="sm" className="ml-2">
-                      {expandedRequest === request.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
+
+      {/* Conversations List */}
+      <div className="flex-1 overflow-y-auto">
+        {conversationsList.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium mb-2">No conversations yet</p>
+            <p className="text-sm">Start by posting a service request to connect with providers</p>
+          </div>
+        ) : (
+          <div className="p-2 space-y-2">
+            {conversationsList.map((conversation) => {
+              const isProviderOnline = isUserOnline(conversation.provider_user_id);
               
-              {expandedRequest === request.id && (
-                <div className="p-4 space-y-4 bg-accent/5">
-                  {/* Request details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium">Description:</p>
-                      <p className="text-muted-foreground">{request.description}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {request.date_range_start ? (
-                            <>
-                              {format(parseISO(request.date_range_start), 'dd MMM yyyy')}
-                              {request.date_range_end && (
-                                <> - {format(parseISO(request.date_range_end), 'dd MMM yyyy')}</>
-                              )}
-                            </>
-                          ) : (
-                            'No date specified'
+              return (
+                <Card 
+                  key={conversation.id}
+                  className={cn(
+                    "cursor-pointer transition-all hover:shadow-md",
+                    conversation.unread_count > 0 && "ring-2 ring-primary/20 bg-primary/5"
+                  )}
+                  onClick={() => handleConversationClick(conversation.id)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1 min-w-0">
+                        <Avatar className="h-10 w-10 flex-shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            <Building2 className="h-5 w-5" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CardTitle className="text-sm font-medium truncate">
+                              {conversation.provider_name}
+                            </CardTitle>
+                            {isProviderOnline && (
+                              <OnlineIndicator 
+                                isOnline={isProviderOnline} 
+                                size="sm" 
+                                showText={false}
+                              />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {conversation.provider_category}
+                          </p>
+                          <p className="text-sm font-medium text-foreground mb-1 line-clamp-1">
+                            {conversation.request_title}
+                          </p>
+                          {conversation.last_message_preview && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {conversation.last_message_preview}
+                            </p>
                           )}
-                        </span>
+                        </div>
                       </div>
-                      <div>
-                        <span>Location: {request.area}, {request.city}</span>
+                      
+                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
+                        {conversation.unread_count > 0 && (
+                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1">
+                            {conversation.unread_count}
+                          </Badge>
+                        )}
+                        {conversation.request_budget && (
+                          <Badge variant="outline" className="text-xs">
+                            ₹{conversation.request_budget.toLocaleString()}
+                          </Badge>
+                        )}
+                        {conversation.last_message_created_at && (
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {format(new Date(conversation.last_message_created_at), 'MMM d, h:mm a')}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  {/* Provider responses with quotations */}
-                  <div>
-                    <h4 className="font-medium mb-2">Provider Responses</h4>
-                    
-                    {hasResponses ? (
-                      <div className="space-y-3">
-                        {requestConversations.map(conversation => {
-                          const providerName = conversation.service_providers?.name || "Provider";
-                          const quotation = getLatestQuotation(conversation.id);
-                          
-                          return (
-                            <QuotationSummary
-                              key={conversation.id}
-                              providerId={conversation.provider_id}
-                              providerName={providerName}
-                              amount={quotation}
-                              lastMessageTime={conversation.last_message_at}
-                              onViewClick={() => {
-                                // Set navigation source for back button
-                                sessionStorage.setItem('conversationNavigationSource', 'inbox');
-                                navigate(`/messages/${conversation.id}`);
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">No providers have responded to this request yet.</p>
-                    )}
-                  </div>
-                  
-                  <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/request/${request.id}`)}>
-                      View Full Request
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
-          );
-        })}
+                  </CardHeader>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
