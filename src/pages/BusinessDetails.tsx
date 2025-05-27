@@ -12,16 +12,25 @@ import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessRatingOverview from '@/components/business/BusinessRatingOverview';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-
 const BusinessDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { data: business, isLoading, error } = useBusinessDetail(id);
-  
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
+  const {
+    user
+  } = useAuth();
+  const {
+    data: business,
+    isLoading,
+    error
+  } = useBusinessDetail(id);
+
   // State for image viewer
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
+
   // Use the new Supabase-based review hook
   const {
     reviews,
@@ -40,7 +49,6 @@ const BusinessDetails: React.FC = () => {
     setCurrentImageIndex(index);
     setIsImageViewerOpen(true);
   };
-
   const handleSubmitReview = async (review: {
     rating: number;
     text: string;
@@ -50,11 +58,10 @@ const BusinessDetails: React.FC = () => {
   }) => {
     if (!user) return Promise.reject(new Error("User not authenticated"));
     if (!id) return Promise.reject(new Error("Business ID is missing"));
-
     try {
       if (userReview) {
         // Update existing review
-        await new Promise<void>((resolve) => {
+        await new Promise<void>(resolve => {
           updateReview({
             reviewId: userReview.id,
             reviewData: {
@@ -69,7 +76,7 @@ const BusinessDetails: React.FC = () => {
         });
       } else {
         // Create new review
-        await new Promise<void>((resolve) => {
+        await new Promise<void>(resolve => {
           createReview({
             business_id: id,
             rating: review.rating,
@@ -89,8 +96,12 @@ const BusinessDetails: React.FC = () => {
   // Calculate rating distribution for the overview
   const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
     const count = reviews.filter(r => r.rating === rating).length;
-    const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-    return { rating, count, percentage };
+    const percentage = totalReviews > 0 ? count / totalReviews * 100 : 0;
+    return {
+      rating,
+      count,
+      percentage
+    };
   });
 
   // Convert Supabase reviews to the format expected by BusinessReviewsList
@@ -105,74 +116,50 @@ const BusinessDetails: React.FC = () => {
     userId: review.user_id,
     criteriaRatings: review.criteria_ratings || {}
   }));
-
   if (isLoading) {
-    return (
-      <MainLayout>
+    return <MainLayout>
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
-      </MainLayout>
-    );
+      </MainLayout>;
   }
-
   if (error) {
-    return (
-      <MainLayout>
+    return <MainLayout>
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Error</h2>
           <p className="text-gray-500">Failed to load business details.</p>
         </div>
-      </MainLayout>
-    );
+      </MainLayout>;
   }
-
   if (!business) {
-    return (
-      <MainLayout>
+    return <MainLayout>
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Business Not Found</h2>
           <p className="text-gray-500">The requested business could not be found.</p>
         </div>
-      </MainLayout>
-    );
+      </MainLayout>;
   }
-
-  return (
-    <MainLayout>
+  return <MainLayout>
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Business Header */}
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
-              {business.images && business.images.length > 0 && (
-                <div className="md:w-1/3">
+              {business.images && business.images.length > 0 && <div className="md:w-1/3">
                   <Carousel className="w-full">
                     <CarouselContent>
-                      {business.images.map((image, index) => (
-                        <CarouselItem key={index}>
-                          <div 
-                            className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-pointer"
-                            onClick={() => handleImageClick(index)}
-                          >
-                            <img 
-                              src={image} 
-                              alt={`${business.name} image ${index + 1}`}
-                              className="object-cover w-full h-full"
-                            />
+                      {business.images.map((image, index) => <CarouselItem key={index}>
+                          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
+                            <img src={image} alt={`${business.name} image ${index + 1}`} className="object-cover w-full h-full" />
                           </div>
-                        </CarouselItem>
-                      ))}
+                        </CarouselItem>)}
                     </CarouselContent>
-                    {business.images.length > 1 && (
-                      <>
+                    {business.images.length > 1 && <>
                         <CarouselPrevious className="left-2" />
                         <CarouselNext className="right-2" />
-                      </>
-                    )}
+                      </>}
                   </Carousel>
-                </div>
-              )}
+                </div>}
               
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-4">
@@ -180,16 +167,7 @@ const BusinessDetails: React.FC = () => {
                     <h1 className="text-3xl font-bold mb-2">{business.name}</h1>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-5 h-5 ${
-                              star <= Math.round(averageRating)
-                                ? 'text-amber-500 fill-amber-500'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
+                        {[1, 2, 3, 4, 5].map(star => <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />)}
                       </div>
                       <span className="text-lg font-semibold">{averageRating.toFixed(1)}</span>
                       <span className="text-muted-foreground">({totalReviews} reviews)</span>
@@ -203,69 +181,44 @@ const BusinessDetails: React.FC = () => {
                 <p className="text-muted-foreground mb-4">{business.description}</p>
                 
                 <div className="space-y-2">
-                  {business.address && (
-                    <div className="flex items-center gap-2">
+                  {business.address && <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{business.address}</span>
-                    </div>
-                  )}
+                    </div>}
                   
-                  {business.contact_phone && (
-                    <div className="flex items-center gap-2">
+                  {business.contact_phone && <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{business.contact_phone}</span>
-                    </div>
-                  )}
+                    </div>}
                   
-                  {business.website && (
-                    <div className="flex items-center gap-2">
+                  {business.website && <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
-                      <a 
-                        href={business.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline"
-                      >
+                      <a href={business.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
                         {business.website}
                       </a>
-                    </div>
-                  )}
+                    </div>}
                   
-                  {business.availability && (
-                    <div className="flex items-center gap-2">
+                  {business.availability && <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{business.availability}</span>
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </div>
             </div>
             
             <div className="grid md:grid-cols-2 gap-6 mt-6">
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Rating & Reviews</h3>
-                <BusinessRatingOverview 
-                  avgRating={averageRating} 
-                  totalReviews={totalReviews} 
-                  ratingDistribution={ratingDistribution} 
-                  criteriaRatings={averageCriteriaRatings} 
-                />
+                
+                <BusinessRatingOverview avgRating={averageRating} totalReviews={totalReviews} ratingDistribution={ratingDistribution} criteriaRatings={averageCriteriaRatings} />
               </div>
             </div>
           </CardContent>
         </Card>
         
         {/* Review Form */}
-        {business.id && (
-          <div className="mt-6">
-            <BusinessReviewForm 
-              businessId={business.id} 
-              businessName={business.name} 
-              businessCategory={business.category} 
-              onReviewSubmit={handleSubmitReview} 
-            />
-          </div>
-        )}
+        {business.id && <div className="mt-6">
+            <BusinessReviewForm businessId={business.id} businessName={business.name} businessCategory={business.category} onReviewSubmit={handleSubmitReview} />
+          </div>}
         
         {/* Reviews section */}
         <div className="mt-6">
@@ -280,17 +233,8 @@ const BusinessDetails: React.FC = () => {
         </div>
 
         {/* Image Viewer */}
-        {business.images && business.images.length > 0 && (
-          <ImageViewer 
-            images={business.images}
-            initialIndex={currentImageIndex}
-            open={isImageViewerOpen}
-            onOpenChange={setIsImageViewerOpen}
-          />
-        )}
+        {business.images && business.images.length > 0 && <ImageViewer images={business.images} initialIndex={currentImageIndex} open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen} />}
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default BusinessDetails;
