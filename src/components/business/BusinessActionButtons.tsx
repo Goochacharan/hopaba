@@ -136,10 +136,9 @@ const BusinessActionButtons: React.FC<BusinessActionButtonsProps> = ({
         onClick={handleCall} 
         title="Call Business" 
         aria-label="Call business" 
-        className="flex-1 h-10 text-white transition-all flex items-center justify-center gap-1 shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500 rounded text-sm font-medium"
+        className="flex-1 h-10 text-white transition-all flex items-center justify-center shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500 rounded"
       >
         <Phone className="h-4 w-4" />
-        <span>Call</span>
       </button>
       
       <button 
