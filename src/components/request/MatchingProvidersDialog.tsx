@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,15 +62,15 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl w-[95vw] h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0 pb-4">
-          <DialogTitle className="text-xl">Matching Service Providers</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-7xl w-[98vw] h-[95vh] flex flex-col overflow-hidden p-6">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+          <DialogTitle className="text-2xl font-bold">Matching Service Providers</DialogTitle>
+          <DialogDescription className="text-base">
             These providers match your service request category and can help you.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto pr-2">
+        <div className="flex-1 min-h-0 mt-4">
           {requestId && <MatchingProvidersContent requestId={requestId} />}
         </div>
       </DialogContent>
@@ -463,17 +464,18 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2 text-lg">Loading providers...</span>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center text-destructive py-4 flex flex-col items-center gap-2">
-        <p>Error loading matching providers.</p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
+      <div className="text-center text-destructive py-8 flex flex-col items-center gap-4">
+        <p className="text-lg">Error loading matching providers.</p>
+        <Button variant="outline" onClick={() => refetch()}>
           Try Again
         </Button>
       </div>
@@ -482,16 +484,16 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   if (!matchingProviders || matchingProviders.length === 0) {
     return (
-      <div className="text-center py-4 text-muted-foreground">
-        No matching service providers found for your request.
+      <div className="text-center py-12 text-muted-foreground">
+        <p className="text-lg">No matching service providers found for your request.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 h-full flex flex-col">
-      {/* Add filters and sort buttons */}
-      <div className="flex-shrink-0">
+    <div className="h-full flex flex-col space-y-4">
+      {/* Filters and sort controls - fixed at top */}
+      <div className="flex-shrink-0 bg-white border-b pb-4">
         <ProviderFilters 
           cities={cities}
           onFilterChange={setFilters}
@@ -502,48 +504,48 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
       {/* Loading indicator for distance calculations */}
       {isCalculatingDistances && currentSort === 'distance' && (
-        <div className="flex items-center justify-center py-2 flex-shrink-0">
-          <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
+        <div className="flex items-center justify-center py-3 flex-shrink-0 bg-blue-50 rounded-lg">
+          <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
           <span className="text-sm text-muted-foreground">Calculating distances...</span>
         </div>
       )}
 
-      {filteredAndSortedProviders.length === 0 ? (
-        <div className="text-center py-4 text-muted-foreground flex-1 flex items-center justify-center">
-          No providers match your current filters.
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid gap-4 pb-4">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        {filteredAndSortedProviders.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="text-lg">No providers match your current filters.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 pb-6 lg:grid-cols-2 xl:grid-cols-3">
             {filteredAndSortedProviders.map((provider) => {
               const hasConversation = hasExistingConversation(provider.provider_id);
               const isProcessing = isCreatingConversation && contactedProviders.has(provider.provider_id);
 
               return (
-                <Card key={provider.provider_id} className="relative flex-shrink-0">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg flex items-center justify-between">
-                      <span>{provider.provider_name}</span>
-                      <div className="flex items-center gap-2">
+                <Card key={provider.provider_id} className="flex flex-col h-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-start justify-between gap-2">
+                      <span className="line-clamp-2">{provider.provider_name}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Distance badge - only show if distance was calculated */}
                         {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
-                          <Badge variant="outline" className="ml-2">
+                          <Badge variant="outline" className="text-xs">
                             📍 {getDistanceDisplayText(provider)}
                           </Badge>
                         )}
                         {/* Overall Score Badge (like Shop page) */}
                         {provider.overallScore && (
                           <div 
-                            className="flex items-center justify-center font-bold"
+                            className="flex items-center justify-center font-bold text-sm"
                             style={{
-                              width: 48,
-                              height: 48,
+                              width: 40,
+                              height: 40,
                               borderRadius: '50%',
                               color: getRatingColor(provider.overallScore),
                               borderColor: getRatingColor(provider.overallScore),
-                              borderWidth: 3,
+                              borderWidth: 2,
                               borderStyle: 'solid',
-                              fontSize: 20,
                               background: '#fff',
                               boxShadow: '0 0 4px 0 rgba(0,0,0,0.05)'
                             }}
@@ -556,78 +558,76 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     </CardTitle>
                   </CardHeader>
                   
-                  <CardContent>
-                    <div className="space-y-3">
-                      {/* Shop Images Carousel */}
-                      <ProviderImageCarousel 
-                        images={provider.images || []}
-                        providerName={provider.provider_name}
-                        className="mb-3"
-                      />
-                      
-                      {/* Category and Subcategory */}
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{provider.provider_category}</Badge>
-                        {provider.provider_subcategory && (
-                          <Badge variant="outline">{provider.provider_subcategory}</Badge>
+                  <CardContent className="flex-1 space-y-4">
+                    {/* Shop Images Carousel */}
+                    <ProviderImageCarousel 
+                      images={provider.images || []}
+                      providerName={provider.provider_name}
+                      className="mb-3"
+                    />
+                    
+                    {/* Category and Subcategory */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary">{provider.provider_category}</Badge>
+                      {provider.provider_subcategory && (
+                        <Badge variant="outline">{provider.provider_subcategory}</Badge>
+                      )}
+                    </div>
+                    
+                    {/* Address Information */}
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span className="line-clamp-2">
+                        {provider.address ? 
+                          `${provider.address}, ${provider.area}, ${provider.city}` :
+                          `${provider.area}, ${provider.city}`
+                        }
+                        {provider.postal_code && (
+                          <span className="text-xs ml-1">({provider.postal_code})</span>
                         )}
-                      </div>
-                      
-                      {/* Address Information */}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        <span>
-                          {provider.address ? 
-                            `${provider.address}, ${provider.area}, ${provider.city}` :
-                            `${provider.area}, ${provider.city}`
-                          }
-                          {provider.postal_code && (
-                            <span className="text-xs ml-1">({provider.postal_code})</span>
-                          )}
+                      </span>
+                    </div>
+                    
+                    {/* Five Star Rating with Review Count + Call Button */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={cn(
+                                "h-4 w-4",
+                                star <= Math.round(provider.rating || 4.5) 
+                                  ? "fill-yellow-400 text-yellow-400" 
+                                  : "text-gray-300"
+                              )} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-muted-foreground">
+                          ({provider.review_count || 0})
                         </span>
                       </div>
                       
-                      {/* Five Star Rating with Review Count + Call Button */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm">
-                          <div className="flex items-center">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star 
-                                key={star} 
-                                className={cn(
-                                  "h-4 w-4",
-                                  star <= Math.round(provider.rating || 4.5) 
-                                    ? "fill-yellow-400 text-yellow-400" 
-                                    : "text-gray-300"
-                                )} 
-                              />
-                            ))}
-                          </div>
-                          <span className="text-muted-foreground">
-                            ({provider.review_count || 0})
-                          </span>
-                        </div>
-                        
-                        {/* Updated Call Button with matching Inbox styling */}
-                        {provider.contact_phone && (
-                          <button
-                            onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
-                            title="Call Business"
-                            aria-label="Call business"
-                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
-                          >
-                            <Phone className="h-4 w-4" />
-                            Call
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Pricing Display with Type Badge */}
-                      {provider.latest_pricing && getPricingDisplay(provider.latest_pricing)}
+                      {/* Call Button */}
+                      {provider.contact_phone && (
+                        <button
+                          onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
+                          title="Call Business"
+                          aria-label="Call business"
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
+                        >
+                          <Phone className="h-4 w-4" />
+                          Call
+                        </button>
+                      )}
                     </div>
+
+                    {/* Pricing Display with Type Badge */}
+                    {provider.latest_pricing && getPricingDisplay(provider.latest_pricing)}
                   </CardContent>
                   
-                  <CardFooter className="flex gap-2 pt-3">
+                  <CardFooter className="flex gap-2 pt-3 mt-auto">
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
@@ -654,8 +654,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
