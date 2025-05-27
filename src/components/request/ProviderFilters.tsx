@@ -54,7 +54,7 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
   );
   
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center justify-between mb-2">
       <div className="flex items-center gap-2">
         <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
           <PopoverTrigger asChild>
@@ -62,16 +62,16 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
               variant={activeFilterCount > 0 ? "default" : "outline"} 
               size="sm"
               className={cn(
-                "flex items-center gap-1 rounded-full relative",
+                "flex items-center gap-1 rounded-full relative h-8",
                 activeFilterCount > 0 && "bg-primary"
               )}
             >
-              <Filter className="h-4 w-4" />
-              <span>Filters</span>
+              <Filter className="h-3 w-3" />
+              <span className="text-xs">Filters</span>
               {activeFilterCount > 0 && (
                 <Badge 
                   variant="outline" 
-                  className="ml-1 bg-background text-foreground h-5 w-5 p-0 flex items-center justify-center rounded-full"
+                  className="ml-1 bg-background text-foreground h-4 w-4 p-0 flex items-center justify-center rounded-full text-xs"
                 >
                   {activeFilterCount}
                 </Badge>
@@ -137,7 +137,7 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
         {/* Active filter badges */}
         <div className="flex flex-wrap gap-1">
           {filters.minRating > 0 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
+            <Badge variant="secondary" className="flex items-center gap-1 text-xs h-6">
               {filters.minRating}+ Stars
               <button 
                 className="ml-1 hover:bg-muted rounded-full"
@@ -149,7 +149,7 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
           )}
           
           {filters.city && (
-            <Badge variant="secondary" className="flex items-center gap-1">
+            <Badge variant="secondary" className="flex items-center gap-1 text-xs h-6">
               {filters.city}
               <button 
                 className="ml-1 hover:bg-muted rounded-full"

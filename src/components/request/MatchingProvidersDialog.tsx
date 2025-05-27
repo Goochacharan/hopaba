@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -62,15 +62,12 @@ export function MatchingProvidersDialog({ requestId, open, onOpenChange }: Match
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-7xl w-[98vw] h-[95vh] flex flex-col overflow-hidden p-6">
-        <DialogHeader className="flex-shrink-0 pb-4 border-b">
-          <DialogTitle className="text-2xl font-bold">Matching Service Providers</DialogTitle>
-          <DialogDescription className="text-base">
-            These providers match your service request category and can help you.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-7xl w-[98vw] h-[95vh] flex flex-col overflow-hidden p-4">
+        <DialogHeader className="flex-shrink-0 pb-2 border-b">
+          <DialogTitle className="text-xl font-bold">Matching Service Providers</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 mt-4">
+        <div className="flex-1 min-h-0 mt-3">
           {requestId && <MatchingProvidersContent requestId={requestId} />}
         </div>
       </DialogContent>
@@ -409,9 +406,11 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     return Array.from(uniqueCities).sort();
   }, [matchingProviders]);
 
-  // Apply filters and sorting
+  // Apply filters and sorting - Fixed to properly trigger re-render
   const filteredAndSortedProviders = useMemo(() => {
     if (!matchingProviders) return [];
+    
+    console.log('Applying filters and sorting with currentSort:', currentSort);
     
     // Use providers with distances if sorting by distance and distances are calculated
     const providersToUse = currentSort === 'distance' && providersWithDistances.length > 0 
@@ -459,8 +458,15 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       }
     });
 
+    console.log('Filtered and sorted providers:', filtered.length);
     return filtered;
   }, [matchingProviders, providersWithDistances, filters, currentSort]);
+
+  // Handle sort change with proper state update
+  const handleSortChange = (sortOption: SortOption) => {
+    console.log('Sort option changed to:', sortOption);
+    setCurrentSort(sortOption);
+  };
 
   if (isLoading) {
     return (
@@ -491,20 +497,20 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-4">
-      {/* Filters and sort controls - fixed at top */}
-      <div className="flex-shrink-0 bg-white border-b pb-4">
+    <div className="h-full flex flex-col space-y-2">
+      {/* Filters and sort controls - reduced height */}
+      <div className="flex-shrink-0 bg-white border-b pb-2">
         <ProviderFilters 
           cities={cities}
           onFilterChange={setFilters}
-          onSortChange={setCurrentSort}
+          onSortChange={handleSortChange}
           currentSort={currentSort}
         />
       </div>
 
       {/* Loading indicator for distance calculations */}
       {isCalculatingDistances && currentSort === 'distance' && (
-        <div className="flex items-center justify-center py-3 flex-shrink-0 bg-blue-50 rounded-lg">
+        <div className="flex items-center justify-center py-2 flex-shrink-0 bg-blue-50 rounded-lg">
           <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
           <span className="text-sm text-muted-foreground">Calculating distances...</span>
         </div>
