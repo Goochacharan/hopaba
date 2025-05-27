@@ -37,6 +37,8 @@ import {
 } from '@/utils/locationFilterUtils';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
+import { usePresence } from '@/hooks/usePresence';
+import { OnlineIndicator } from '@/components/ui/online-indicator';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -69,6 +71,9 @@ const Inbox: React.FC = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
+  
+  // Add presence tracking for online status
+  const { isUserOnline } = usePresence('general');
   
   // Location and sorting state for messages
   const [userLocation, setUserLocation] = useState<Location | null>(null);
@@ -712,6 +717,7 @@ const Inbox: React.FC = () => {
                           sortedConversations.map((conversation) => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
                             const providerDetails = enhancedProviderDetails[conversation.provider_id];
+                            const isProviderOnline = isUserOnline(conversation.service_providers?.user_id);
                             
                             return (
                               <Card key={conversation.id} className={cn(
@@ -727,7 +733,15 @@ const Inbox: React.FC = () => {
                                 )}
                                 <CardHeader className="pb-2">
                                   <CardTitle className="text-lg flex items-center justify-between">
-                                    <span>{conversation.service_providers.name || "Service Provider"}</span>
+                                    <div className="flex flex-col">
+                                      <span>{conversation.service_providers.name || "Service Provider"}</span>
+                                      <OnlineIndicator 
+                                        isOnline={isProviderOnline} 
+                                        size="sm" 
+                                        showText={false}
+                                        className="mt-1"
+                                      />
+                                    </div>
                                     {providerDetails?.overallScore && (
                                       <div 
                                         className="flex items-center justify-center font-bold"
