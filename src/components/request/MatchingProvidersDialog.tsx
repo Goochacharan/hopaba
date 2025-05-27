@@ -137,26 +137,21 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
 
-  // Add handleCall function similar to the Messages tab
+  // Updated handleCall function to prevent browser blocking
   const handleCall = (e: React.MouseEvent, phone?: string, providerName?: string) => {
     e.stopPropagation();
     if (phone) {
-      const link = document.createElement('a');
-      link.href = `tel:${phone}`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Use window.open instead of programmatic link creation to avoid browser blocking
+      window.open(`tel:${phone}`, '_self');
       toast({
-        title: "Calling provider",
+        title: "Calling business",
         description: `Dialing ${phone}...`,
         duration: 2000
       });
     } else {
       toast({
         title: "Phone number not available",
-        description: "This provider has not provided a phone number",
+        description: "This business has not provided a phone number",
         variant: "destructive",
         duration: 3000
       });
@@ -615,13 +610,15 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                           </span>
                         </div>
                         
-                        {/* Updated Call Button with proper handleCall function */}
+                        {/* Updated Call Button with matching Inbox styling */}
                         {provider.contact_phone && (
-                          <button 
+                          <button
                             onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
-                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                            title="Call Business"
+                            aria-label="Call business"
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
                           >
-                            <Phone className="h-3 w-3" />
+                            <Phone className="h-4 w-4" />
                             Call
                           </button>
                         )}

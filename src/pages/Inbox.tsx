@@ -485,13 +485,8 @@ const Inbox: React.FC = () => {
   // Handle call functionality for provider call button
   const handleCall = (phone: string, providerName: string) => {
     if (phone) {
-      const link = document.createElement('a');
-      link.href = `tel:${phone}`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Use window.open instead of programmatic link creation to avoid browser blocking
+      window.open(`tel:${phone}`, '_self');
       toast({
         title: "Calling business",
         description: `Dialing ${phone}...`,
