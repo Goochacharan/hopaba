@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Loader2, Send, IndianRupee, FileText, ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -205,9 +204,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
   
   return (
-    <div className="border-t p-2">
+    <div className="border-t p-1">
       {quotationMode && isProvider && (
-        <div className="mb-2 p-2 bg-muted rounded-md">
+        <div className="mb-1 p-2 bg-muted rounded-md">
           <div className="flex items-center gap-2 mb-2">
             <IndianRupee className="h-4 w-4 text-primary" />
             <h3 className="font-medium text-sm">Send a Price Quote</h3>
@@ -261,7 +260,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Image Attachments Preview */}
       {attachments.length > 0 && (
-        <div className="mb-2 p-2 bg-muted/50 rounded-md">
+        <div className="mb-1 p-2 bg-muted/50 rounded-md">
           <div className="flex items-center gap-2 mb-1">
             <ImageIcon className="h-3 w-3 text-primary" />
             <span className="text-xs font-medium">Attached Images ({attachments.length})</span>
