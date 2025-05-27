@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone } from 'lucide-
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { SortOption } from '@/components/SortButton'; 
 import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
@@ -126,6 +125,7 @@ const getPricingDisplay = (pricing: any) => {
 export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<ProviderFiltersType>({
@@ -136,6 +136,32 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const [userLocation, setUserLocation] = useState<any>(null);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
+
+  // Add handleCall function similar to the Messages tab
+  const handleCall = (e: React.MouseEvent, phone?: string, providerName?: string) => {
+    e.stopPropagation();
+    if (phone) {
+      const link = document.createElement('a');
+      link.href = `tel:${phone}`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({
+        title: "Calling provider",
+        description: `Dialing ${phone}...`,
+        duration: 2000
+      });
+    } else {
+      toast({
+        title: "Phone number not available",
+        description: "This provider has not provided a phone number",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  };
 
   // Function to check if the provider already has a conversation for this request
   const hasExistingConversation = (providerId: string) => {
@@ -589,15 +615,15 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                           </span>
                         </div>
                         
-                        {/* Add Call Button */}
+                        {/* Updated Call Button with proper handleCall function */}
                         {provider.contact_phone && (
-                          <a 
-                            href={`tel:${provider.contact_phone}`}
-                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                          <button 
+                            onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-500 transition-colors"
                           >
                             <Phone className="h-3 w-3" />
                             Call
-                          </a>
+                          </button>
                         )}
                       </div>
 
