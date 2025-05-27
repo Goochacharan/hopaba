@@ -7,6 +7,7 @@ import { Toggle } from '@/components/ui/toggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+
 interface ReviewFormProps {
   businessId: string;
   businessName: string;
@@ -24,6 +25,7 @@ interface ReviewCriterion {
   name: string;
   category: string;
 }
+
 const BusinessReviewForm: React.FC<ReviewFormProps> = ({
   businessId,
   businessName,
@@ -134,60 +136,72 @@ const BusinessReviewForm: React.FC<ReviewFormProps> = ({
       setSubmitting(false);
     }
   };
-  return <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 my-0 px-[219px] py-0">
-        
-        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"} size="sm" className="px-[15px]">
+  return (
+    <>
+      {/* Write Review Button - No Card wrapper */}
+      <div className="mb-6 flex justify-center">
+        <Button 
+          onClick={() => setShowForm(!showForm)} 
+          variant={showForm ? "outline" : "default"} 
+          size="sm"
+        >
           {showForm ? "Cancel" : "Write Review"}
         </Button>
-      </CardHeader>
+      </div>
       
-      {showForm && <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium mb-2">Your rating for {businessName}</p>
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map(value => <button key={value} type="button" onClick={() => setRating(value)} className="focus:outline-none">
-                    <Star className={`w-6 h-6 ${value <= rating ? "text-amber-500 fill-amber-500" : "text-gray-300"}`} />
-                  </button>)}
+      {/* Review Form - Keep Card for expanded form */}
+      {showForm && (
+        <Card className="mb-6">
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Your rating for {businessName}</p>
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map(value => <button key={value} type="button" onClick={() => setRating(value)} className="focus:outline-none">
+                      <Star className={`w-6 h-6 ${value <= rating ? "text-amber-500 fill-amber-500" : "text-gray-300"}`} />
+                    </button>)}
+                </div>
               </div>
-            </div>
 
-            {/* Criteria-based ratings */}
-            {criteria.length > 0 && <div className="space-y-3">
-                <p className="text-sm font-medium mb-1">Rate specific aspects</p>
-                
-                {criteria.map(criterion => <div key={criterion.id} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>{criterion.name}</span>
-                      <span className="font-medium">{criteriaRatings[criterion.id] || 7}/10</span>
-                    </div>
-                    <input type="range" min="1" max="10" value={criteriaRatings[criterion.id] || 7} onChange={e => handleCriterionRating(criterion.id, parseInt(e.target.value))} className="w-full" />
-                  </div>)}
-              </div>}
-            
-            <div>
-              <p className="text-sm font-medium mb-2">Share your experience</p>
-              <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} className="w-full p-2 border rounded-md h-24" placeholder="What did you like or dislike about this business?" />
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-2">
-              <Toggle pressed={isMustVisit} onPressedChange={setIsMustVisit} className={`flex gap-2 items-center ${isMustVisit ? 'bg-green-500 text-white' : ''}`}>
-                <Award className={`w-4 h-4 ${isMustVisit ? 'text-white' : ''}`} />
-                Must Visit
-              </Toggle>
+              {/* Criteria-based ratings */}
+              {criteria.length > 0 && <div className="space-y-3">
+                  <p className="text-sm font-medium mb-1">Rate specific aspects</p>
+                  
+                  {criteria.map(criterion => <div key={criterion.id} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{criterion.name}</span>
+                        <span className="font-medium">{criteriaRatings[criterion.id] || 7}/10</span>
+                      </div>
+                      <input type="range" min="1" max="10" value={criteriaRatings[criterion.id] || 7} onChange={e => handleCriterionRating(criterion.id, parseInt(e.target.value))} className="w-full" />
+                    </div>)}
+                </div>}
               
-              <Toggle pressed={isHiddenGem} onPressedChange={setIsHiddenGem} className={`flex gap-2 items-center ${isHiddenGem ? 'bg-purple-500 text-white' : ''}`}>
-                <Gem className={`w-4 h-4 ${isHiddenGem ? 'text-white' : ''}`} />
-                Hidden Gem
-              </Toggle>
+              <div>
+                <p className="text-sm font-medium mb-2">Share your experience</p>
+                <textarea value={reviewText} onChange={e => setReviewText(e.target.value)} className="w-full p-2 border rounded-md h-24" placeholder="What did you like or dislike about this business?" />
+              </div>
+              
+              <div className="flex flex-col md:flex-row gap-2">
+                <Toggle pressed={isMustVisit} onPressedChange={setIsMustVisit} className={`flex gap-2 items-center ${isMustVisit ? 'bg-green-500 text-white' : ''}`}>
+                  <Award className={`w-4 h-4 ${isMustVisit ? 'text-white' : ''}`} />
+                  Must Visit
+                </Toggle>
+                
+                <Toggle pressed={isHiddenGem} onPressedChange={setIsHiddenGem} className={`flex gap-2 items-center ${isHiddenGem ? 'bg-purple-500 text-white' : ''}`}>
+                  <Gem className={`w-4 h-4 ${isHiddenGem ? 'text-white' : ''}`} />
+                  Hidden Gem
+                </Toggle>
+              </div>
+              
+              <Button onClick={handleSubmitReview} disabled={submitting} className="w-full">
+                {submitting ? 'Submitting...' : 'Submit Review'}
+              </Button>
             </div>
-            
-            <Button onClick={handleSubmitReview} disabled={submitting} className="w-full">
-              {submitting ? 'Submitting...' : 'Submit Review'}
-            </Button>
-          </div>
-        </CardContent>}
-    </Card>;
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
 };
+
 export default BusinessReviewForm;

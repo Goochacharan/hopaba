@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, Globe, Clock, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Loader2, Star } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
 import { useBusinessDetail } from '@/hooks/useBusinessDetail';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import BusinessReviewForm from '@/components/business/BusinessReviewForm';
 import BusinessReviewsList from '@/components/business/BusinessReviewsList';
+import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 const BusinessDetails: React.FC = () => {
   const {
     id
@@ -156,6 +158,27 @@ const BusinessDetails: React.FC = () => {
                     <Badge variant="secondary" className="mb-2">
                       {business.category}
                     </Badge>
+                    
+                    {/* Star Rating Display */}
+                    {totalReviews > 0 && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-5 h-5 ${
+                                star <= Math.round(averageRating)
+                                  ? 'fill-amber-500 stroke-amber-500'
+                                  : 'stroke-amber-500'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          ({totalReviews})
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -208,4 +231,5 @@ const BusinessDetails: React.FC = () => {
       </div>
     </MainLayout>;
 };
+
 export default BusinessDetails;
