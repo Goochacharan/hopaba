@@ -12,6 +12,7 @@ import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 const BusinessDetails: React.FC = () => {
   const {
     id
@@ -178,8 +179,6 @@ const BusinessDetails: React.FC = () => {
                       <span className="text-sm">{business.address}</span>
                     </div>}
                   
-                  {business.contact_phone}
-                  
                   {business.website && <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <a href={business.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
@@ -222,4 +221,5 @@ const BusinessDetails: React.FC = () => {
       </div>
     </MainLayout>;
 };
+
 export default BusinessDetails;
