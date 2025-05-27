@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -315,9 +316,9 @@ const Shop = () => {
   return (
     <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* City Filter and Location Toggle - Combined Row */}
-        <div className="flex flex-col md:flex-row gap-3 mb-3">
-          <div className="md:w-1/2">
+        {/* City Filter and Location Toggle - Always Side by Side */}
+        <div className="flex flex-row gap-2 mb-3">
+          <div className="flex-1">
             <Select value={selectedCity} onValueChange={handleCityChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select city" />
@@ -331,7 +332,7 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:w-1/2">
+          <div className="flex-1">
             <Button 
               variant={isLocationEnabled ? "default" : "outline"} 
               onClick={handleLocationToggle} 
