@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ import { OnlineIndicator } from '@/components/ui/online-indicator';
 interface RequestConversationsPanelProps {
   onConversationSelect?: (conversationId: string) => void;
   showCreateRequestButton?: boolean;
+  showAllConversations?: boolean;
 }
 
 interface ConversationWithDetails {
@@ -42,19 +44,20 @@ interface ConversationWithDetails {
 
 const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
   onConversationSelect,
-  showCreateRequestButton = true
+  showCreateRequestButton = true,
+  showAllConversations = false
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { conversations } = useConversations();
-  const { unreadCount: totalUnreadCount } = useServiceProviderUnreadCount();
+  const { data: totalUnreadCount } = useServiceProviderUnreadCount();
   
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
 
-  const { data: conversationsWithDetails, isLoading, error } = useQuery(
-    ['conversationsWithDetails'],
-    async () => {
+  const { data: conversationsWithDetails, isLoading, error } = useQuery({
+    queryKey: ['conversationsWithDetails'],
+    queryFn: async (): Promise<ConversationWithDetails[] | null> => {
       if (!user) return null;
 
       // Fetch conversations with additional details
@@ -123,11 +126,9 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
 
       return mappedData as ConversationWithDetails[];
     },
-    {
-      enabled: !!user,
-      staleTime: 60000, // 1 minute
-    }
-  );
+    enabled: !!user,
+    staleTime: 60000, // 1 minute
+  });
 
   const handleConversationClick = (conversationId: string) => {
     if (onConversationSelect) {
@@ -172,8 +173,10 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b bg-white">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold">Service Requests</h2>
-          {totalUnreadCount > 0 && (
+          <h2 className="text-lg font-semibold">
+            {showAllConversations ? 'All Conversations' : 'Service Requests'}
+          </h2>
+          {totalUnreadCount && totalUnreadCount > 0 && (
             <Badge variant="destructive" className="rounded-full">
               {totalUnreadCount}
             </Badge>

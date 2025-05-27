@@ -249,7 +249,7 @@ const Messages: React.FC = () => {
               
               <TabsContent value="conversations">
                 <div className="space-y-4">
-                  <RequestConversationsPanel showAllConversations />
+                  <RequestConversationsPanel showAllConversations={true} />
                 </div>
               </TabsContent>
               
