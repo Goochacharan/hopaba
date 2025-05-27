@@ -135,7 +135,7 @@ const BusinessReviewForm: React.FC<ReviewFormProps> = ({
     }
   };
   return <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 py-0">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 my-0 px-[219px] py-0">
         
         <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"} size="sm">
           {showForm ? "Cancel" : "Write Review"}
