@@ -190,7 +190,10 @@ const BusinessDetails: React.FC = () => {
                       <span className="text-sm">{business.address}</span>
                     </div>}
                   
-                  {business.contact_phone}
+                  {business.contact_phone && <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{business.contact_phone}</span>
+                    </div>}
                   
                   {business.website && <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
@@ -204,6 +207,17 @@ const BusinessDetails: React.FC = () => {
                       <span className="text-sm">{business.availability}</span>
                     </div>}
                 </div>
+
+                {/* Action Buttons */}
+                <BusinessActionButtons 
+                  businessId={business.id}
+                  name={business.name}
+                  phone={business.contact_phone}
+                  whatsapp={business.whatsapp}
+                  instagram={business.instagram}
+                  location={business.address || ''}
+                  mapLink={business.map_link}
+                />
               </div>
             </div>
           </CardContent>
