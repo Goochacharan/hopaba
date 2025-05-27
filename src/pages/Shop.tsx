@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 import { useBusinessesBySubcategory } from '@/hooks/useBusinesses';
 import BusinessCardPublic from '@/components/business/BusinessCardPublic';
-import { Loader2, Search, FilterX, MapPin, Navigation } from 'lucide-react';
+import { Loader2, Search, FilterX, MapPin, Navigation, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -12,7 +11,6 @@ import { useSearchFilters } from '@/hooks/useSearchFilters';
 import SearchControls from '@/components/search/SearchControls';
 import { SortOption } from '@/components/SortButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import PostalCodeSearch from '@/components/search/PostalCodeSearch';
 import { distanceService, type Location } from '@/services/distanceService';
 import { useToast } from '@/hooks/use-toast';
 import { filterBusinessesByPostalCode, getDistanceDisplayText, type BusinessWithDistance } from '@/utils/locationFilterUtils';
@@ -207,9 +205,35 @@ const Shop = () => {
     setSelectedCity(city);
   };
 
-  // Handle postal code search (legacy support)
-  const handlePostalCodeSearch = (code: string) => {
-    setPostalCode(code);
+  // Handle postal code search
+  const handlePostalCodeSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedPostalCode = postalCode.trim();
+    if (!trimmedPostalCode) {
+      toast({
+        title: "Please enter a postal code",
+        description: "Enter a 6-digit postal code to search for listings",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if postal code is 6 digits
+    const isValidPostalCode = /^\d{6}$/.test(trimmedPostalCode);
+    if (!isValidPostalCode) {
+      toast({
+        title: "Invalid postal code",
+        description: "Postal code must be 6 digits",
+        variant: "destructive"
+      });
+      return;
+    }
+    console.log("Searching for listings with postal code:", trimmedPostalCode);
+  };
+
+  // Clear postal code
+  const clearPostalCode = () => {
+    setPostalCode('');
   };
 
   // Handle reset filters
@@ -311,12 +335,13 @@ const Shop = () => {
       }
     });
   }, [businesses, businessesWithDistance, isLocationEnabled, searchTerm, selectedCity, postalCode, filters]);
+
   const hasActiveFilters = selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly || isLocationEnabled;
 
   return (
     <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* City Filter and Location Toggle - Always Side by Side */}
+        {/* City Filter, Postal Code Search and Location Toggle - All in One Row */}
         <div className="flex flex-row gap-2 mb-3">
           <div className="flex-1">
             <Select value={selectedCity} onValueChange={handleCityChange}>
@@ -332,26 +357,42 @@ const Shop = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex-1">
+          <div className="w-32">
+            <form onSubmit={handlePostalCodeSearch} className="relative">
+              <Input 
+                type="text" 
+                placeholder="PIN code" 
+                value={postalCode} 
+                onChange={e => setPostalCode(e.target.value)} 
+                className="w-full pr-8 text-sm" 
+                maxLength={6}
+              />
+              {postalCode && (
+                <button
+                  type="button"
+                  onClick={clearPostalCode}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </form>
+          </div>
+          <div className="w-12">
             <Button 
               variant={isLocationEnabled ? "default" : "outline"} 
               onClick={handleLocationToggle} 
               disabled={isCalculatingDistances} 
-              className="flex items-center gap-2 w-full"
+              className="flex items-center justify-center w-full h-10 p-0"
+              title={isLocationEnabled ? "Disable Location" : "Enable Location"}
             >
               {isCalculatingDistances ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Navigation className="h-4 w-4" />
               )}
-              {isLocationEnabled ? "Disable Location" : "Enable Location"}
             </Button>
           </div>
-        </div>
-
-        {/* Postal Code Filter */}
-        <div className="mb-2">
-          <PostalCodeSearch onSearch={handlePostalCodeSearch} initialValue={postalCode} />
         </div>
         
         {/* Search Bar */}
