@@ -1,266 +1,161 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film, Navigation } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Business } from '@/hooks/useBusinesses';
-import { supabase } from '@/integrations/supabase/client';
-import RatingProgressBars from '@/components/RatingProgressBars';
-import BusinessActionButtons from '@/components/business/BusinessActionButtons';
-import { useBusinessReviews } from '@/hooks/useBusinessReviews';
-import StarRating from '@/components/marketplace/StarRating';
-import { useToast } from '@/hooks/use-toast';
+import BusinessActionButtons from './BusinessActionButtons';
+import { cn } from '@/lib/utils';
+
+interface Business {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  address: string;
+  area: string;
+  city: string;
+  contact_phone: string;
+  contact_email?: string;
+  website?: string;
+  instagram?: string;
+  whatsapp?: string;
+  map_link?: string;
+  price_range_min?: number;
+  price_range_max?: number;
+  price_unit?: string;
+  availability?: string;
+  availability_days?: string[];
+  availability_start_time?: string;
+  availability_end_time?: string;
+  tags?: string[];
+  images?: string[];
+  hours?: string;
+  languages?: string[];
+  experience?: string;
+  created_at: string;
+  approval_status: string;
+  rating?: number;
+  calculatedDistance?: number | null;
+  distanceText?: string;
+}
 
 interface BusinessCardPublicProps {
   business: Business;
-  className?: string;
 }
 
-const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
+const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business }) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  // Use the new Supabase-based review hook
-  const {
-    averageRating,
-    averageCriteriaRatings,
-    totalReviews
-  } = useBusinessReviews(business.id || '');
-  
-  // Map days numbers to actual day names
-  const dayMap: Record<string, string> = {
-    '0': 'Sun',
-    '1': 'Mon',
-    '2': 'Tue',
-    '3': 'Wed',
-    '4': 'Thu',
-    '5': 'Fri',
-    '6': 'Sat'
-  };
-
-  const formatAvailabilityDays = (days: string[] | undefined) => {
-    if (!days || days.length === 0) return 'Not specified';
-    
-    return days.map(day => dayMap[day] || day).join(', ');
-  };
-
-  const formatPrice = () => {
-    if (business.price_range_min && business.price_range_max) {
-      return `₹${business.price_range_min} - ₹${business.price_range_max} ${business.price_unit || ''}`;
-    } else if (business.price_range_min) {
-      return `₹${business.price_range_min} ${business.price_unit || ''}`;
-    } else if (business.price_range_max) {
-      return `Up to ₹${business.price_range_max} ${business.price_unit || ''}`;
-    }
-    return 'Not specified';
-  };
 
   const handleCardClick = () => {
     navigate(`/business/${business.id}`);
   };
-  
-  const handleInstagramClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (business.instagram) {
-      window.open(`https://instagram.com/${business.instagram.replace('@', '')}`, '_blank', 'noopener,noreferrer');
-      toast({
-        title: "Opening video content",
-        description: `Visiting ${business.name}'s video content`,
-        duration: 2000
-      });
+
+  // Debug logging for phone number
+  console.log('BusinessCardPublic - Business:', business.name, 'Phone:', business.contact_phone);
+
+  const formatPriceRange = () => {
+    if (business.price_range_min && business.price_range_max) {
+      return `₹${business.price_range_min} - ₹${business.price_range_max} ${business.price_unit || 'per hour'}`;
     }
+    return null;
+  };
+
+  const getAvailabilityText = () => {
+    if (business.availability_days && business.availability_start_time && business.availability_end_time) {
+      const days = business.availability_days.length === 7 ? 'Daily' : 
+                   business.availability_days.length === 5 ? 'Weekdays' :
+                   business.availability_days.join(', ');
+      return `${days} ${business.availability_start_time} - ${business.availability_end_time}`;
+    }
+    return business.availability || 'Contact for availability';
   };
 
   return (
-    <Card 
-      className={`overflow-hidden border-primary/20 h-full ${className} cursor-pointer hover:shadow-md transition-shadow`}
-      onClick={handleCardClick}
-    >
-      <div className="aspect-video w-full overflow-hidden relative">
-        {business.images && business.images.length > 0 ? (
-          <img 
-            src={business.images[0]} 
-            alt={business.name} 
-            className="object-cover w-full h-full" 
-          />
-        ) : (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
-            <p className="text-muted-foreground">No image available</p>
+    <Card className={cn(
+      "cursor-pointer hover:shadow-lg transition-shadow duration-300 h-full flex flex-col",
+      business.calculatedDistance !== null && business.calculatedDistance !== undefined && "border-blue-200"
+    )}>
+      <CardHeader onClick={handleCardClick} className="pb-2">
+        <div className="flex justify-between items-start mb-2">
+          <CardTitle className="text-lg font-semibold line-clamp-2">{business.name}</CardTitle>
+          <div className="flex items-center gap-1 text-sm">
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            <span>{business.rating?.toFixed(1) || '4.5'}</span>
           </div>
-        )}
-        <div className="absolute top-2 right-2">
-          <Badge variant="default" className="bg-primary/90">
+        </div>
+        
+        <div className="space-y-2">
+          <Badge variant="secondary" className="w-fit">
             {business.category}
           </Badge>
-        </div>
-        {business.subcategory && (
-          <div className="absolute top-2 left-2">
-            <Badge variant="outline" className="bg-background/90 border-primary/40">
-              {business.subcategory}
-            </Badge>
+          
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span className="line-clamp-1">{business.area}, {business.city}</span>
           </div>
-        )}
-      </div>
-      
-      <CardContent className="p-5 space-y-3">
-        <div className="flex justify-between items-start">
-          <h3 className="font-semibold text-lg line-clamp-2">{business.name}</h3>
-          <div>
-            <StarRating 
-              rating={averageRating} 
-              showCount={true} 
-              count={totalReviews} 
-              size="medium"
-            />
-          </div>
+
+          {business.calculatedDistance !== null && business.calculatedDistance !== undefined && (
+            <div className="flex items-center gap-1 text-sm text-blue-600 font-medium">
+              <Navigation className="h-4 w-4" />
+              <span>{business.calculatedDistance.toFixed(1)} km away</span>
+            </div>
+          )}
         </div>
-        
-        {business.description && (
-          <p className="text-muted-foreground text-sm line-clamp-2">
-            {business.description}
-          </p>
-        )}
-        
-        {/* Display tags if available (above the location info) */}
+      </CardHeader>
+
+      <CardContent onClick={handleCardClick} className="flex-1 pt-0">
+        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+          {business.description}
+        </p>
+
+        <div className="space-y-2 text-sm">
+          {formatPriceRange() && (
+            <div className="text-green-600 font-medium">
+              {formatPriceRange()}
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span className="line-clamp-1">{getAvailabilityText()}</span>
+          </div>
+
+          {business.contact_phone && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Phone className="h-4 w-4" />
+              <span>{business.contact_phone}</span>
+            </div>
+          )}
+        </div>
+
         {business.tags && business.tags.length > 0 && (
-          <div className="mb-2">
-            <div className="flex flex-wrap gap-1.5">
-              {business.tags.map((tag, index) => (
-                <Badge key={index} variant="secondary" className="bg-primary/10 text-primary text-xs">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-1 mt-3">
+            {business.tags.slice(0, 3).map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+            {business.tags.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{business.tags.length - 3} more
+              </Badge>
+            )}
           </div>
         )}
-        
-        {/* Real Criteria Rating Progress Bars from Supabase */}
-        {Object.keys(averageCriteriaRatings).length > 0 && (
-          <div className="mt-2 mb-2">
-            <RatingProgressBars 
-              criteriaRatings={averageCriteriaRatings}
-              locationId={business.id}
-            />
-          </div>
-        )}
-        
-        <div className="grid gap-2 text-sm">
-          {(business.area || business.city) && (
-            <div className="flex items-center gap-2 justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="line-clamp-1">
-                  {[business.area, business.city].filter(Boolean).join(', ')}
-                </span>
-              </div>
-              {business.instagram && (
-                <button 
-                  onClick={handleInstagramClick}
-                  title="Watch Instagram content" 
-                  className="bg-gradient-to-tr from-purple-500 via-pink-500 to-yellow-500 rounded-full hover:shadow-md transition-all p-1.5"
-                >
-                  <Film className="h-3.5 w-3.5 text-white" />
-                </button>
-              )}
-            </div>
-          )}
-          
-          {/* Distance display */}
-          {(business as any).calculatedDistance !== null && (business as any).calculatedDistance !== undefined && (
-            <div className="flex items-center gap-2">
-              <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-primary font-medium">
-                {(business as any).calculatedDistance.toFixed(1)} km away
-              </span>
-            </div>
-          )}
-          
-          {business.availability_days && business.availability_days.length > 0 && (
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="line-clamp-1">
-                  {formatAvailabilityDays(business.availability_days)}
-                </span>
-              </div>
-              {business.availability_start_time && business.availability_end_time && (
-                <div className="ml-6 text-xs text-muted-foreground">
-                  {business.availability_start_time} - {business.availability_end_time}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {business.price_range_min || business.price_range_max ? (
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Price:</span>
-              <span>{formatPrice()}</span>
-            </div>
-          ) : null}
-          
-          {business.languages && business.languages.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-1">{business.languages.join(', ')}</span>
-            </div>
-          )}
-        </div>
-        
-        {/* Action Buttons */}
+      </CardContent>
+
+      <CardFooter className="pt-0">
         <BusinessActionButtons
           businessId={business.id}
           name={business.name}
           phone={business.contact_phone}
-          whatsapp={business.contact_phone}
+          whatsapp={business.whatsapp}
           instagram={business.instagram}
-          location={[business.area, business.city].filter(Boolean).join(', ')}
+          location={`${business.address}, ${business.area}, ${business.city}`}
           mapLink={business.map_link}
         />
-        
-        {/* Hidden buttons */}
-        <div className="hidden">
-          {business.website && (
-            <a 
-              href={business.website} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline">
-                <Globe className="h-4 w-4 mr-1" />
-                Website
-              </Button>
-            </a>
-          )}
-          
-          {business.instagram && (
-            <a 
-              href={`https://instagram.com/${business.instagram.replace('@', '')}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline" className="text-pink-600 hover:text-pink-700">
-                <Instagram className="h-4 w-4 mr-1" />
-                Instagram
-              </Button>
-            </a>
-          )}
-          
-          {business.contact_email && (
-            <a 
-              href={`mailto:${business.contact_email}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline">
-                <Mail className="h-4 w-4 mr-1" />
-                Email
-              </Button>
-            </a>
-          )}
-        </div>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 };

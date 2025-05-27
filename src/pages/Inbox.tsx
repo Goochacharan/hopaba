@@ -484,20 +484,36 @@ const Inbox: React.FC = () => {
 
   // Handle call functionality for provider call button
   const handleCall = (phone: string, providerName: string) => {
-    if (phone) {
-      const link = document.createElement('a');
-      link.href = `tel:${phone}`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({
-        title: "Calling business",
-        description: `Dialing ${phone}...`,
-        duration: 2000
-      });
+    console.log('Inbox call button clicked. Phone:', phone, 'Provider:', providerName);
+    
+    if (phone && phone.trim()) {
+      // Clean the phone number - remove any non-digit characters except +
+      const cleanPhone = phone.replace(/[^\d+]/g, '');
+      console.log('Cleaned phone number:', cleanPhone);
+      
+      try {
+        const link = document.createElement('a');
+        link.href = `tel:${cleanPhone}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({
+          title: "Calling business",
+          description: `Dialing ${phone}...`,
+          duration: 2000
+        });
+      } catch (error) {
+        console.error('Error initiating call:', error);
+        toast({
+          title: "Call failed",
+          description: "Unable to initiate call. Please try again.",
+          variant: "destructive"
+        });
+      }
     } else {
+      console.log('No phone number available for provider:', providerName);
       toast({
         title: "Phone number not available",
         description: "This business has not provided a phone number",
@@ -717,6 +733,10 @@ const Inbox: React.FC = () => {
                           sortedConversations.map((conversation) => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
                             const providerDetails = enhancedProviderDetails[conversation.provider_id];
+                            
+                            // Debug logging for each conversation
+                            console.log('Conversation:', conversation.service_providers?.name, 'Provider Details:', providerDetails);
+                            console.log('Contact phone from provider details:', providerDetails?.contact_phone);
                             
                             return (
                               <Card key={conversation.id} className={cn(

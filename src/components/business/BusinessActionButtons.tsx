@@ -48,20 +48,38 @@ const BusinessActionButtons: React.FC<BusinessActionButtonsProps> = ({
   
   const handleCall = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (phone) {
-      const link = document.createElement('a');
-      link.href = `tel:${phone}`;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast({
-        title: "Calling business",
-        description: `Dialing ${phone}...`,
-        duration: 2000
-      });
+    console.log('Call button clicked. Phone:', phone, 'Business:', name);
+    
+    if (phone && phone.trim()) {
+      // Clean the phone number - remove any non-digit characters except +
+      const cleanPhone = phone.replace(/[^\d+]/g, '');
+      console.log('Cleaned phone number:', cleanPhone);
+      
+      try {
+        const link = document.createElement('a');
+        link.href = `tel:${cleanPhone}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+          title: "Calling business",
+          description: `Dialing ${phone}...`,
+          duration: 2000
+        });
+      } catch (error) {
+        console.error('Error initiating call:', error);
+        toast({
+          title: "Call failed",
+          description: "Unable to initiate call. Please try again.",
+          variant: "destructive",
+          duration: 3000
+        });
+      }
     } else {
+      console.log('No phone number available for business:', name);
       toast({
         title: "Phone number not available",
         description: "This business has not provided a phone number",
@@ -136,9 +154,10 @@ const BusinessActionButtons: React.FC<BusinessActionButtonsProps> = ({
         onClick={handleCall} 
         title="Call Business" 
         aria-label="Call business" 
-        className="flex-1 h-10 text-white transition-all flex items-center justify-center shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500 rounded"
+        className="flex-1 h-10 text-white transition-all flex items-center justify-center gap-1 shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500 rounded"
       >
         <Phone className="h-4 w-4" />
+        <span className="text-xs">Call</span>
       </button>
       
       <button 
