@@ -1,15 +1,15 @@
+
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, Globe, Clock, Star, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Loader2 } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
 import { useBusinessDetail } from '@/hooks/useBusinessDetail';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import BusinessReviewForm from '@/components/business/BusinessReviewForm';
 import BusinessReviewsList from '@/components/business/BusinessReviewsList';
-import BusinessRatingOverview from '@/components/business/BusinessRatingOverview';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
@@ -85,13 +85,6 @@ const BusinessDetails: React.FC = () => {
       throw error;
     }
   };
-
-  // Calculate rating distribution for the overview
-  const ratingDistribution = [5, 4, 3, 2, 1].map(rating => {
-    const count = reviews.filter(r => r.rating === rating).length;
-    const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-    return { rating, count, percentage };
-  });
 
   // Convert Supabase reviews to the format expected by BusinessReviewsList
   const formattedReviews = reviews.map(review => ({
@@ -178,22 +171,6 @@ const BusinessDetails: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h1 className="text-3xl font-bold mb-2">{business.name}</h1>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex items-center">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-5 h-5 ${
-                              star <= Math.round(averageRating)
-                                ? 'text-amber-500 fill-amber-500'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-lg font-semibold">{averageRating.toFixed(1)}</span>
-                      <span className="text-muted-foreground">({totalReviews} reviews)</span>
-                    </div>
                     <Badge variant="secondary" className="mb-2">
                       {business.category}
                     </Badge>
@@ -238,18 +215,6 @@ const BusinessDetails: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6 mt-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Rating & Reviews</h3>
-                <BusinessRatingOverview 
-                  avgRating={averageRating} 
-                  totalReviews={totalReviews} 
-                  ratingDistribution={ratingDistribution} 
-                  criteriaRatings={averageCriteriaRatings} 
-                />
               </div>
             </div>
           </CardContent>
