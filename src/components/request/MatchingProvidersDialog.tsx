@@ -137,12 +137,12 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
 
-  // Updated handleCall function to prevent browser blocking
+  // Updated handleCall function to trigger device call interface
   const handleCall = (e: React.MouseEvent, phone?: string, providerName?: string) => {
     e.stopPropagation();
     if (phone) {
-      // Use window.open instead of programmatic link creation to avoid browser blocking
-      window.open(`tel:${phone}`, '_self');
+      // Use window.location.href to properly trigger device's native call interface
+      window.location.href = `tel:${phone}`;
       toast({
         title: "Calling business",
         description: `Dialing ${phone}...`,
@@ -460,8 +460,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
     return filtered;
   }, [matchingProviders, providersWithDistances, filters, currentSort]);
-
-
 
   if (isLoading) {
     return (

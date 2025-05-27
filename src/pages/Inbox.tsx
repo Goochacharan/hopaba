@@ -482,11 +482,11 @@ const Inbox: React.FC = () => {
     );
   };
 
-  // Handle call functionality for provider call button
+  // Handle call functionality for provider call button - updated to trigger device call interface
   const handleCall = (phone: string, providerName: string) => {
     if (phone) {
-      // Use window.open instead of programmatic link creation to avoid browser blocking
-      window.open(`tel:${phone}`, '_self');
+      // Use window.location.href to properly trigger device's native call interface
+      window.location.href = `tel:${phone}`;
       toast({
         title: "Calling business",
         description: `Dialing ${phone}...`,
