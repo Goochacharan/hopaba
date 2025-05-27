@@ -92,7 +92,7 @@ const BusinessRatingOverview: React.FC<BusinessRatingOverviewProps> = ({
           <div className="flex items-center gap-4">
             <div className="text-center">
               <div className="text-3xl font-bold">{avgRating.toFixed(1)}</div>
-              <StarRating rating={avgRating} size="sm" />
+              <StarRating rating={avgRating} size="small" />
               <div className="text-sm text-muted-foreground mt-1">
                 {totalReviews} reviews
               </div>
@@ -122,7 +122,7 @@ const BusinessRatingOverview: React.FC<BusinessRatingOverviewProps> = ({
                     {criteriaNames[criterionId] || getFallbackName(criterionId)}
                   </span>
                   <div className="flex items-center gap-2">
-                    <StarRating rating={rating} size="sm" />
+                    <StarRating rating={rating} size="small" />
                     <span className="text-sm font-medium">{rating.toFixed(1)}</span>
                   </div>
                 </div>
