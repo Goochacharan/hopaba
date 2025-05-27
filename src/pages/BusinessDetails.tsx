@@ -12,7 +12,6 @@ import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-
 const BusinessDetails: React.FC = () => {
   const {
     id
@@ -160,25 +159,14 @@ const BusinessDetails: React.FC = () => {
                     </Badge>
                     
                     {/* Star Rating Display */}
-                    {totalReviews > 0 && (
-                      <div className="flex items-center gap-2 mb-2">
+                    {totalReviews > 0 && <div className="flex items-center gap-2 mb-2">
                         <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-5 h-5 ${
-                                star <= Math.round(averageRating)
-                                  ? 'fill-amber-500 stroke-amber-500'
-                                  : 'stroke-amber-500'
-                              }`}
-                            />
-                          ))}
+                          {[1, 2, 3, 4, 5].map(star => <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-amber-500 stroke-amber-500' : 'stroke-amber-500'}`} />)}
                         </div>
                         <span className="text-sm text-muted-foreground">
                           ({totalReviews})
                         </span>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                 </div>
                 
@@ -190,10 +178,7 @@ const BusinessDetails: React.FC = () => {
                       <span className="text-sm">{business.address}</span>
                     </div>}
                   
-                  {business.contact_phone && <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{business.contact_phone}</span>
-                    </div>}
+                  {business.contact_phone}
                   
                   {business.website && <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
@@ -209,15 +194,7 @@ const BusinessDetails: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <BusinessActionButtons 
-                  businessId={business.id}
-                  name={business.name}
-                  phone={business.contact_phone}
-                  whatsapp={(business as any).whatsapp}
-                  instagram={(business as any).instagram}
-                  location={business.address || ''}
-                  mapLink={(business as any).map_link}
-                />
+                <BusinessActionButtons businessId={business.id} name={business.name} phone={business.contact_phone} whatsapp={(business as any).whatsapp} instagram={(business as any).instagram} location={business.address || ''} mapLink={(business as any).map_link} />
               </div>
             </div>
           </CardContent>
@@ -245,5 +222,4 @@ const BusinessDetails: React.FC = () => {
       </div>
     </MainLayout>;
 };
-
 export default BusinessDetails;
