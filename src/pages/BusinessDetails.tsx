@@ -213,10 +213,10 @@ const BusinessDetails: React.FC = () => {
                   businessId={business.id}
                   name={business.name}
                   phone={business.contact_phone}
-                  whatsapp={business.whatsapp}
-                  instagram={business.instagram}
+                  whatsapp={(business as any).whatsapp}
+                  instagram={(business as any).instagram}
                   location={business.address || ''}
-                  mapLink={business.map_link}
+                  mapLink={(business as any).map_link}
                 />
               </div>
             </div>
