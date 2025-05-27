@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -223,16 +224,17 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="mb-1">
                             <CardTitle className="text-sm font-medium truncate">
                               {conversation.provider_name}
                             </CardTitle>
-                            <OnlineIndicator 
-                              isOnline={isProviderOnline} 
-                              size="sm" 
-                              showText={false}
-                            />
                           </div>
+                          <OnlineIndicator 
+                            isOnline={isProviderOnline} 
+                            size="sm" 
+                            showText={false}
+                            className="mb-1"
+                          />
                           <p className="text-xs text-muted-foreground mb-1">
                             {conversation.provider_category}
                           </p>
