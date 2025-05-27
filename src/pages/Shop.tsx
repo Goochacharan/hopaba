@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
-import { useBusinessesBySubcategory } from '@/hooks/useBusinesses';
+import { useBusinessesOptimized } from '@/hooks/useBusinessesOptimized';
 import BusinessCardPublic from '@/components/business/BusinessCardPublic';
 import { Loader2, Search, FilterX, MapPin, Navigation, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { distanceService, type Location } from '@/services/distanceService';
 import { useToast } from '@/hooks/use-toast';
 import { filterBusinessesByPostalCode, getDistanceDisplayText, type BusinessWithDistance } from '@/utils/locationFilterUtils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = ["All Cities", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"];
@@ -38,6 +40,11 @@ const Shop = () => {
   const [selectedCity, setSelectedCity] = useState<string>(cityParam);
   const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
 
+  // Debounce search inputs for better performance
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedCity = useDebounce(selectedCity, 200);
+  const debouncedPostalCode = useDebounce(postalCode, 200);
+
   // Location state for distance calculation
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
@@ -47,10 +54,13 @@ const Shop = () => {
   // Filters
   const { filters, setters } = useSearchFilters();
 
-  // Fetch businesses based on selected category and subcategory
-  const { data: businesses, isLoading, error } = useBusinessesBySubcategory(
+  // Fetch businesses using optimized hook with combined search
+  const { data: businesses, isLoading, error } = useBusinessesOptimized(
     selectedCategory === 'All' ? null : selectedCategory,
-    selectedSubcategories.length > 0 ? selectedSubcategories[0] : null
+    selectedSubcategories.length > 0 ? selectedSubcategories[0] : null,
+    debouncedCity !== 'All Cities' ? debouncedCity : undefined,
+    debouncedPostalCode || undefined,
+    debouncedSearchTerm || undefined
   );
 
   // Update URL when filters change
@@ -74,7 +84,6 @@ const Shop = () => {
   // Handle location enable/disable
   const handleLocationToggle = async () => {
     if (isLocationEnabled) {
-      // Disable location
       setIsLocationEnabled(false);
       setUserLocation(null);
       setBusinessesWithDistance([]);
@@ -83,7 +92,6 @@ const Shop = () => {
         description: "Distance sorting is now disabled"
       });
     } else {
-      // Enable location
       setIsCalculatingDistances(true);
       try {
         console.log('🔍 Getting user location...');
@@ -96,7 +104,6 @@ const Shop = () => {
           description: "Distance calculation enabled for sorting"
         });
 
-        // Calculate distances for current businesses
         if (businesses) {
           await calculateDistancesForBusinesses(businesses, location);
         }
@@ -121,22 +128,18 @@ const Shop = () => {
         let calculatedDistance = null;
         let distanceText = null;
 
-        // Try to calculate distance using available location data
         if (business.latitude && business.longitude) {
-          // Use coordinates if available - calculate straight-line distance
           const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, {
             lat: business.latitude,
             lng: business.longitude
           });
-          calculatedDistance = straightLineDistance; // Already in km
+          calculatedDistance = straightLineDistance;
           distanceText = `${straightLineDistance.toFixed(1)} km`;
           console.log(`📍 Distance calculated for ${business.name} using coordinates: ${calculatedDistance.toFixed(2)} km`);
         } else if (business.postal_code) {
-          // Use postal code if coordinates are not available
           try {
             console.log(`🔍 Calculating distance for ${business.name} using postal code: ${business.postal_code}`);
 
-            // Get coordinates from postal code (use fallback first as it's more reliable from browser)
             let businessLocation: Location;
             try {
               businessLocation = await distanceService.getCoordinatesFromPostalCodeFallback(business.postal_code);
@@ -147,14 +150,12 @@ const Shop = () => {
               console.log(`📍 Geocoded ${business.postal_code} to:`, businessLocation);
             }
 
-            // Calculate straight-line distance (more reliable than API calls from browser)
             const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, businessLocation);
-            calculatedDistance = straightLineDistance; // Already in km
+            calculatedDistance = straightLineDistance;
             distanceText = `${straightLineDistance.toFixed(1)} km`;
             console.log(`📍 Distance calculated for ${business.name} using postal code: ${calculatedDistance.toFixed(2)} km`);
           } catch (error) {
             console.warn(`Failed to calculate distance for ${business.name} using postal code ${business.postal_code}:`, error);
-            // Don't set distance if postal code geocoding fails
           }
         } else {
           console.log(`⚠️ No location data available for ${business.name} (no coordinates or postal code)`);
@@ -168,7 +169,6 @@ const Shop = () => {
       setBusinessesWithDistance(businessesWithDist);
       console.log('✅ Distance calculation completed for', businessesWithDist.length, 'businesses');
 
-      // Log summary of distance calculations
       const withDistance = businessesWithDist.filter(b => b.calculatedDistance !== null);
       const withoutDistance = businessesWithDist.filter(b => b.calculatedDistance === null);
       console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
@@ -187,15 +187,14 @@ const Shop = () => {
   // Handle category change
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    // Don't reset subcategory here - the CategoryScrollBar component will handle it
   };
 
-  // Handle subcategory change - updated to accept string[]
+  // Handle subcategory change
   const handleSubcategoryChange = (subcategories: string[]) => {
     setSelectedSubcategories(subcategories);
   };
 
-  // Handle search
+  // Handle search - now triggers immediately since we're using optimized backend filtering
   const handleSearch = () => {
     setSearchTerm(inputValue);
   };
@@ -218,7 +217,6 @@ const Shop = () => {
       return;
     }
 
-    // Check if postal code is 6 digits
     const isValidPostalCode = /^\d{6}$/.test(trimmedPostalCode);
     if (!isValidPostalCode) {
       toast({
@@ -260,49 +258,23 @@ const Shop = () => {
     setters.setSortBy(option);
   };
 
-  // Filter and sort businesses
+  // Filter and sort businesses - now using already filtered data from backend
   const filteredBusinesses = useMemo(() => {
-    // Use businesses with distance if location is enabled, otherwise use all businesses
     const businessesToFilter = isLocationEnabled && businessesWithDistance.length > 0 ? businessesWithDistance : (businesses || []).map(b => b as BusinessWithDistance);
 
-    // Log distance calculation for each business
-    businessesToFilter.forEach(business => {
-      if (business.calculatedDistance !== null && business.calculatedDistance !== undefined) {
-        const locationInfo = business.latitude && business.longitude ? `${business.latitude}, ${business.longitude}` : `Postal Code: ${business.postal_code || 'N/A'}`;
-        console.log(`🏪 Business: ${business.name} | Distance: ${business.calculatedDistance.toFixed(2)} km | Location: ${locationInfo}`);
-      } else {
-        const locationInfo = business.latitude && business.longitude ? `${business.latitude}, ${business.longitude}` : `Postal Code: ${business.postal_code || 'N/A'}`;
-        console.log(`🏪 Business: ${business.name} | Distance: Not calculated | Location: ${locationInfo}`);
-      }
-    });
     return businessesToFilter.filter(business => {
-      // Apply search filter
-      if (searchTerm && !business.name.toLowerCase().includes(searchTerm.toLowerCase()) && !business.description?.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-
-      // Apply city filter
-      if (selectedCity !== 'All Cities' && business.city !== selectedCity) {
-        return false;
-      }
-
-      // Apply postal code filter (legacy)
-      if (postalCode && business.postal_code !== postalCode) {
-        return false;
-      }
-
       // Apply rating filter
       const businessRating = business.rating || 0;
       if (filters.minRating[0] > 0 && businessRating < filters.minRating[0]) {
         return false;
       }
 
-      // Apply price filter (simplified)
+      // Apply price filter
       if (business.price_range_max && filters.priceRange < business.price_range_max) {
         return false;
       }
 
-      // Apply open now filter (simplified)
+      // Apply open now filter
       if (filters.openNowOnly) {
         const now = new Date();
         const day = now.getDay().toString();
@@ -313,7 +285,6 @@ const Shop = () => {
     }).sort((a, b) => {
       switch (filters.sortBy) {
         case 'distance':
-          // Sort by calculated distance if available
           const aDistance = a.calculatedDistance ?? null;
           const bDistance = b.calculatedDistance ?? null;
           if (aDistance !== null && bDistance !== null) {
@@ -321,12 +292,10 @@ const Shop = () => {
           }
           if (aDistance !== null) return -1;
           if (bDistance !== null) return 1;
-          // Fall back to rating if no distance data
           return (b.rating || 0) - (a.rating || 0);
         case 'rating':
           return (b.rating || 0) - (a.rating || 0);
         case 'reviewCount':
-          // We don't have review count, so fall back to rating
           return (b.rating || 0) - (a.rating || 0);
         case 'newest':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -334,7 +303,7 @@ const Shop = () => {
           return (b.rating || 0) - (a.rating || 0);
       }
     });
-  }, [businesses, businessesWithDistance, isLocationEnabled, searchTerm, selectedCity, postalCode, filters]);
+  }, [businesses, businessesWithDistance, isLocationEnabled, filters]);
 
   const hasActiveFilters = selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly || isLocationEnabled;
 
