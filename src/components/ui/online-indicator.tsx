@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -14,8 +15,6 @@ export const OnlineIndicator: React.FC<OnlineIndicatorProps> = ({
   showText = true,
   size = 'md'
 }) => {
-  if (!isOnline) return null;
-
   const sizeClasses = {
     sm: 'h-2 w-2',
     md: 'h-3 w-3',
@@ -31,17 +30,23 @@ export const OnlineIndicator: React.FC<OnlineIndicatorProps> = ({
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <div className={cn(
-        'rounded-full bg-green-500 animate-pulse',
+        'rounded-full',
+        isOnline 
+          ? 'bg-green-500 animate-pulse' 
+          : 'bg-gray-400',
         sizeClasses[size]
       )} />
       {showText && (
         <span className={cn(
-          'font-medium text-green-600 uppercase tracking-wide',
+          'font-medium uppercase tracking-wide',
+          isOnline 
+            ? 'text-green-600' 
+            : 'text-gray-500',
           textSizeClasses[size]
         )}>
-          Online
+          {isOnline ? 'Online' : 'Offline'}
         </span>
       )}
     </div>
   );
-}; 
+};

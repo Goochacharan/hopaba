@@ -247,13 +247,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col gap-2">
                     <CardTitle className="text-lg">{request.title}</CardTitle>
-                    {isRequesterOnline && (
-                      <OnlineIndicator 
-                        isOnline={isRequesterOnline} 
-                        size="sm" 
-                        className="self-start"
-                      />
-                    )}
+                    <OnlineIndicator 
+                      isOnline={isRequesterOnline} 
+                      size="sm" 
+                      className="self-start"
+                    />
                   </div>
                   <Badge variant={request.status === 'open' ? 'default' : 'secondary'}>
                     {request.status}

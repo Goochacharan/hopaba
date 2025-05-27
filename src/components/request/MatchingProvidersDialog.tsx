@@ -539,13 +539,11 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <CardTitle className="text-lg flex items-start justify-between gap-2">
                       <div className="flex flex-col gap-1">
                         <span className="line-clamp-2">{provider.provider_name}</span>
-                        {isProviderOnline && (
-                          <OnlineIndicator 
-                            isOnline={isProviderOnline} 
-                            size="sm" 
-                            className="self-start"
-                          />
-                        )}
+                        <OnlineIndicator 
+                          isOnline={isProviderOnline} 
+                          size="sm" 
+                          className="self-start"
+                        />
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Distance badge - only show if distance was calculated */}
