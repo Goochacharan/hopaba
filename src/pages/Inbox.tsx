@@ -738,7 +738,7 @@ const Inbox: React.FC = () => {
                                       <OnlineIndicator 
                                         isOnline={isProviderOnline} 
                                         size="sm" 
-                                        showText={false}
+                                        showText={true}
                                         className="mt-1"
                                       />
                                     </div>
