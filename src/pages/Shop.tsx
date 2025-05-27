@@ -18,12 +18,11 @@ import { filterBusinessesByPostalCode, getDistanceDisplayText, type BusinessWith
 
 // Added list of major Indian cities
 const INDIAN_CITIES = ["All Cities", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"];
+
 const Shop = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // Get URL parameters
   const categoryParam = searchParams.get('category') || 'All';
@@ -47,17 +46,13 @@ const Shop = () => {
   const [businessesWithDistance, setBusinessesWithDistance] = useState<BusinessWithDistance[]>([]);
 
   // Filters
-  const {
-    filters,
-    setters
-  } = useSearchFilters();
+  const { filters, setters } = useSearchFilters();
 
   // Fetch businesses based on selected category and subcategory
-  const {
-    data: businesses,
-    isLoading,
-    error
-  } = useBusinessesBySubcategory(selectedCategory === 'All' ? null : selectedCategory, selectedSubcategories.length > 0 ? selectedSubcategories[0] : null);
+  const { data: businesses, isLoading, error } = useBusinessesBySubcategory(
+    selectedCategory === 'All' ? null : selectedCategory,
+    selectedSubcategories.length > 0 ? selectedSubcategories[0] : null
+  );
 
   // Update URL when filters change
   useEffect(() => {
@@ -316,46 +311,59 @@ const Shop = () => {
     });
   }, [businesses, businessesWithDistance, isLocationEnabled, searchTerm, selectedCity, postalCode, filters]);
   const hasActiveFilters = selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly || isLocationEnabled;
-  return <MainLayout>
+
+  return (
+    <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* Location Toggle */}
-        <div className="mb-6">
-          <div className="bg-white rounded-xl border border-border p-4 py-[3px] px-[169px]">
-            <div className="flex items-center justify-between">
-              
-              <Button variant={isLocationEnabled ? "default" : "outline"} onClick={handleLocationToggle} disabled={isCalculatingDistances} className="flex items-center gap-2">
-                {isCalculatingDistances ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4" />}
-                {isLocationEnabled ? "Disable Location" : "Enable Location"}
-              </Button>
-            </div>
-
-          </div>
-        </div>
-
-        {/* City Filter and Postal Code Filter (Legacy) */}
-        <div className="flex flex-col md:flex-row gap-3 mb-4">
-          <div className="md:w-1/3">
+        {/* City Filter and Location Toggle - Combined Row */}
+        <div className="flex flex-col md:flex-row gap-3 mb-3">
+          <div className="md:w-1/2">
             <Select value={selectedCity} onValueChange={handleCityChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select city" />
               </SelectTrigger>
               <SelectContent>
-                {INDIAN_CITIES.map(city => <SelectItem key={city} value={city}>
+                {INDIAN_CITIES.map(city => (
+                  <SelectItem key={city} value={city}>
                     {city}
-                  </SelectItem>)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="md:w-2/3">
-            <PostalCodeSearch onSearch={handlePostalCodeSearch} initialValue={postalCode} />
+          <div className="md:w-1/2">
+            <Button 
+              variant={isLocationEnabled ? "default" : "outline"} 
+              onClick={handleLocationToggle} 
+              disabled={isCalculatingDistances} 
+              className="flex items-center gap-2 w-full"
+            >
+              {isCalculatingDistances ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Navigation className="h-4 w-4" />
+              )}
+              {isLocationEnabled ? "Disable Location" : "Enable Location"}
+            </Button>
           </div>
+        </div>
+
+        {/* Postal Code Filter */}
+        <div className="mb-2">
+          <PostalCodeSearch onSearch={handlePostalCodeSearch} initialValue={postalCode} />
         </div>
         
         {/* Search Bar */}
-        <div className="relative mb-6 flex gap-2">
+        <div className="relative mb-4 flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search shops & services..." value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} className="pl-10" />
+            <Input 
+              placeholder="Search shops & services..." 
+              value={inputValue} 
+              onChange={e => setInputValue(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleSearch()} 
+              className="pl-10" 
+            />
           </div>
           <Button onClick={handleSearch} className="shrink-0">
             Search
@@ -364,46 +372,81 @@ const Shop = () => {
         
         {/* Categories with improved subcategory selector */}
         <div className="mb-6">
-          <CategoryScrollBar selected={selectedCategory} onSelect={handleCategoryChange} selectedSubcategory={selectedSubcategories} onSubcategorySelect={handleSubcategoryChange} />
+          <CategoryScrollBar 
+            selected={selectedCategory} 
+            onSelect={handleCategoryChange} 
+            selectedSubcategory={selectedSubcategories} 
+            onSubcategorySelect={handleSubcategoryChange} 
+          />
         </div>
         
-        
         <div className="mb-4 flex flex-wrap gap-2">
-          {hasActiveFilters && <>
+          {hasActiveFilters && (
+            <>
               <div className="text-sm text-muted-foreground mr-2 flex items-center">Active filters:</div>
               <Button size="sm" variant="destructive" onClick={handleResetFilters} className="h-7 gap-1">
                 <FilterX className="h-3.5 w-3.5" />
                 Reset All
               </Button>
-            </>}
+            </>
+          )}
         </div>
         
         {/* Filters and Sort Controls */}
         <div className="mb-6">
-          <SearchControls distance={filters.distance} setDistance={setters.setDistance} minRating={filters.minRating} setMinRating={setters.setMinRating} priceRange={filters.priceRange} setPriceRange={setters.setPriceRange} openNowOnly={filters.openNowOnly} setOpenNowOnly={setters.setOpenNowOnly} hiddenGemOnly={filters.hiddenGemOnly} setHiddenGemOnly={setters.setHiddenGemOnly} mustVisitOnly={filters.mustVisitOnly} setMustVisitOnly={setters.setMustVisitOnly} sortBy={filters.sortBy} onSortChange={handleSortChange} />
+          <SearchControls 
+            distance={filters.distance} 
+            setDistance={setters.setDistance} 
+            minRating={filters.minRating} 
+            setMinRating={setters.setMinRating} 
+            priceRange={filters.priceRange} 
+            setPriceRange={setters.setPriceRange} 
+            openNowOnly={filters.openNowOnly} 
+            setOpenNowOnly={setters.setOpenNowOnly} 
+            hiddenGemOnly={filters.hiddenGemOnly} 
+            setHiddenGemOnly={setters.setHiddenGemOnly} 
+            mustVisitOnly={filters.mustVisitOnly} 
+            setMustVisitOnly={setters.setMustVisitOnly} 
+            sortBy={filters.sortBy} 
+            onSortChange={handleSortChange} 
+          />
         </div>
         
         {/* Results */}
-        {isLoading ? <div className="flex justify-center py-12">
+        {isLoading ? (
+          <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div> : error ? <div className="text-center py-12">
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
             <p className="text-destructive">Error loading businesses. Please try again later.</p>
-          </div> : filteredBusinesses.length === 0 ? <div className="text-center py-12">
+          </div>
+        ) : filteredBusinesses.length === 0 ? (
+          <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">No businesses found</h3>
             <p className="text-muted-foreground">
               Try changing your filters or search term
             </p>
-          </div> : <div className="space-y-4">
+          </div>
+        ) : (
+          <div className="space-y-4">
             {/* Results summary */}
-            {isLocationEnabled && userLocation && <div className="text-sm text-muted-foreground">
+            {isLocationEnabled && userLocation && (
+              <div className="text-sm text-muted-foreground">
                 Showing {filteredBusinesses.length} businesses sorted by distance from your location
-              </div>}
+              </div>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredBusinesses.map(business => <BusinessCardPublic key={business.id} business={business as any} />)}
+              {filteredBusinesses.map(business => (
+                <BusinessCardPublic key={business.id} business={business as any} />
+              ))}
             </div>
-          </div>}
+          </div>
+        )}
       </div>
-    </MainLayout>;
+    </MainLayout>
+  );
 };
+
 export default Shop;
