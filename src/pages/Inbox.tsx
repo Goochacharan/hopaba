@@ -482,6 +482,31 @@ const Inbox: React.FC = () => {
     );
   };
 
+  // Handle call functionality for provider call button
+  const handleCall = (phone: string, providerName: string) => {
+    if (phone) {
+      const link = document.createElement('a');
+      link.href = `tel:${phone}`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast({
+        title: "Calling business",
+        description: `Dialing ${phone}...`,
+        duration: 2000
+      });
+    } else {
+      toast({
+        title: "Phone number not available",
+        description: "This business has not provided a phone number",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  };
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-background">
@@ -789,15 +814,17 @@ const Inbox: React.FC = () => {
                                           </span>
                                         </div>
                                         
-                                        {/* Add Call Button */}
+                                        {/* Enhanced Call Button with proper styling */}
                                         {providerDetails.contact_phone && (
-                                          <a 
-                                            href={`tel:${providerDetails.contact_phone}`}
-                                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 transition-colors"
+                                          <button
+                                            onClick={() => handleCall(providerDetails.contact_phone, conversation.service_providers.name || "Service Provider")}
+                                            title="Call Business"
+                                            aria-label="Call business"
+                                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
                                           >
-                                            <Phone className="h-3 w-3" />
+                                            <Phone className="h-4 w-4" />
                                             Call
-                                          </a>
+                                          </button>
                                         )}
                                       </div>
                                     )}
