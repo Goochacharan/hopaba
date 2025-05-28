@@ -68,23 +68,53 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
     );
   }
 
+  // Determine other party name based on user type
+  const isProvider = conversation.service_providers?.user_id === user?.id;
+  const otherPartyName = isProvider 
+    ? `${conversation.service_requests?.title || 'Customer'}`
+    : conversation.service_providers?.name || 'Service Provider';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b">
           <ConversationHeader 
-            conversation={conversation} 
-            showBackButton={false}
+            otherPartyName={otherPartyName}
+            conversation={conversation}
           />
         </DialogHeader>
         
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-hidden">
-            <MessagesList conversationId={conversationId} />
+            <MessagesList 
+              conversationId={conversationId}
+              messages={[]} // This will be loaded by the component itself
+              userId={user?.id || ''}
+              otherPartyName={otherPartyName}
+              isProvider={isProvider}
+              businessName={conversation.service_providers?.name}
+              providerId={conversation.provider_id}
+            />
           </div>
           
           <div className="border-t bg-background p-4">
-            <MessageInput conversationId={conversationId} />
+            <MessageInput 
+              message=""
+              setMessage={() => {}}
+              quotationMode={false}
+              setQuotationMode={() => {}}
+              quotationPrice=""
+              setQuotationPrice={() => {}}
+              handleSendMessage={() => {}}
+              isSendingMessage={false}
+              isProvider={isProvider}
+              requestDetails={conversation.service_requests ? {
+                title: conversation.service_requests.title,
+                category: conversation.service_requests.category,
+                subcategory: conversation.service_requests.subcategory,
+                budget: conversation.service_requests.budget
+              } : undefined}
+            />
           </div>
         </div>
       </DialogContent>
