@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -502,8 +503,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   return (
     <div className="h-full flex flex-col space-y-2">
-      {/* Filters and sort controls - reduced height */}
-      <div className="flex-shrink-0 bg-white border-b pb-2">
+      {/* Filters and sort controls - simplified styling */}
+      <div className="flex-shrink-0 pb-2">
         <ProviderFilters 
           cities={cities}
           onFilterChange={setFilters}
@@ -520,7 +521,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
         </div>
       )}
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area - removed background styling */}
       <div className="flex-1 overflow-y-auto">
         {filteredAndSortedProviders.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
