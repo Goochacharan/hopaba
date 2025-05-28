@@ -67,7 +67,14 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   // Type cast messages to ensure proper typing
   const messages: Message[] = messagesData.map(msg => ({
     ...msg,
-    sender_type: msg.sender_type as "user" | "provider"
+    sender_type: msg.sender_type as "user" | "provider",
+    pricing_type: msg.pricing_type as "fixed" | "negotiable" | "wholesale",
+    attachments: msg.attachments || [],
+    quotation_images: msg.quotation_images || [],
+    delivery_available: msg.delivery_available || false,
+    quotation_price: msg.quotation_price || undefined,
+    negotiable_price: msg.negotiable_price || undefined,
+    wholesale_price: msg.wholesale_price || undefined
   }));
 
   // Close dialog if conversation not found and not loading
