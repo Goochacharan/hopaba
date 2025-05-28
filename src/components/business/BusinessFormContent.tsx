@@ -80,6 +80,7 @@ interface BusinessFormContentProps {
   setShowAddSubcategoryDialog: (show: boolean) => void;
   isSubmitting: boolean;
   business: any;
+  onCancel?: () => void;
 }
 
 const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
