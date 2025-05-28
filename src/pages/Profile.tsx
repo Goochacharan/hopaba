@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import BusinessFormSimple from '@/components/business/BusinessFormSimple';
-import BusinessListSimple from '@/components/business/BusinessListSimple';
 import { Business } from '@/components/business/BusinessForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Lazy load the AdminSection to improve performance and avoid initial loading issues
+// Lazy load heavy components to improve initial page load
 const AdminSection = lazy(() => import('@/components/admin/AdminSectionWrapper'));
+const BusinessFormSimple = lazy(() => import('@/components/business/BusinessFormSimple'));
+const BusinessListSimple = lazy(() => import('@/components/business/BusinessListSimple'));
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -74,6 +74,16 @@ const Profile = () => {
   const handleViewServiceRequests = () => {
     navigate('/provider-requests');
   };
+
+  // Loading component for lazy loaded sections
+  const LoadingCard = ({ text }: { text: string }) => (
+    <Card>
+      <CardContent className="p-6 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+        <span>{text}</span>
+      </CardContent>
+    </Card>
+  );
 
   if (pageError) {
     return <MainLayout>
@@ -135,14 +145,7 @@ const Profile = () => {
 
         {/* Admin section with error handling and loading state */}
         {isAdmin && !adminLoading && (
-          <Suspense fallback={
-            <Card className="mb-8">
-              <CardContent className="p-6 flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2">Loading admin section...</span>
-              </CardContent>
-            </Card>
-          }>
+          <Suspense fallback={<LoadingCard text="Loading admin section..." />}>
             <AdminSection />
           </Suspense>
         )}
@@ -166,7 +169,9 @@ const Profile = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
+                  <Suspense fallback={<LoadingCard text="Loading business form..." />}>
+                    <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
+                  </Suspense>
                 </CardContent>
               </Card>
             ) : (
@@ -179,7 +184,9 @@ const Profile = () => {
                   </Button>
                 </div>
 
-                <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
+                <Suspense fallback={<LoadingCard text="Loading your businesses..." />}>
+                  <BusinessListSimple onEdit={handleEditBusiness} refresh={refreshBusinesses} />
+                </Suspense>
               </div>
             )}
           </TabsContent>
