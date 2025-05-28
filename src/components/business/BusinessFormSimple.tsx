@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,69 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import BusinessFormContent from './BusinessFormContent';
 import { useCategories, useSubcategories } from '@/hooks/useCategories';
-
-export interface BusinessFormValues {
-  name: string;
-  category: string;
-  subcategory: string[];
-  description: string;
-  area: string;
-  city: string;
-  address: string;
-  postal_code: string;
-  contact_phone: string;
-  whatsapp: string;
-  contact_email?: string;
-  website?: string;
-  instagram?: string;
-  price_range_min?: number;
-  price_range_max?: number;
-  price_unit?: string;
-  map_link?: string;
-  tags?: string[];
-  experience?: string;
-  availability?: string;
-  hours?: string;
-  hours_from?: string;
-  hours_to?: string;
-  availability_days?: string[];
-  images?: string[];
-  languages?: string[];
-}
-
-export interface Business {
-  id?: string;
-  name: string;
-  category: string;
-  subcategory?: string[];
-  description: string;
-  area: string;
-  city: string;
-  address: string;
-  postal_code: string;
-  contact_phone: string;
-  whatsapp: string;
-  contact_email?: string;
-  website?: string;
-  instagram?: string;
-  price_range_min?: number;
-  price_range_max?: number;
-  price_unit?: string;
-  map_link?: string;
-  tags?: string[];
-  experience?: string;
-  availability?: string;
-  hours?: string;
-  hours_from?: string;
-  hours_to?: string;
-  availability_days?: string[];
-  images?: string[];
-  languages?: string[];
-  approval_status?: string;
-  user_id?: string;
-  created_at?: string;
-  updated_at?: string;
-}
+import { BusinessFormValues, Business } from './BusinessForm';
 
 const businessSchema = z.object({
   name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
@@ -121,7 +58,6 @@ const businessSchema = z.object({
   tags: z.array(z.string()).min(3, { message: "Please add at least 3 tags describing your services or items." }).optional(),
   experience: z.string().optional().or(z.literal('')),
   availability: z.string().optional().or(z.literal('')),
-  hours: z.string().optional().or(z.literal('')),
   hours_from: z.string().optional(),
   hours_to: z.string().optional(),
   availability_days: z.array(z.string()).optional(),
@@ -312,7 +248,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       tags: business?.tags || [],
       experience: business?.experience || "",
       availability: business?.availability || "",
-      hours: business?.hours || "",
       hours_from: defaultHoursFrom,
       hours_to: defaultHoursTo,
       availability_days: business?.availability_days || [],
@@ -622,6 +557,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
                 setShowAddSubcategoryDialog={setShowAddSubcategoryDialog}
                 isSubmitting={isSubmitting}
                 business={business}
+                onCancel={onCancel}
               />
             </CardContent>
           </Card>
