@@ -39,6 +39,7 @@ import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
+import ChatDialog from '@/components/messaging/ChatDialog';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -72,6 +73,10 @@ const Inbox: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
   
+  // Chat dialog state
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
   
@@ -81,7 +86,7 @@ const Inbox: React.FC = () => {
   const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
   const [messagesSortBy, setMessagesSortBy] = useState<string>('recent');
   const [conversationsWithDistance, setConversationsWithDistance] = useState<any[]>([]);
-  
+
   // Enhanced debug logging for conversations
   useEffect(() => {
     console.log('Inbox - Conversations data:', conversations);
@@ -105,6 +110,18 @@ const Inbox: React.FC = () => {
     setSelectedRequestId(requestId);
     setActiveTab("messages");
     setRetryCount(0); // Reset retry count when switching requests
+  };
+  
+  // Handle opening chat dialog
+  const handleChatOpen = (conversationId: string) => {
+    setSelectedConversationId(conversationId);
+    setChatDialogOpen(true);
+  };
+
+  // Handle closing chat dialog
+  const handleChatClose = () => {
+    setChatDialogOpen(false);
+    setSelectedConversationId(null);
   };
   
   // Get the selected request details
@@ -861,11 +878,7 @@ const Inbox: React.FC = () => {
                                         "flex-1",
                                         unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
                                       )}
-                                      onClick={() => {
-                                        // Set navigation source for back button
-                                        sessionStorage.setItem('conversationNavigationSource', 'inbox');
-                                        window.location.href = `/messages/${conversation.id}`;
-                                      }}
+                                      onClick={() => handleChatOpen(conversation.id)}
                                     >
                                       <MessageSquare className="h-4 w-4 mr-1" />
                                       {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
@@ -890,6 +903,13 @@ const Inbox: React.FC = () => {
             </div>
           </div>
         </SidebarProvider>
+        
+        {/* Chat Dialog */}
+        <ChatDialog
+          conversationId={selectedConversationId}
+          open={chatDialogOpen}
+          onOpenChange={setChatDialogOpen}
+        />
       </div>
     </MainLayout>
   );
