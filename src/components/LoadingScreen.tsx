@@ -16,7 +16,7 @@ const LoadingScreen: React.FC = () => {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes zoom-in {
           0% {
             transform: scale(0.5);
