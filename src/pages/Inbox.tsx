@@ -49,7 +49,7 @@ const SidebarToggleButton = () => {
     <button 
       onClick={toggleSidebar}
       className={cn(
-        "absolute left-0 top-1/2 -translate-y-1/2 z-[100] bg-primary text-primary-foreground p-2 rounded-r-md shadow-lg transition-all duration-300",
+        "fixed left-0 top-1/2 -translate-y-1/2 z-[100] bg-primary text-primary-foreground p-2 rounded-r-md shadow-lg transition-all duration-300",
         "flex items-center justify-center hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring",
         "md:h-16 md:w-8",
         "h-14 w-7",

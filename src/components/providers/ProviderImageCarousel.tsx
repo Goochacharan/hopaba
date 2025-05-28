@@ -17,6 +17,11 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
   className
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum distance for a swipe
+  const minSwipeDistance = 50;
 
   // If no images, show placeholder
   if (!images || images.length === 0) {
@@ -31,16 +36,20 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
     );
   }
 
-  const nextImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const nextImage = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     console.log('Next image clicked, current:', currentImageIndex);
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
-  const previousImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const previousImage = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     console.log('Previous image clicked, current:', currentImageIndex);
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
@@ -52,17 +61,49 @@ const ProviderImageCarousel: React.FC<ProviderImageCarouselProps> = ({
     setCurrentImageIndex(index);
   };
 
+  // Touch event handlers for mobile swipe support
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && images.length > 1) {
+      nextImage();
+    }
+    if (isRightSwipe && images.length > 1) {
+      previousImage();
+    }
+  };
+
   return (
     <div className={cn("relative group", className)}>
       <AspectRatio ratio={16 / 9}>
-        <img
-          src={images[currentImageIndex]}
-          alt={`${providerName} - Image ${currentImageIndex + 1}`}
-          className="w-full h-full object-cover rounded-md"
-          onError={(e) => {
-            e.currentTarget.src = '/placeholder.svg';
-          }}
-        />
+        <div
+          className="w-full h-full"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <img
+            src={images[currentImageIndex]}
+            alt={`${providerName} - Image ${currentImageIndex + 1}`}
+            className="w-full h-full object-cover rounded-md"
+            onError={(e) => {
+              e.currentTarget.src = '/placeholder.svg';
+            }}
+          />
+        </div>
         
         {/* Navigation arrows - only show if more than one image */}
         {images.length > 1 && (
