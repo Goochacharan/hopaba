@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import { WishlistProvider } from "./contexts/WishlistContext";
 import { AuthProvider } from "./hooks/useAuth";
 import React, { Suspense, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import LoadingScreen from "./components/LoadingScreen";
 
 // Lazy load route components with chunks named for better debugging
 const SearchResults = React.lazy(() => import(/* webpackChunkName: "search-results" */ "./pages/SearchResults"));
@@ -42,16 +42,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-// Loading component with better UX
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background/50 backdrop-blur-sm">
-    <div className="flex flex-col items-center gap-2">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <span className="text-sm text-muted-foreground">Loading...</span>
-    </div>
-  </div>
-);
 
 // Error boundary component for handling lazy load errors
 const ErrorFallback = () => (
@@ -125,7 +115,7 @@ const App = () => (
             <Sonner />
             <RoutePrefetcher />
             <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   {/* Redirect root to shop page */}
                   <Route path="/" element={<Navigate to="/shop" replace />} />

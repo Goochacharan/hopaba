@@ -89,24 +89,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   };
   
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
-      <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
+      <header className="w-full sticky top-0 z-50 bg-gradient-to-r from-red-600 to-red-500 border-b border-red-400/50 px-6 py-4 shadow-sm">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
           <Link to="/shop" className="flex items-center gap-2" role="button" aria-label="Go to shop page" onClick={e => {
           e.preventDefault();
           navigateToShop();
         }}>
             <AnimatedLogo size="sm" />
-            <h1 className="text-xl font-medium tracking-tight">
-              Hopaba
+            <h1 className="text-xl font-medium tracking-tight text-white">
+              Chowkashi
             </h1>
           </Link>
           
           <div className="flex items-center gap-4">
             {!user && <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
+                <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="border-white/20 text-white hover:bg-white/10">
                   Login
                 </Button>
-                <Button size="sm" onClick={() => navigate('/signup')}>
+                <Button size="sm" onClick={() => navigate('/signup')} className="bg-white text-red-600 hover:bg-white/90">
                   Sign Up
                 </Button>
               </div>}
