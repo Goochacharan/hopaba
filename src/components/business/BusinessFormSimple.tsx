@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,6 +51,7 @@ export interface BusinessFormValues {
   hours_to?: string;
   availability_days?: string[];
   images?: string[];
+  languages?: string[];
 }
 
 export interface Business {
@@ -79,8 +81,8 @@ export interface Business {
   hours_to?: string;
   availability_days?: string[];
   images?: string[];
-  approval_status?: string;
   languages?: string[];
+  approval_status?: string;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -124,6 +126,7 @@ const businessSchema = z.object({
   hours_to: z.string().optional(),
   availability_days: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
 });
 
 interface BusinessFormProps {
@@ -314,6 +317,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       hours_to: defaultHoursTo,
       availability_days: business?.availability_days || [],
       images: business?.images || [],
+      languages: business?.languages || [],
     },
   });
 
@@ -506,12 +510,13 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
       
       console.log("Submitting availability days:", availabilityDays);
       console.log("Subcategory values:", data.subcategory);
+      console.log("Languages:", data.languages);
       
       // Ensure subcategory is always an array
       const subcategoryArray = Array.isArray(data.subcategory) ? data.subcategory : 
                               (data.subcategory ? [data.subcategory] : []);
       
-      // Prepare business data with correct subcategory array
+      // Prepare business data with languages
       const businessData = {
         name: data.name,
         category: data.category,
@@ -540,6 +545,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
         availability_end_time: data.hours_to || null,
         availability_days: availabilityDays,
         images: data.images || [],
+        languages: data.languages || [],
       };
 
       console.log("Submitting business data:", businessData);

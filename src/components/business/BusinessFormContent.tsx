@@ -1,47 +1,31 @@
+
 import React from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { Business, BusinessFormValues } from './BusinessFormSimple';
-import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TagsInput } from '@/components/ui/tags-input';
-import { ImageUpload } from '@/components/ui/image-upload';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import SubcategorySelector from './SubcategorySelector';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, X } from "lucide-react";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { UseFormReturn } from "react-hook-form";
+import { BusinessFormValues } from "./BusinessFormSimple";
+import LanguagesSelector from "./LanguagesSelector";
+import { useState } from 'react';
 
-// Added list of major Indian cities
-const INDIAN_CITIES = [
-  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
-  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
-  "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"
+const PRICE_UNITS = [
+  "per hour", 
+  "per day", 
+  "per session", 
+  "per month", 
+  "per person",
+  "fixed price"
 ];
-
-interface BusinessFormContentProps {
-  form?: UseFormReturn<BusinessFormValues>;
-  handlePhoneInput?: (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => void;
-  handleDayToggle?: (day: string, checked: boolean) => void;
-  selectedDays?: string[];
-  loadingCategories?: boolean;
-  dbCategories?: any[] | undefined;
-  categories?: string[];
-  isAdmin?: boolean;
-  setShowAddCategoryDialog?: (show: boolean) => void;
-  selectedCategoryId?: string | null;
-  loadingSubcategories?: boolean;
-  subcategories?: any[] | undefined;
-  setShowAddSubcategoryDialog?: (show: boolean) => void;
-  isSubmitting: boolean;
-  business?: Business;
-  onCancel?: () => void;
-}
 
 const DAYS_OF_WEEK = [
   "Monday",
-  "Tuesday",
+  "Tuesday", 
   "Wednesday",
   "Thursday",
   "Friday",
@@ -65,19 +49,38 @@ const TIME_OPTIONS = [
 const EXPERIENCE_OPTIONS = [
   "Less than 1 year",
   "1-3 years",
-  "3-5 years",
+  "3-5 years", 
   "5-10 years",
   "More than 10 years"
 ];
 
-const PRICE_UNITS = [
-  "per hour", 
-  "per day", 
-  "per session", 
-  "per month", 
-  "per person",
-  "fixed price"
+const AVAILABILITY_OPTIONS = [
+  "Weekdays Only",
+  "Weekends Only",
+  "All Days",
+  "Monday to Friday",
+  "Weekends and Evenings",
+  "By Appointment Only",
+  "Seasonal"
 ];
+
+interface BusinessFormContentProps {
+  form: UseFormReturn<BusinessFormValues>;
+  handlePhoneInput: (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => void;
+  handleDayToggle: (day: string, checked: boolean) => void;
+  selectedDays: string[];
+  loadingCategories: boolean;
+  dbCategories: any[];
+  categories: string[];
+  isAdmin: boolean;
+  setShowAddCategoryDialog: (show: boolean) => void;
+  selectedCategoryId: string | null;
+  loadingSubcategories: boolean;
+  subcategories: any[];
+  setShowAddSubcategoryDialog: (show: boolean) => void;
+  isSubmitting: boolean;
+  business: any;
+}
 
 const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
   form,
@@ -96,13 +99,37 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
   isSubmitting,
   business
 }) => {
+  const [tagInput, setTagInput] = useState('');
+  const tags = form.watch('tags') || [];
+  const selectedLanguages = form.watch('languages') || [];
+
+  const handleAddTag = () => {
+    if (tagInput.trim() !== '' && !tags.includes(tagInput.trim())) {
+      form.setValue('tags', [...tags, tagInput.trim()]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (index: number) => {
+    form.setValue('tags', tags.filter((_: string, i: number) => i !== index));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  const handleLanguagesChange = (languages: string[]) => {
+    form.setValue('languages', languages, { shouldValidate: true });
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Basic Information Section */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Building className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Basic Information</h3>
-        </div>
+        <h3 className="text-lg font-semibold">Basic Information</h3>
         
         <FormField
           control={form.control}
@@ -111,7 +138,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             <FormItem>
               <FormLabel>Business Name*</FormLabel>
               <FormControl>
-                <Input placeholder="Your business name" {...field} />
+                <Input placeholder="Enter business name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -125,45 +152,43 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             <FormItem>
               <FormLabel>Category*</FormLabel>
               <div className="flex gap-2">
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  value={field.value}
+                  disabled={loadingCategories}
+                >
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     {loadingCategories ? (
-                      <div className="px-2 py-1.5 text-sm">Loading categories...</div>
-                    ) : dbCategories?.length ? (
-                      dbCategories.map(category => (
-                        <SelectItem key={category.id} value={category.name}>
-                          {category.name}
-                        </SelectItem>
-                      ))
-                    ) : categories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                    {isAdmin && (
-                      <button 
-                        className="flex w-full items-center px-2 py-1.5 text-sm rounded-sm hover:bg-muted"
-                        type="button"
-                        onClick={() => setShowAddCategoryDialog(true)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add New Category
-                      </button>
+                      <SelectItem value="loading" disabled>Loading categories...</SelectItem>
+                    ) : (
+                      <>
+                        {dbCategories?.map(category => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                        {categories.filter(cat => !dbCategories?.some(dbCat => dbCat.name === cat)).map(category => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </>
                     )}
                   </SelectContent>
                 </Select>
                 {isAdmin && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowAddCategoryDialog(true)}
-                    title="Add New Category"
+                    className="shrink-0"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -173,43 +198,76 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="subcategory"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <ListOrdered className="h-4 w-4" />
-                Subcategory
-              </FormLabel>
+              <FormLabel>Subcategory</FormLabel>
               <div className="flex gap-2">
-                {/* Replace the Select with the SubcategorySelector component */}
-                <SubcategorySelector
-                  categoryId={selectedCategoryId || undefined}
-                  value={field.value}
-                  onChange={(values) => {
-                    form.setValue("subcategory", values, { shouldValidate: true });
+                <Select 
+                  onValueChange={(value) => {
+                    const currentSubcategories = field.value || [];
+                    if (value && !currentSubcategories.includes(value)) {
+                      field.onChange([...currentSubcategories, value]);
+                    }
                   }}
-                  disabled={!selectedCategoryId}
-                  isVisible={true}
-                  className="w-full"
-                />
+                  disabled={!selectedCategoryId || loadingSubcategories}
+                >
+                  <FormControl>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={selectedCategoryId ? "Select subcategory" : "Select a category first"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {loadingSubcategories ? (
+                      <SelectItem value="loading" disabled>Loading subcategories...</SelectItem>
+                    ) : (
+                      subcategories?.map(subcategory => (
+                        <SelectItem key={subcategory.id} value={subcategory.name}>
+                          {subcategory.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
                 {isAdmin && selectedCategoryId && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShowAddSubcategoryDialog(true)}
-                    title="Add New Subcategory"
+                    className="shrink-0"
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
                 )}
               </div>
-              {!selectedCategoryId && (
-                <FormDescription>Select a category first to see subcategories (optional)</FormDescription>
+              
+              {/* Display selected subcategories */}
+              {field.value && field.value.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {field.value.map((subcategory: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="px-2 py-1">
+                      {subcategory}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-1 h-4 w-4 p-0 text-muted-foreground"
+                        onClick={() => {
+                          const newSubcategories = field.value.filter((_: string, i: number) => i !== index);
+                          field.onChange(newSubcategories);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
               )}
+              
               <FormMessage />
             </FormItem>
           )}
@@ -222,7 +280,70 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             <FormItem>
               <FormLabel>Description*</FormLabel>
               <FormControl>
-                <Textarea placeholder="Describe your business or service" className="min-h-[120px]" {...field} />
+                <Textarea 
+                  placeholder="Describe your business, services offered, and any other important information"
+                  className="min-h-[120px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Tags Section */}
+        <div>
+          <FormLabel>Tags (at least 3)*</FormLabel>
+          <div className="flex mt-2">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Add tags (press Enter)"
+              className="mr-2"
+            />
+            <Button type="button" onClick={handleAddTag}>Add</Button>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {tags.map((tag: string, index: number) => (
+              <Badge key={index} variant="secondary" className="px-2 py-1">
+                {tag}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="ml-1 h-4 w-4 p-0 text-muted-foreground"
+                  onClick={() => handleRemoveTag(index)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            ))}
+          </div>
+          {tags.length < 3 && (
+            <p className="text-sm text-amber-600 mt-2">Please add at least 3 tags to describe your business</p>
+          )}
+        </div>
+
+        {/* Languages Section */}
+        <LanguagesSelector 
+          selectedLanguages={selectedLanguages}
+          onLanguagesChange={handleLanguagesChange}
+        />
+      </div>
+
+      {/* Location and Contact Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Location & Contact</h3>
+        
+        <FormField
+          control={form.control}
+          name="area"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Area*</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter area" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -231,34 +352,18 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
 
         <FormField
           control={form.control}
-          name="images"
+          name="city"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Business Images</FormLabel>
-              <FormDescription>
-                Upload images of your business or services
-              </FormDescription>
+              <FormLabel>City*</FormLabel>
               <FormControl>
-                <ImageUpload 
-                  images={field.value || []} 
-                  onImagesChange={(images) => form.setValue('images', images, { shouldValidate: true })}
-                  maxImages={10}
-                />
+                <Input placeholder="Enter city" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      </div>
 
-      <Separator />
-
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Location Information</h3>
-        </div>
-        
         <FormField
           control={form.control}
           name="address"
@@ -266,57 +371,12 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             <FormItem>
               <FormLabel>Address*</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your street address" {...field} />
+                <Input placeholder="Enter full address" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>City*</FormLabel>
-                <FormControl>
-                  <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select city" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDIAN_CITIES.map((city) => (
-                        <SelectItem key={city} value={city}>
-                          {city}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="area"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Area/Neighborhood*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter neighborhood or area" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <FormField
           control={form.control}
@@ -325,53 +385,24 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             <FormItem>
               <FormLabel>Postal Code*</FormLabel>
               <FormControl>
-                <Input placeholder="6-digit postal code" {...field} maxLength={6} />
+                <Input placeholder="Enter 6-digit postal code" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="map_link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Maps Link</FormLabel>
-              <FormControl>
-                <Input placeholder="Paste your Google Maps link here" {...field} />
-              </FormControl>
-              <FormDescription>
-                Optional: Add a link to your business on Google Maps
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <Separator />
-
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Phone className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Contact Information</h3>
-        </div>
-        
         <FormField
           control={form.control}
           name="contact_phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number*</FormLabel>
+              <FormLabel>Contact Phone*</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="Enter phone number" 
-                  value={field.value} 
-                  onChange={(e) => {
-                    field.onChange(e);
-                    handlePhoneInput(e, 'contact_phone');
-                  }}
+                  placeholder="+91XXXXXXXXXX"
+                  {...field}
+                  onChange={(e) => handlePhoneInput(e, 'contact_phone')}
                 />
               </FormControl>
               <FormMessage />
@@ -384,18 +415,12 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           name="whatsapp"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                WhatsApp Number*
-              </FormLabel>
+              <FormLabel>WhatsApp*</FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="Enter WhatsApp number" 
-                  value={field.value}
-                  onChange={(e) => {
-                    field.onChange(e);
-                    handlePhoneInput(e, 'whatsapp');
-                  }}
+                  placeholder="+91XXXXXXXXXX"
+                  {...field}
+                  onChange={(e) => handlePhoneInput(e, 'whatsapp')}
                 />
               </FormControl>
               <FormMessage />
@@ -408,7 +433,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           name="contact_email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email <span className="text-muted-foreground text-xs">(optional)</span></FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input placeholder="Enter email address" {...field} />
               </FormControl>
@@ -422,29 +447,23 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           name="website"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                Website <span className="text-xs text-muted-foreground">(optional)</span>
-              </FormLabel>
+              <FormLabel>Website</FormLabel>
               <FormControl>
-                <Input placeholder="Enter website URL" {...field} />
+                <Input placeholder="https://example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="instagram"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Instagram className="h-4 w-4" />
-                Instagram <span className="text-xs text-muted-foreground">(optional)</span>
-              </FormLabel>
+              <FormLabel>Instagram</FormLabel>
               <FormControl>
-                <Input placeholder="@yourusername or full URL" {...field} />
+                <Input placeholder="@username or https://instagram.com/username" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -452,74 +471,9 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
         />
       </div>
 
-      <Separator />
-
+      {/* Pricing Section */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Tag className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Services & Pricing</h3>
-        </div>
-        
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Services/Items Tags* (minimum 3)</FormLabel>
-              <FormDescription>
-                Add at least 3 tags describing your services or items
-              </FormDescription>
-              <FormControl>
-                <TagsInput
-                  placeholder="Type and press enter (e.g., Ice Cream, Massage, Haircut)"
-                  tags={field.value || []}
-                  setTags={(newTags) => form.setValue('tags', newTags, { shouldValidate: true })}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="price_range_min"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Min Price (₹)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="300"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="price_range_max"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Max Price (₹)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="400"
-                    value={field.value || ''}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <h3 className="text-lg font-semibold">Pricing & Services</h3>
         
         <FormField
           control={form.control}
@@ -530,7 +484,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a price unit" />
+                    <SelectValue placeholder="Select price unit" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -545,29 +499,57 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             </FormItem>
           )}
         />
-      </div>
 
-      <Separator />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="price_range_min"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Min Price (₹)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="1000"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Experience & Availability</h3>
+          <FormField
+            control={form.control}
+            name="price_range_max"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Max Price (₹)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="5000"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-        
+
         <FormField
           control={form.control}
           name="experience"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Professional Experience</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                value={field.value || undefined}
-              >
+              <FormLabel>Experience</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select years of experience" />
+                    <SelectValue placeholder="Select experience level" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -582,66 +564,46 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             </FormItem>
           )}
         />
+      </div>
+
+      {/* Availability Section */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Availability</h3>
         
-        <FormField
-          control={form.control}
-          name="availability_days"
-          render={() => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Available Days
-              </FormLabel>
-              <FormDescription>
-                Select the days you are available
-              </FormDescription>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {DAYS_OF_WEEK.map((day) => (
-                  <FormItem
-                    key={day}
-                    className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3"
-                  >
-                    <FormControl>
-                      <Checkbox
-                        checked={selectedDays.includes(day)}
-                        onCheckedChange={(checked) => {
-                          handleDayToggle(day, checked as boolean);
-                        }}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal cursor-pointer">
-                      {day}
-                    </FormLabel>
-                  </FormItem>
-                ))}
+        <div>
+          <FormLabel>Available Days</FormLabel>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {DAYS_OF_WEEK.map((day) => (
+              <div key={day} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`day-${day}`}
+                  checked={selectedDays.includes(day)}
+                  onCheckedChange={(checked) => handleDayToggle(day, checked as boolean)}
+                />
+                <label htmlFor={`day-${day}`} className="text-sm font-medium">
+                  {day}
+                </label>
               </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="hours_from"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Working Hours From
-                </FormLabel>
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value || "9:00 AM"}
-                >
+                <FormLabel>From Time</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select start time" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     {TIME_OPTIONS.map(time => (
-                      <SelectItem key={`from-${time}`} value={time}>
+                      <SelectItem key={time} value={time}>
                         {time}
                       </SelectItem>
                     ))}
@@ -651,28 +613,22 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="hours_to"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Working Hours To
-                </FormLabel>
-                <Select 
-                  onValueChange={field.onChange}
-                  value={field.value || "5:00 PM"}
-                >
+                <FormLabel>To Time</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select end time" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent>
                     {TIME_OPTIONS.map(time => (
-                      <SelectItem key={`to-${time}`} value={time}>
+                      <SelectItem key={time} value={time}>
                         {time}
                       </SelectItem>
                     ))}
@@ -683,6 +639,29 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             )}
           />
         </div>
+      </div>
+
+      {/* Images Section */}
+      <div className="space-y-4 md:col-span-2">
+        <h3 className="text-lg font-semibold">Business Images</h3>
+        
+        <FormField
+          control={form.control}
+          name="images"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Upload Images*</FormLabel>
+              <FormControl>
+                <ImageUpload
+                  images={field.value || []}
+                  onImagesChange={field.onChange}
+                  maxImages={10}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
     </div>
   );
