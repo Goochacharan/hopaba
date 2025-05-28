@@ -111,8 +111,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
               requestDetails={conversation.service_requests ? {
                 title: conversation.service_requests.title,
                 category: conversation.service_requests.category,
-                subcategory: conversation.service_requests.subcategory,
-                budget: conversation.service_requests.budget
+                subcategory: conversation.service_requests.subcategory
               } : undefined}
             />
           </div>
