@@ -87,7 +87,6 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-hidden">
             <MessagesList 
-              conversationId={conversationId}
               messages={[]} // This will be loaded by the component itself
               userId={user?.id || ''}
               otherPartyName={otherPartyName}
