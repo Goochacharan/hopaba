@@ -24,6 +24,7 @@ export const CATEGORIES = [
   "Model",
   "Musician",
   "Nail Technicians",
+  "Other",
   "Painter",
   "Photographer",
   "Plumber",
@@ -36,9 +37,8 @@ export const CATEGORIES = [
   "Vacation Rentals",
   "Videographers",
   "Weight Loss Centers",
-  "Writer",
-  "Other"
-].sort() as const;
+  "Writer"
+] as const;
 
 export const PRICE_UNITS = [
   "per hour",
