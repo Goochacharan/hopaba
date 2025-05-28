@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, X } from "lucide-react";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { UseFormReturn } from "react-hook-form";
-import { BusinessFormValues } from "./BusinessFormSimple";
+import { BusinessFormValues } from "./BusinessForm";
 import LanguagesSelector from "./LanguagesSelector";
 import { useState } from 'react';
 
