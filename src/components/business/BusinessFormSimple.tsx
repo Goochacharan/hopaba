@@ -279,15 +279,6 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, on
     }
   }, [business, form]);
 
-  useEffect(() => {
-    const hoursFrom = form.getValues("hours_from");
-    const hoursTo = form.getValues("hours_to");
-    
-    if (hoursFrom && hoursTo) {
-      form.setValue("hours", `${hoursFrom} - ${hoursTo}`);
-    }
-  }, [form.watch("hours_from"), form.watch("hours_to")]);
-
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => {
     let value = e.target.value;
     

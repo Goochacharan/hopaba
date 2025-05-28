@@ -10,7 +10,7 @@ import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch } from 'luc
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
 import BusinessListSimple from '@/components/business/BusinessListSimple';
-import { Business } from '@/components/business/BusinessFormSimple';
+import { Business } from '@/components/business/BusinessForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Lazy load the AdminSection to improve performance and avoid initial loading issues
