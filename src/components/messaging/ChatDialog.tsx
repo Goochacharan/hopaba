@@ -15,6 +15,7 @@ import { Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Message } from '@/types/serviceRequestTypes';
 
 interface ChatDialogProps {
   conversationId: string | null;
@@ -41,7 +42,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   const conversation = conversations?.find(conv => conv.id === conversationId);
 
   // Fetch messages for this conversation
-  const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
+  const { data: messagesData = [], isLoading: isLoadingMessages } = useQuery({
     queryKey: ['conversation-messages', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
@@ -62,6 +63,12 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
     enabled: !!conversationId && open,
     staleTime: 30000, // 30 seconds
   });
+
+  // Type cast messages to ensure proper typing
+  const messages: Message[] = messagesData.map(msg => ({
+    ...msg,
+    sender_type: msg.sender_type as "user" | "provider"
+  }));
 
   // Close dialog if conversation not found and not loading
   useEffect(() => {
