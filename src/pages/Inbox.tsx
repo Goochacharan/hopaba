@@ -880,11 +880,9 @@ const Inbox: React.FC = () => {
                     </TabsContent>
                     
                     <TabsContent value="providers">
-                      <div className="border rounded-lg p-4 shadow-sm">
-                        {selectedRequestId && (
-                          <MatchingProvidersContent requestId={selectedRequestId} />
-                        )}
-                      </div>
+                      {selectedRequestId && (
+                        <MatchingProvidersContent requestId={selectedRequestId} />
+                      )}
                     </TabsContent>
                   </Tabs>
                 </>
