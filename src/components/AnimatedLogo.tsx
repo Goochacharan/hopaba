@@ -19,12 +19,12 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
 
   return (
     <div className={cn('relative flex items-center justify-center', sizeClasses[size], className)}>
-      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-red-500/80 to-orange-400/30 blur-md animate-pulse-soft" />
+      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-400/80 to-green-400/30 blur-md animate-pulse-soft" />
       <div className="absolute inset-0 rounded-full bg-white/80 backdrop-blur-sm" />
       <div className="relative z-10 flex items-center justify-center w-full h-full">
         <img 
-          src="/lovable-uploads/a0c1e02e-e40f-437a-83ba-65749c6b0113.png" 
-          alt="Chowkashi Logo" 
+          src="/lovable-uploads/92aaa562-a180-460d-9f71-3b12d541c349.png" 
+          alt="Hopaba Logo" 
           className="w-[85%] h-[85%] object-contain" 
         />
       </div>
