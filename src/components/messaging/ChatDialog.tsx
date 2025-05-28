@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,9 @@ import MessageInput from '@/components/messaging/MessageInput';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 interface ChatDialogProps {
   conversationId: string | null;
@@ -26,9 +29,39 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const { conversations, isLoadingConversations } = useConversations();
+  const queryClient = useQueryClient();
+
+  // Message input state
+  const [message, setMessage] = useState('');
+  const [quotationMode, setQuotationMode] = useState(false);
+  const [quotationPrice, setQuotationPrice] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   // Find the specific conversation
   const conversation = conversations?.find(conv => conv.id === conversationId);
+
+  // Fetch messages for this conversation
+  const { data: messages = [], isLoading: isLoadingMessages } = useQuery({
+    queryKey: ['conversation-messages', conversationId],
+    queryFn: async () => {
+      if (!conversationId) return [];
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+    enabled: !!conversationId && open,
+    staleTime: 30000, // 30 seconds
+  });
 
   // Close dialog if conversation not found and not loading
   useEffect(() => {
@@ -37,6 +70,65 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
     }
   }, [conversation, conversationId, isLoadingConversations, onOpenChange]);
 
+  // Handle sending messages
+  const handleSendMessage = async () => {
+    if (!conversationId || !user || (!message.trim() && !quotationMode)) return;
+
+    setIsSendingMessage(true);
+    try {
+      const messageData: any = {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        sender_type: conversation?.service_providers?.user_id === user.id ? 'provider' : 'user',
+        content: message.trim(),
+      };
+
+      // Add quotation data if in quotation mode
+      if (quotationMode && quotationPrice) {
+        messageData.quotation_price = parseInt(quotationPrice);
+        messageData.pricing_type = 'fixed';
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .insert([messageData]);
+
+      if (error) {
+        console.error('Error sending message:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Clear form
+      setMessage('');
+      setQuotationPrice('');
+      setQuotationMode(false);
+
+      // Refresh messages
+      queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+
+      // Update conversation timestamp
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversationId);
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   if (!open || !conversationId) {
     return null;
   }
@@ -44,7 +136,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   if (isLoadingConversations) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -56,7 +148,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   if (!conversation) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Conversation Not Found</DialogTitle>
           </DialogHeader>
@@ -76,7 +168,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b">
           <ConversationHeader 
             otherPartyName={otherPartyName}
@@ -86,26 +178,32 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
         
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-hidden">
-            <MessagesList 
-              messages={[]} // This will be loaded by the component itself
-              userId={user?.id || ''}
-              otherPartyName={otherPartyName}
-              isProvider={isProvider}
-              businessName={conversation.service_providers?.name}
-              providerId={conversation.provider_id}
-            />
+            {isLoadingMessages ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <MessagesList 
+                messages={messages}
+                userId={user?.id || ''}
+                otherPartyName={otherPartyName}
+                isProvider={isProvider}
+                businessName={conversation.service_providers?.name}
+                providerId={conversation.provider_id}
+              />
+            )}
           </div>
           
           <div className="border-t bg-background p-4">
             <MessageInput 
-              message=""
-              setMessage={() => {}}
-              quotationMode={false}
-              setQuotationMode={() => {}}
-              quotationPrice=""
-              setQuotationPrice={() => {}}
-              handleSendMessage={() => {}}
-              isSendingMessage={false}
+              message={message}
+              setMessage={setMessage}
+              quotationMode={quotationMode}
+              setQuotationMode={setQuotationMode}
+              quotationPrice={quotationPrice}
+              setQuotationPrice={setQuotationPrice}
+              handleSendMessage={handleSendMessage}
+              isSendingMessage={isSendingMessage}
               isProvider={isProvider}
               requestDetails={conversation.service_requests ? {
                 title: conversation.service_requests.title,
