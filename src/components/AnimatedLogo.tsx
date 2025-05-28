@@ -24,7 +24,7 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
       <div className="relative z-10 flex items-center justify-center w-full h-full">
         <img 
           src="/lovable-uploads/92aaa562-a180-460d-9f71-3b12d541c349.png" 
-          alt="Hopaba Logo" 
+          alt="Chowkashi Logo" 
           className="w-[85%] h-[85%] object-contain" 
         />
       </div>

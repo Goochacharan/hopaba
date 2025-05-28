@@ -97,7 +97,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
         }}>
             <AnimatedLogo size="sm" />
             <h1 className="text-xl font-medium tracking-tight">
-              Hopaba
+              Chowkashi
             </h1>
           </Link>
           

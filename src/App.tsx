@@ -5,8 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import { AuthProvider } from "./hooks/useAuth";
-import React, { Suspense, useEffect } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import LoadingScreen from "./components/LoadingScreen";
 
 // Lazy load route components with chunks named for better debugging
 const SearchResults = React.lazy(() => import(/* webpackChunkName: "search-results" */ "./pages/SearchResults"));
@@ -115,56 +116,76 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 }
 
+const AppContent = () => {
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 2500); // Show loading screen for 2.5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isInitialLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <RoutePrefetcher />
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Redirect root to shop page */}
+            <Route path="/" element={<Navigate to="/shop" replace />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/location/:id" element={<LocationDetails />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/seller/:id" element={<SellerDetails />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/business/:id" element={<BusinessDetails />} />
+            
+            {/* Service Requests routes */}
+            <Route path="/post-request" element={<PostRequest />} />
+            <Route path="/requests" element={<Requests />} />
+            <Route path="/request/:id" element={<RequestDetail />} />
+            {/* Messages listing route */}
+            {/* <Route path="/messages" element={<MessagesListing />} /> */}
+            <Route path="/messages/:id" element={<Messages />} />
+            
+            {/* Provider routes */}
+            <Route path="/provider-requests" element={<ProviderRequests />} />
+            
+            {/* New Service Requests page */}
+            <Route path="/service-requests" element={<ServiceRequests />} />
+            
+            {/* New Inbox page */}
+            <Route path="/inbox" element={<Inbox />} />
+            
+            {/* Distance Calculator Demo
+            <Route path="/distance-demo" element={<DistanceDemo />} /> */}
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
+    </TooltipProvider>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
         <WishlistProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <RoutePrefetcher />
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  {/* Redirect root to shop page */}
-                  <Route path="/" element={<Navigate to="/shop" replace />} />
-                  <Route path="/search" element={<SearchResults />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/seller/:id" element={<SellerDetails />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/business/:id" element={<BusinessDetails />} />
-                  
-                  {/* Service Requests routes */}
-                  <Route path="/post-request" element={<PostRequest />} />
-                  <Route path="/requests" element={<Requests />} />
-                  <Route path="/request/:id" element={<RequestDetail />} />
-                  {/* Messages listing route */}
-                  {/* <Route path="/messages" element={<MessagesListing />} /> */}
-                  <Route path="/messages/:id" element={<Messages />} />
-                  
-                  {/* Provider routes */}
-                  <Route path="/provider-requests" element={<ProviderRequests />} />
-                  
-                  {/* New Service Requests page */}
-                  <Route path="/service-requests" element={<ServiceRequests />} />
-                  
-                  {/* New Inbox page */}
-                  <Route path="/inbox" element={<Inbox />} />
-                  
-                  {/* Distance Calculator Demo
-                  <Route path="/distance-demo" element={<DistanceDemo />} /> */}
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
-          </TooltipProvider>
+          <AppContent />
         </WishlistProvider>
       </AuthProvider>
     </BrowserRouter>
