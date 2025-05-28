@@ -6,9 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ConversationHeader } from '@/components/messaging/ConversationHeader';
-import { MessagesList } from '@/components/messaging/MessagesList';
-import { MessageInput } from '@/components/messaging/MessageInput';
+import ConversationHeader from '@/components/messaging/ConversationHeader';
+import MessagesList from '@/components/messaging/MessagesList';
+import MessageInput from '@/components/messaging/MessageInput';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
