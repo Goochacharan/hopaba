@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,7 +23,7 @@ export const useNotifications = () => {
       return false;
     }
     
-    const isSupported = 'Notification' in window && 'serviceWorker' in navigator && window.Notification;
+    const isSupported = 'Notification' in window && 'serviceWorker' in navigator && typeof window.Notification !== 'undefined';
     return isSupported;
   }, []);
 
@@ -207,3 +208,4 @@ export const useNotifications = () => {
     isNotificationsEnabled: permissionState.permission === 'granted' && permissionState.isServiceWorkerRegistered
   };
 };
+
