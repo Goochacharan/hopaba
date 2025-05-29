@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -139,24 +138,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             {/* Removed the Post Request text */}
           </div>
           
-          {/* Vault Button - only show for service providers */}
-          {isServiceProvider && (
-            <NavButton 
-              to="/service-requests" 
-              icon={(
-                <div className="relative">
-                  <Briefcase className="h-5 w-5" />
-                  {safeServiceProviderUnreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
-                      {safeServiceProviderUnreadCount > 99 ? '99+' : safeServiceProviderUnreadCount}
-                    </span>
-                  )}
-                </div>
-              )}
-              label="Vault" 
-              isActive={location.pathname === '/service-requests'} 
-            />
-          )}
+          {/* Vault Button - now visible to all users */}
+          <NavButton 
+            to={user ? "/service-requests" : "/login"}
+            icon={(
+              <div className="relative">
+                <Briefcase className="h-5 w-5" />
+                {user && isServiceProvider && safeServiceProviderUnreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
+                    {safeServiceProviderUnreadCount > 99 ? '99+' : safeServiceProviderUnreadCount}
+                  </span>
+                )}
+              </div>
+            )}
+            label="Vault" 
+            isActive={location.pathname === '/service-requests'} 
+          />
           
           {/* Profile Button */}
           <NavButton 
