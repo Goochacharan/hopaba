@@ -11,6 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
+import { ChatDialog } from '@/components/messaging/ChatDialog';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { toast } from '@/components/ui/use-toast';
 import { useConversations } from '@/hooks/useConversations';
@@ -43,6 +44,10 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [quotationDialogOpen, setQuotationDialogOpen] = useState(false);
   const [requestDetailsOpen, setRequestDetailsOpen] = useState(false);
+  
+  // Chat dialog state
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   
   // Location state
   const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
@@ -189,8 +194,11 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     );
     
     if (conversation) {
-      sessionStorage.setItem('conversationNavigationSource', 'provider-requests');
-      navigate(`/messages/${conversation.id}`);
+      // Set navigation source for proper back button behavior
+      sessionStorage.setItem('conversationNavigationSource', 'service-requests');
+      // Open chat dialog instead of navigating
+      setSelectedConversationId(conversation.id);
+      setChatDialogOpen(true);
     }
   };
 
@@ -369,6 +377,13 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
           />
         </>
       )}
+
+      {/* Chat Dialog */}
+      <ChatDialog
+        conversationId={selectedConversationId}
+        open={chatDialogOpen}
+        onOpenChange={setChatDialogOpen}
+      />
     </div>
   );
 };
