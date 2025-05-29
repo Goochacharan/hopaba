@@ -28,6 +28,13 @@ const LoadingScreen: React.FC = () => {
       </style>
       
       <div className="text-center zoom-in-animation">
+        <div className="flex justify-center mb-4">
+          <img 
+            src="/lovable-uploads/d0e2cc43-097a-4f2d-9c8c-9ccadce28eb9.png" 
+            alt="Chowkashi Logo" 
+            className="w-24 h-24 object-contain"
+          />
+        </div>
         <h1 className="text-6xl font-bold text-gray-800 mb-4">
           Chowkashi
         </h1>
