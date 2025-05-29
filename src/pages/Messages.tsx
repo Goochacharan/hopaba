@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { NotificationPrompt } from '@/components/notifications/NotificationPrompt';
 import { Link } from 'react-router-dom';
-import AnimatedLogo from '@/components/AnimatedLogo';
 
 // Import refactored components
 import MessagesList from '@/components/messaging/MessagesList';
@@ -200,9 +199,12 @@ const Messages: React.FC = () => {
         {/* Header */}
         <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-            <Link to="/shop" className="flex items-center gap-2">
-              <AnimatedLogo size="sm" />
-              <h1 className="text-xl font-medium tracking-tight">Hopaba</h1>
+            <Link to="/shop" className="flex items-center">
+              <img 
+                src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+                alt="Chowkashi Logo" 
+                className="h-8 object-contain"
+              />
             </Link>
             
             <div className="flex items-center gap-4">
@@ -277,9 +279,12 @@ const Messages: React.FC = () => {
         {/* Header */}
         <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-            <Link to="/shop" className="flex items-center gap-2">
-              <AnimatedLogo size="sm" />
-              <h1 className="text-xl font-medium tracking-tight">Hopaba</h1>
+            <Link to="/shop" className="flex items-center">
+              <img 
+                src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+                alt="Chowkashi Logo" 
+                className="h-8 object-contain"
+              />
             </Link>
           </div>
         </header>
@@ -303,9 +308,12 @@ const Messages: React.FC = () => {
       {/* Header */}
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4 flex-shrink-0">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-          <Link to="/shop" className="flex items-center gap-2">
-            <AnimatedLogo size="sm" />
-            <h1 className="text-xl font-medium tracking-tight">Hopaba</h1>
+          <Link to="/shop" className="flex items-center">
+            <img 
+              src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+              alt="Chowkashi Logo" 
+              className="h-8 object-contain"
+            />
           </Link>
           
           <div className="flex items-center gap-4">

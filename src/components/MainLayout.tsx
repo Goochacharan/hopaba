@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import AnimatedLogo from './AnimatedLogo';
 import { cn } from '@/lib/utils';
 import { User, Store, MessageSquare, Plus, Briefcase, Inbox } from 'lucide-react';
 import SearchBar from './SearchBar';
