@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -194,75 +194,51 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   };
   
   return (
-    <div className="p-4 border-b">
+    <div className="p-2">
       <div className="flex items-center gap-2">
         <Button 
           variant="ghost" 
           size="icon" 
-          className="mr-1"
+          className="h-8 w-8"
           onClick={handleBackNavigation}
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4" />
         </Button>
         
-        <Avatar className="h-8 w-8">
-          <AvatarFallback>{otherPartyName.substring(0, 2).toUpperCase()}</AvatarFallback>
+        <Avatar className="h-6 w-6">
+          <AvatarFallback className="text-xs">{otherPartyName.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-medium line-clamp-1">{otherPartyName}</h3>
+            <h3 className="font-medium text-sm line-clamp-1">{otherPartyName}</h3>
             {request && (
-              <Badge variant="outline" className="truncate max-w-[200px]">
+              <Badge variant="outline" className="text-xs truncate max-w-[150px]">
                 {request.title}
               </Badge>
             )}
-            {/* Online indicator when both parties are online */}
             <OnlineIndicator 
               isOnline={bothPartiesOnline} 
               size="sm"
-              className="ml-1"
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground line-clamp-1">
             {request?.category}
             {request?.subcategory && ` / ${request.subcategory}`}
-            {request?.budget && ` • Budget: ₹${request.budget}`}
+            {request?.budget && ` • ₹${request.budget}`}
           </p>
         </div>
         
         <Button 
           variant="outline" 
           size="sm"
+          className="h-7 px-2 text-xs"
           onClick={() => navigate(`/request/${conversation.request_id}`)}
         >
-          View Request
+          <Eye className="h-3 w-3 mr-1" />
+          View
         </Button>
       </div>
-
-      {/* Additional request info */}
-      {request && (request.date_range_start || (request.area && request.city)) && (
-        <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
-          {request.date_range_start && (
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              <span>
-                {format(parseISO(request.date_range_start), 'dd MMM yyyy')}
-                {request.date_range_end && (
-                  <> - {format(parseISO(request.date_range_end), 'dd MMM yyyy')}</>
-                )}
-              </span>
-            </div>
-          )}
-          
-          {request.area && request.city && (
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>{request.area}, {request.city}</span>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

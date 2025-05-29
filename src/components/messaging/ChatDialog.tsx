@@ -150,7 +150,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   if (isLoadingConversations) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+        <DialogContent className="max-w-5xl h-screen flex flex-col p-0">
           <div className="flex justify-center items-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
@@ -162,8 +162,8 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   if (!conversation) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl h-screen flex flex-col p-0">
+          <DialogHeader className="px-4 py-2 border-b">
             <DialogTitle>Conversation Not Found</DialogTitle>
           </DialogHeader>
           <div className="flex justify-center items-center h-full">
@@ -182,13 +182,13 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b">
+      <DialogContent className="max-w-5xl h-screen flex flex-col p-0">
+        <div className="border-b">
           <ConversationHeader 
             otherPartyName={otherPartyName}
             conversation={conversation}
           />
-        </DialogHeader>
+        </div>
         
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-hidden">
@@ -208,7 +208,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
             )}
           </div>
           
-          <div className="border-t bg-background p-4">
+          <div className="border-t bg-background p-2">
             <MessageInput 
               message={message}
               setMessage={setMessage}
