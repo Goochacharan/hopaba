@@ -50,24 +50,34 @@ export const useMainLayoutData = () => {
     queryFn: async () => {
       if (!user || !isServiceProvider) return 0;
       
-      const { data, error } = await supabase
+      // First get the provider ID
+      const { data: providerData } = await supabase
+        .from('service_providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!providerData) return 0;
+
+      // Then get conversations for this provider
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('provider_id', providerData.id);
+
+      if (!conversations || conversations.length === 0) return 0;
+
+      // Finally count unread messages from users in these conversations
+      const conversationIds = conversations.map(c => c.id);
+      
+      const { count, error } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
         .eq('sender_type', 'user')
         .eq('read', false)
-        .in('conversation_id', 
-          supabase
-            .from('conversations')
-            .select('id')
-            .eq('provider_id', 
-              supabase
-                .from('service_providers')
-                .select('id')
-                .eq('user_id', user.id)
-            )
-        );
+        .in('conversation_id', conversationIds);
 
-      return error ? 0 : (data || 0);
+      return error ? 0 : (count || 0);
     },
     enabled: !!user && isServiceProvider,
     staleTime: 30 * 1000,
@@ -78,7 +88,7 @@ export const useMainLayoutData = () => {
   return useMemo(() => ({
     isServiceProvider,
     isLoadingProvider,
-    unreadCount,
-    serviceProviderUnreadCount
+    unreadCount: typeof unreadCount === 'number' ? unreadCount : 0,
+    serviceProviderUnreadCount: typeof serviceProviderUnreadCount === 'number' ? serviceProviderUnreadCount : 0
   }), [isServiceProvider, isLoadingProvider, unreadCount, serviceProviderUnreadCount]);
 };

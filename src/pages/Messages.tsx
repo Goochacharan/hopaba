@@ -344,7 +344,10 @@ const Messages: React.FC = () => {
                 </div>
               ) : (
                 <MessagesList 
-                  messages={conversationData.messages} 
+                  messages={conversationData.messages.map(msg => ({
+                    ...msg,
+                    sender_type: msg.sender_type as "user" | "provider"
+                  }))} 
                   userId={user?.id || ''}
                   otherPartyName={otherPartyName}
                   isProvider={isProvider}

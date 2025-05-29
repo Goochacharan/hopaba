@@ -63,6 +63,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({
     navigate('/post-request');
   };
   
+  // Ensure unread counts are numbers
+  const safeUnreadCount = typeof unreadCount === 'number' ? unreadCount : 0;
+  const safeServiceProviderUnreadCount = typeof serviceProviderUnreadCount === 'number' ? serviceProviderUnreadCount : 0;
+  
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
@@ -112,9 +116,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
             icon={(
               <div className="relative">
                 <Inbox className="h-5 w-5" />
-                {user && unreadCount > 0 && (
+                {user && safeUnreadCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                    {safeUnreadCount > 99 ? '99+' : safeUnreadCount}
                   </span>
                 )}
               </div>
@@ -142,9 +146,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({
               icon={(
                 <div className="relative">
                   <Briefcase className="h-5 w-5" />
-                  {serviceProviderUnreadCount > 0 && (
+                  {safeServiceProviderUnreadCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold">
-                      {serviceProviderUnreadCount > 99 ? '99+' : serviceProviderUnreadCount}
+                      {safeServiceProviderUnreadCount > 99 ? '99+' : safeServiceProviderUnreadCount}
                     </span>
                   )}
                 </div>
