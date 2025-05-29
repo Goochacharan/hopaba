@@ -15,12 +15,16 @@ export const useNotificationsOptimized = () => {
 
     // Check notification permission with requestIdleCallback for better performance
     const checkPermission = () => {
-      if ('Notification' in window) {
-        setIsNotificationsEnabled(Notification.permission === 'granted');
+      // Ensure we're in a browser environment and Notification API exists
+      if (typeof window === 'undefined' || !window.Notification || !('Notification' in window)) {
+        setIsNotificationsEnabled(false);
+        return;
       }
+
+      setIsNotificationsEnabled(window.Notification.permission === 'granted');
     };
 
-    if ('requestIdleCallback' in window) {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
       requestIdleCallback(checkPermission);
     } else {
       setTimeout(checkPermission, 100);
@@ -28,12 +32,13 @@ export const useNotificationsOptimized = () => {
   }, [user]);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
+    // Check if we're in a browser environment and Notification API exists
+    if (typeof window === 'undefined' || !window.Notification || !('Notification' in window)) {
       return false;
     }
 
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await window.Notification.requestPermission();
       const granted = permission === 'granted';
       setIsNotificationsEnabled(granted);
       return granted;

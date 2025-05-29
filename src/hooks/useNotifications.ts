@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 export interface NotificationPermissionState {
   permission: NotificationPermission;
@@ -16,13 +17,18 @@ export const useNotifications = () => {
 
   // Check if notifications are supported
   const checkNotificationSupport = useCallback(() => {
-    const isSupported = 'Notification' in window && 'serviceWorker' in navigator;
+    // Check if we're in a browser environment and Notification API exists
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      return false;
+    }
+    
+    const isSupported = 'Notification' in window && 'serviceWorker' in navigator && window.Notification;
     return isSupported;
   }, []);
 
   // Register service worker
   const registerServiceWorker = useCallback(async () => {
-    if (!('serviceWorker' in navigator)) {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
       console.warn('Service Worker not supported');
       return false;
     }
@@ -56,7 +62,7 @@ export const useNotifications = () => {
     }
 
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await window.Notification.requestPermission();
       setPermissionState(prev => ({ ...prev, permission }));
       
       if (permission === 'granted') {
@@ -109,6 +115,10 @@ export const useNotifications = () => {
       return false;
     }
 
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return false;
+    }
+
     try {
       // Check if the page is currently visible
       const isPageVisible = document.visibilityState === 'visible';
@@ -150,7 +160,7 @@ export const useNotifications = () => {
     }
 
     const isServiceWorkerRegistered = await registerServiceWorker();
-    const currentPermission = Notification.permission;
+    const currentPermission = window.Notification ? window.Notification.permission : 'denied';
 
     setPermissionState({
       permission: currentPermission,
@@ -168,12 +178,16 @@ export const useNotifications = () => {
 
   // Listen for permission changes
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
     const handleVisibilityChange = () => {
       // Update permission state when page becomes visible
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && window.Notification) {
         setPermissionState(prev => ({
           ...prev,
-          permission: Notification.permission
+          permission: window.Notification.permission
         }));
       }
     };
@@ -192,4 +206,4 @@ export const useNotifications = () => {
     initializeNotifications,
     isNotificationsEnabled: permissionState.permission === 'granted' && permissionState.isServiceWorkerRegistered
   };
-}; 
+};
