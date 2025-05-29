@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import {
   Dialog,
@@ -187,6 +186,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
           <ConversationHeader 
             otherPartyName={otherPartyName}
             conversation={conversation}
+            onClose={() => onOpenChange(false)}
           />
         </div>
         

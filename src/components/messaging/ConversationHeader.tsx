@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Eye } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -37,11 +37,13 @@ interface ConversationHeaderProps {
     category: string;
     subcategory?: string;
   };
+  onClose?: () => void;
 }
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   otherPartyName,
   conversation,
-  requestInfo
+  requestInfo,
+  onClose
 }) => {
   const navigate = useNavigate();
   const {
@@ -214,10 +216,18 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
           </p>
         </div>
         
-        <Button variant="outline" size="sm" onClick={() => navigate(`/request/${conversation.request_id}`)} className="h-7 text-xs py-0 px-[20px]">
-          <Eye className="h-3 w-3 mr-1" />
-          View
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" onClick={() => navigate(`/request/${conversation.request_id}`)} className="h-7 text-xs py-0 px-[20px]">
+            <Eye className="h-3 w-3 mr-1" />
+            View
+          </Button>
+          
+          {onClose && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>;
 };
