@@ -94,11 +94,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           e.preventDefault();
           navigateToShop();
         }}>
-            <img 
-              src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
-              alt="Chowkashi Logo" 
-              className="h-8 object-contain"
-            />
+            <span className="text-xl font-bold text-foreground">Chowkashi</span>
           </Link>
           
           <div className="flex items-center gap-4">

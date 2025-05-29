@@ -200,11 +200,7 @@ const Messages: React.FC = () => {
         <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
             <Link to="/shop" className="flex items-center">
-              <img 
-                src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
-                alt="Chowkashi Logo" 
-                className="h-8 object-contain"
-              />
+              <span className="text-xl font-bold text-foreground">Chowkashi</span>
             </Link>
             
             <div className="flex items-center gap-4">
@@ -280,11 +276,7 @@ const Messages: React.FC = () => {
         <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
             <Link to="/shop" className="flex items-center">
-              <img 
-                src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
-                alt="Chowkashi Logo" 
-                className="h-8 object-contain"
-              />
+              <span className="text-xl font-bold text-foreground">Chowkashi</span>
             </Link>
           </div>
         </header>
@@ -309,11 +301,7 @@ const Messages: React.FC = () => {
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4 flex-shrink-0">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
           <Link to="/shop" className="flex items-center">
-            <img 
-              src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
-              alt="Chowkashi Logo" 
-              className="h-8 object-contain"
-            />
+            <span className="text-xl font-bold text-foreground">Chowkashi</span>
           </Link>
           
           <div className="flex items-center gap-4">
