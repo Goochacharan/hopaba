@@ -201,7 +201,7 @@ const Messages: React.FC = () => {
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
             <Link to="/shop" className="flex items-center">
               <img 
-                src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+                src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
                 alt="Chowkashi Logo" 
                 className="h-8 object-contain"
               />
@@ -281,7 +281,7 @@ const Messages: React.FC = () => {
           <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
             <Link to="/shop" className="flex items-center">
               <img 
-                src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+                src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
                 alt="Chowkashi Logo" 
                 className="h-8 object-contain"
               />
@@ -310,7 +310,7 @@ const Messages: React.FC = () => {
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
           <Link to="/shop" className="flex items-center">
             <img 
-              src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+              src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
               alt="Chowkashi Logo" 
               className="h-8 object-contain"
             />

@@ -30,7 +30,7 @@ const LoadingScreen: React.FC = () => {
       <div className="text-center zoom-in-animation">
         <div className="flex justify-center mb-4">
           <img 
-            src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
+            src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
             alt="Chowkashi Logo" 
             className="w-32 h-auto object-contain"
           />
