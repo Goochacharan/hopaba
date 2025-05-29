@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -355,19 +354,19 @@ export function EnhancedQuotationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] z-50">
-        <div className="max-h-[80vh] overflow-y-auto pr-2">
-          <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Send Quotation
-            </DialogTitle>
-            <DialogDescription>
-              Send your price quote for "{request?.title || 'Unknown Request'}"
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="h-screen w-screen max-w-none m-0 rounded-none flex flex-col">
+        <DialogHeader className="flex-shrink-0 p-6 border-b">
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Send Quotation
+          </DialogTitle>
+          <DialogDescription>
+            Send your price quote for "{request?.title || 'Unknown Request'}"
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6 max-w-2xl mx-auto">
             {/* Shop Information */}
             {businessName && (
               <Card>
@@ -600,9 +599,11 @@ export function EnhancedQuotationDialog({
               </CardContent>
             </Card>
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
+        {/* Actions */}
+        <div className="flex-shrink-0 p-6 border-t bg-background">
+          <div className="flex justify-end gap-2 max-w-2xl mx-auto">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -627,4 +628,4 @@ export function EnhancedQuotationDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}
