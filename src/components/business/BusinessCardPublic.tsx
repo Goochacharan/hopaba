@@ -180,7 +180,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="line-clamp-1">
+                <span>
                   {formatAvailabilityDays(business.availability_days)}
                 </span>
               </div>
