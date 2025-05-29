@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
-import { ChatDialog } from '@/components/messaging/ChatDialog';
+import ChatDialog from '@/components/messaging/ChatDialog';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { toast } from '@/components/ui/use-toast';
 import { useConversations } from '@/hooks/useConversations';
