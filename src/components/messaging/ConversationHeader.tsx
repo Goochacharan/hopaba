@@ -222,11 +222,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             View
           </Button>
           
-          {onClose && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-              <X className="h-3 w-3" />
-            </Button>
-          )}
+          {onClose}
         </div>
       </div>
     </div>;
