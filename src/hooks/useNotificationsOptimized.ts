@@ -1,26 +1,42 @@
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
-// Simplified notification hook to prevent performance issues
 export const useNotificationsOptimized = () => {
-  const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const { user } = useAuth();
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    // Check if notifications are supported
-    setIsSupported('Notification' in window);
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
+    // Only check notification permission if user is logged in
+    if (!user) {
+      setIsNotificationsEnabled(false);
+      return;
     }
-  }, []);
 
-  const requestPermission = async () => {
-    if (!isSupported) return false;
-    
+    // Check notification permission with requestIdleCallback for better performance
+    const checkPermission = () => {
+      if ('Notification' in window) {
+        setIsNotificationsEnabled(Notification.permission === 'granted');
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(checkPermission);
+    } else {
+      setTimeout(checkPermission, 100);
+    }
+  }, [user]);
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      return false;
+    }
+
     try {
-      const result = await Notification.requestPermission();
-      setPermission(result);
-      return result === 'granted';
+      const permission = await Notification.requestPermission();
+      const granted = permission === 'granted';
+      setIsNotificationsEnabled(granted);
+      return granted;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return false;
@@ -28,9 +44,7 @@ export const useNotificationsOptimized = () => {
   };
 
   return {
-    isSupported,
-    permission,
-    requestPermission,
-    hasPermission: permission === 'granted'
+    isNotificationsEnabled,
+    requestNotificationPermission
   };
 };

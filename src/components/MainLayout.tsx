@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -5,11 +6,8 @@ import { User, Store, MessageSquare, Plus, Briefcase, Inbox } from 'lucide-react
 import SearchBar from './SearchBar';
 import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useConversations } from '@/hooks/useConversations';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useServiceProviderUnreadCount } from '@/hooks/useServiceProviderUnreadCount';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useMainLayoutData } from '@/hooks/useMainLayoutData';
+import { useNotificationsOptimized } from '@/hooks/useNotificationsOptimized';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -22,37 +20,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   
-  const { unreadCount } = useConversations();
-  const { isNotificationsEnabled } = useNotifications();
-  const { data: serviceProviderUnreadCount = 0 } = useServiceProviderUnreadCount();
+  const { 
+    isServiceProvider, 
+    unreadCount, 
+    serviceProviderUnreadCount 
+  } = useMainLayoutData();
   
-  // Check if user is a service provider with longer cache time to prevent refetching
-  const { data: isServiceProvider, isLoading: isLoadingProvider } = useQuery({
-    queryKey: ['isServiceProvider', user?.id],
-    queryFn: async () => {
-      if (!user) return false;
-      console.log('Checking if user is service provider:', user.id);
-      const { data } = await supabase
-        .from('service_providers')
-        .select('id')
-        .eq('user_id', user.id);
-      
-      const result = data && data.length > 0;
-      console.log('Is service provider result:', result);
-      return result;
-    },
-    enabled: !!user,
-    staleTime: 300000, // Cache for 5 minutes
-    gcTime: 600000   // Keep in cache for 10 minutes (changed from cacheTime to gcTime)
-  });
-  
-  useEffect(() => {
-    console.log('MainLayout - isServiceProvider:', isServiceProvider);
-  }, [isServiceProvider]);
+  const { isNotificationsEnabled } = useNotificationsOptimized();
   
   const onSearch = (query: string) => {
     console.log("MainLayout search triggered with:", query);

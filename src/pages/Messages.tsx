@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { useAuth } from '@/hooks/useAuth';
 import { usePresence } from '@/hooks/usePresence';
@@ -41,7 +42,7 @@ const Messages: React.FC = () => {
     sendMessage,
     isSendingMessage,
     markMessagesAsRead 
-  } = useConversations();
+  } = useConversationsOptimized();
 
   // Check for quotationMode param in URL
   useEffect(() => {
@@ -57,7 +58,7 @@ const Messages: React.FC = () => {
     }
   }, [location]);
 
-  // Fetch user's role (whether they're a service provider or not)
+  // Fetch user's role (whether they're a service provider or not) - optimized
   const { data: providerData, isLoading: isLoadingProviderData } = useQuery({
     queryKey: ['provider-role', user?.id],
     queryFn: async () => {
@@ -72,19 +73,14 @@ const Messages: React.FC = () => {
       return data;
     },
     enabled: !!user,
-    staleTime: 60000 // Cache for 1 minute to prevent frequent refetching
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
   
   // User is a service provider if they have a provider record
   const isServiceProvider = !!providerData;
   
-  // Debug logging
-  useEffect(() => {
-    console.log('User is service provider:', isServiceProvider);
-    console.log('Provider data:', providerData);
-  }, [isServiceProvider, providerData]);
-  
-  // Fetch conversation with messages when in single conversation view
+  // Fetch conversation with messages when in single conversation view - optimized
   const { 
     data: conversationData,
     isLoading,
@@ -94,10 +90,10 @@ const Messages: React.FC = () => {
     queryKey: ['conversation', id],
     queryFn: () => getConversationWithMessages(id!),
     enabled: !!id && !!user,
-    staleTime: 30000, // Consider data fresh for 30 seconds
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchInterval: undefined, // Don't automatically poll
-    gcTime: 5 * 60 * 1000 // Cache for 5 minutes (garbage collection time)
+    staleTime: 60 * 1000, // 1 minute for conversation data
+    refetchOnWindowFocus: false,
+    refetchInterval: undefined,
+    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
   });
   
   // Determine if current user is the service provider or the requester
@@ -108,17 +104,15 @@ const Messages: React.FC = () => {
     ? "Requester" // If we're the provider, the other party is the requester
     : conversationData?.conversation?.service_providers?.name || "Provider"; // Otherwise it's the provider
   
-  // Optimized: Mark messages as read with debouncing to prevent excessive API calls
+  // Optimized: Mark messages as read with longer debouncing
   useEffect(() => {
     if (!id || !user || !conversationData) return;
     
-    // Use a timeout to debounce API calls
     const timeoutId = setTimeout(() => {
       console.log('Marking messages as read (optimized):', { id, isProvider });
       markMessagesAsRead(id, isProvider ? 'provider' : 'user');
-    }, 2000); // Increased debounce to 2 seconds to further reduce API calls
+    }, 3000); // Increased to 3 seconds
     
-    // Clean up the timeout if the component unmounts or dependencies change
     return () => clearTimeout(timeoutId);
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
   
@@ -179,9 +173,6 @@ const Messages: React.FC = () => {
         setQuotationMode(false);
         setQuotationPrice('');
       }
-      
-      // Don't force an immediate refetch - the real-time subscription will handle this
-      // This prevents duplicate API calls as the subscription already triggers a refresh
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
