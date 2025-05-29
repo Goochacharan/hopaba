@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -346,7 +345,8 @@ const Messages: React.FC = () => {
                 <MessagesList 
                   messages={conversationData.messages.map(msg => ({
                     ...msg,
-                    sender_type: msg.sender_type as "user" | "provider"
+                    sender_type: msg.sender_type as "user" | "provider",
+                    pricing_type: msg.pricing_type as "fixed" | "negotiable" | "wholesale"
                   }))} 
                   userId={user?.id || ''}
                   otherPartyName={otherPartyName}
