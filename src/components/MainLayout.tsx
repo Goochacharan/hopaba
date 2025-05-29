@@ -96,7 +96,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           navigateToShop();
         }}>
             <img 
-              src="/lovable-uploads/5a8c638f-6737-408a-ba04-ed1ba13a2a25.png" 
+              src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
               alt="Chowkashi Logo" 
               className="h-8 object-contain"
             />

@@ -20,7 +20,7 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({
   return (
     <div className={cn('relative flex items-center justify-center', sizeClasses[size], className)}>
       <img 
-        src="/lovable-uploads/d0e2cc43-097a-4f2d-9c8c-9ccadce28eb9.png" 
+        src="/lovable-uploads/0d7d8a94-2755-46c0-b154-5b61bc26f3ce.png" 
         alt="Chowkashi Logo" 
         className="w-full h-full object-contain"
       />
