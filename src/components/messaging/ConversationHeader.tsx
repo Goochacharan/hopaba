@@ -11,6 +11,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
 interface ConversationHeaderProps {
   otherPartyName: string;
   conversation: Conversation & {
@@ -39,6 +40,7 @@ interface ConversationHeaderProps {
   };
   onClose?: () => void;
 }
+
 const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   otherPartyName,
   conversation,
@@ -222,9 +224,14 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             View
           </Button>
           
-          {onClose}
+          {onClose && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>;
 };
+
 export default ConversationHeader;
