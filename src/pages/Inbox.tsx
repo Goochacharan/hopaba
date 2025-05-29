@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
@@ -604,7 +605,21 @@ const Inbox: React.FC = () => {
             
             <div className="flex-1 overflow-auto p-4">
               {!selectedRequestId ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                <div className="flex flex-col items-center justify-center h-full text-center p-4 relative">
+                  {/* Hand icon pointing to sidebar */}
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <svg 
+                        className="h-8 w-8 text-primary transform rotate-180" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor"
+                      >
+                        <path d="M18.5 2.5C19.88 2.5 21 3.62 21 5C21 6.38 19.88 7.5 18.5 7.5H17.83L17.5 9.5L17.17 11.5H18.5C19.88 11.5 21 12.62 21 14C21 15.38 19.88 16.5 18.5 16.5H17.83L17.5 18.5C17.33 19.43 16.57 20.17 15.64 20.34L15.5 20.36C14.92 20.46 14.34 20.24 13.93 19.79L13.5 19.31L10 15.81L9.5 16.31C9.11 16.7 8.47 16.7 8.08 16.31C7.69 15.92 7.69 15.28 8.08 14.89L9.5 13.47L12.42 10.55C13.2 9.77 14.43 9.77 15.21 10.55L15.71 11.05L16.17 7.5H14.5C13.12 7.5 12 6.38 12 5C12 3.62 13.12 2.5 14.5 2.5H18.5M14.5 4.5C14.22 4.5 14 4.72 14 5C14 5.28 14.22 5.5 14.5 5.5H18.5C18.78 5.5 19 5.28 19 5C19 4.72 18.78 4.5 18.5 4.5H14.5M18.5 13.5C18.78 13.5 19 13.72 19 14C19 14.28 18.78 14.5 18.5 14.5H14.5C14.22 14.5 14 14.28 14 14C14 13.72 14.22 13.5 14.5 13.5H18.5Z"/>
+                      </svg>
+                      <ArrowRight className="h-4 w-4 text-primary animate-bounce" style={{ animationDelay: '0.5s' }} />
+                    </div>
+                  </div>
+                  
                   <Users className="h-12 w-12 text-muted-foreground mb-2" />
                   <h2 className="text-xl font-medium">Select a Request</h2>
                   <p className="text-muted-foreground max-w-md">
