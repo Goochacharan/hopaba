@@ -91,14 +91,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({
   return <div className="min-h-screen w-full bg-background flex flex-col items-center relative pb-24">
       <header className="w-full sticky top-0 z-50 glass border-b border-border/50 px-6 py-4">
         <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
-          <Link to="/shop" className="flex items-center gap-2" role="button" aria-label="Go to shop page" onClick={e => {
+          <Link to="/shop" className="flex items-center" role="button" aria-label="Go to shop page" onClick={e => {
           e.preventDefault();
           navigateToShop();
         }}>
-            <AnimatedLogo size="sm" />
-            <h1 className="text-xl font-medium tracking-tight">
-              Chowkashi
-            </h1>
+            <img 
+              src="/lovable-uploads/5a8c638f-6737-408a-ba04-ed1ba13a2a25.png" 
+              alt="Chowkashi Logo" 
+              className="h-8 object-contain"
+            />
           </Link>
           
           <div className="flex items-center gap-4">
