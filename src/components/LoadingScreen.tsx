@@ -28,12 +28,13 @@ const LoadingScreen: React.FC = () => {
       </style>
       
       <div className="text-center zoom-in-animation">
-        <div className="flex justify-center mb-4">
-          <img 
-            src="/lovable-uploads/c86a553b-b292-4a63-8de7-e97eee43a75e.png" 
-            alt="Chowkashi Logo" 
-            className="w-32 h-auto object-contain"
-          />
+        <div className="mb-4">
+          <h1 className="text-6xl font-bold text-primary mb-2">
+            Chowkashi
+          </h1>
+          <p className="text-xl text-muted-foreground font-medium">
+            Ask Find Bargain
+          </p>
         </div>
         
         {/* Loading indicator */}
