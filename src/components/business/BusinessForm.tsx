@@ -149,6 +149,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
 
   const handleSubmit = async (data: BusinessFormValues) => {
     console.log("Form submitted with data:", data);
+    console.log("Selected language IDs:", data.language_ids);
     
     if (!user) {
       toast({
@@ -228,6 +229,9 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
 
       // Handle language selections if any languages were selected
       if (data.language_ids && data.language_ids.length > 0 && businessId) {
+        console.log("Processing language selections for business:", businessId);
+        console.log("Selected language IDs:", data.language_ids);
+        
         // First, delete existing language associations for this business
         const { error: deleteError } = await supabase
           .from('business_languages')
@@ -236,6 +240,8 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
 
         if (deleteError) {
           console.error("Error deleting existing languages:", deleteError);
+        } else {
+          console.log("Successfully deleted existing language associations");
         }
 
         // Then insert new language associations
@@ -244,6 +250,8 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
           language_id: languageId
         }));
 
+        console.log("Inserting language associations:", languageInserts);
+
         const { error: languageError } = await supabase
           .from('business_languages')
           .insert(languageInserts);
@@ -251,7 +259,16 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         if (languageError) {
           console.error("Error inserting languages:", languageError);
           // Don't throw error for language insert failure - business creation should still succeed
+          toast({
+            title: "Warning",
+            description: "Business saved but there was an issue saving language selections.",
+            variant: "destructive",
+          });
+        } else {
+          console.log("Successfully saved language selections");
         }
+      } else {
+        console.log("No languages selected or business ID missing");
       }
 
       if (business?.id) {
