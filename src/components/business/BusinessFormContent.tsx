@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SubcategorySelector from './SubcategorySelector';
+import LanguageSelector from './LanguageSelector';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = [
@@ -37,6 +38,8 @@ interface BusinessFormContentProps {
   isSubmitting: boolean;
   business?: Business;
   onCancel?: () => void;
+  selectedLanguageIds?: string[];
+  onLanguageIdsChange?: (languageIds: string[]) => void;
 }
 
 const DAYS_OF_WEEK = [
@@ -94,7 +97,9 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
   subcategories,
   setShowAddSubcategoryDialog,
   isSubmitting,
-  business
+  business,
+  selectedLanguageIds = [],
+  onLanguageIdsChange = () => {}
 }) => {
   return (
     <div className="space-y-8">
@@ -184,7 +189,6 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
                 Subcategory
               </FormLabel>
               <div className="flex gap-2">
-                {/* Replace the Select with the SubcategorySelector component */}
                 <SubcategorySelector
                   categoryId={selectedCategoryId || undefined}
                   value={field.value}
@@ -449,6 +453,12 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               <FormMessage />
             </FormItem>
           )}
+        />
+
+        <LanguageSelector
+          form={form}
+          selectedLanguages={selectedLanguageIds}
+          onLanguageChange={onLanguageIdsChange}
         />
       </div>
 

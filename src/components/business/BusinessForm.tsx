@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -94,6 +93,9 @@ const businessSchema = z.object({
   price_range_max: z.number().optional(),
   availability: z.string().optional(),
   languages: z.array(z.string()).optional(),
+  language_ids: z.array(z.string()).min(1, {
+    message: "Please select at least one language you can communicate in."
+  }).optional(),
   experience: z.string().optional(),
   tags: z.array(z.string())
     .min(3, {
@@ -116,6 +118,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [selectedLanguageIds, setSelectedLanguageIds] = useState<string[]>([]);
 
   const form = useForm<BusinessFormValues>({
     resolver: zodResolver(businessSchema),
@@ -136,6 +139,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
       map_link: business?.map_link || "",
       tags: business?.tags || [],
       languages: business?.languages || [],
+      language_ids: [],
       experience: business?.experience || "",
       availability: business?.availability || "",
       price_unit: business?.price_unit || "per hour",
@@ -192,6 +196,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
       console.log("Formatted business data for Supabase:", businessData);
 
       let result;
+      let businessId = business?.id;
       
       if (business?.id) {
         console.log("Updating business with ID:", business.id);
@@ -206,22 +211,56 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         }
 
         console.log("Business updated successfully");
-        toast({
-          title: "Business Updated",
-          description: "Your business listing has been updated and will be reviewed by an admin.",
-        });
       } else {
         console.log("Creating new business");
         result = await supabase
           .from('service_providers')
-          .insert([businessData]);
+          .insert([businessData])
+          .select();
 
         if (result.error) {
           console.error("Supabase insert error:", result.error);
           throw new Error(result.error.message);
         }
 
+        businessId = result.data[0]?.id;
         console.log("Business created successfully", result);
+      }
+
+      // Handle language selections if any languages were selected
+      if (selectedLanguageIds.length > 0 && businessId) {
+        // First, delete existing language associations for this business
+        const { error: deleteError } = await supabase
+          .from('business_languages')
+          .delete()
+          .eq('business_id', businessId);
+
+        if (deleteError) {
+          console.error("Error deleting existing languages:", deleteError);
+        }
+
+        // Then insert new language associations
+        const languageInserts = selectedLanguageIds.map(languageId => ({
+          business_id: businessId,
+          language_id: languageId
+        }));
+
+        const { error: languageError } = await supabase
+          .from('business_languages')
+          .insert(languageInserts);
+
+        if (languageError) {
+          console.error("Error inserting languages:", languageError);
+          // Don't throw error for language insert failure - business creation should still succeed
+        }
+      }
+
+      if (business?.id) {
+        toast({
+          title: "Business Updated",
+          description: "Your business listing has been updated and will be reviewed by an admin.",
+        });
+      } else {
         toast({
           title: "Business Added",
           description: "Your business has been listed and will be reviewed by an admin.",
@@ -249,6 +288,8 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
             isSubmitting={isSubmitting} 
             onCancel={onCancel} 
             business={business}
+            selectedLanguageIds={selectedLanguageIds}
+            onLanguageIdsChange={setSelectedLanguageIds}
           />
         </form>
         

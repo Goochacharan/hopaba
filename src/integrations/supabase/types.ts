@@ -24,6 +24,42 @@ export type Database = {
         }
         Relationships: []
       }
+      business_languages: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          language_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          language_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          language_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_languages_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_languages_language_id_fkey"
+            columns: ["language_id"]
+            isOneToOne: false
+            referencedRelation: "languages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_reviews: {
         Row: {
           business_id: string
@@ -216,6 +252,27 @@ export type Database = {
           time?: string
           title?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      languages: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
