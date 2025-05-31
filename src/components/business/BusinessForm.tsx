@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import BusinessFormContent from './BusinessFormContent';
 import SuccessDialog from '../business-form/SuccessDialog';
+import { sanitizeText, sanitizeEmail, sanitizePhoneNumber, sanitizeUrl } from '@/utils/inputSanitization';
+import { validateEmail, validatePhoneNumber, validatePostalCode, validateUrl } from '@/utils/securityValidation';
 
 export interface Business {
   id?: string;
@@ -163,34 +165,75 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
     setIsSubmitting(true);
 
     try {
-      const priceRangeMin = data.price_range_min ? Number(data.price_range_min) : undefined;
-      const priceRangeMax = data.price_range_max ? Number(data.price_range_max) : undefined;
+      // Sanitize all input data
+      const sanitizedData = {
+        ...data,
+        name: sanitizeText(data.name),
+        description: sanitizeText(data.description),
+        area: sanitizeText(data.area),
+        city: sanitizeText(data.city),
+        address: sanitizeText(data.address),
+        contact_email: data.contact_email ? sanitizeEmail(data.contact_email) : null,
+        website: data.website ? sanitizeUrl(data.website) : null,
+        instagram: data.instagram ? sanitizeText(data.instagram) : null,
+        map_link: data.map_link ? sanitizeUrl(data.map_link) : null,
+        experience: data.experience ? sanitizeText(data.experience) : null,
+        tags: data.tags?.map(tag => sanitizeText(tag)) || [],
+      };
+
+      // Additional validation
+      if (sanitizedData.contact_email && !validateEmail(sanitizedData.contact_email)) {
+        throw new Error("Invalid email format");
+      }
+
+      if (!validatePhoneNumber(sanitizedData.contact_phone)) {
+        throw new Error("Invalid phone number format");
+      }
+
+      if (!validatePhoneNumber(sanitizedData.whatsapp)) {
+        throw new Error("Invalid WhatsApp number format");
+      }
+
+      if (!validatePostalCode(sanitizedData.postal_code)) {
+        throw new Error("Invalid postal code format");
+      }
+
+      if (sanitizedData.website && !validateUrl(sanitizedData.website)) {
+        throw new Error("Invalid website URL format");
+      }
+
+      if (sanitizedData.map_link && !validateUrl(sanitizedData.map_link)) {
+        throw new Error("Invalid map link URL format");
+      }
+
+      const priceRangeMin = sanitizedData.price_range_min ? Number(sanitizedData.price_range_min) : undefined;
+      const priceRangeMax = sanitizedData.price_range_max ? Number(sanitizedData.price_range_max) : undefined;
       
       const businessData = {
-        name: data.name,
-        category: data.category,
-        subcategory: data.subcategory || [],
-        description: data.description,
-        area: data.area,
-        city: data.city,
-        address: data.address,
-        postal_code: data.postal_code,
-        contact_phone: data.contact_phone,
-        whatsapp: data.whatsapp,
-        contact_email: data.contact_email || null,
-        website: data.website || null,
-        instagram: data.instagram || null,
-        map_link: data.map_link || null,
+        name: sanitizedData.name,
+        category: sanitizedData.category,
+        subcategory: sanitizedData.subcategory || [],
+        description: sanitizedData.description,
+        area: sanitizedData.area,
+        city: sanitizedData.city,
+        address: sanitizedData.address,
+        postal_code: sanitizedData.postal_code,
+        contact_phone: sanitizedData.contact_phone,
+        whatsapp: sanitizedData.whatsapp,
+        contact_email: sanitizedData.contact_email,
+        website: sanitizedData.website,
+        instagram: sanitizedData.instagram,
+        map_link: sanitizedData.map_link,
         user_id: user.id,
         approval_status: 'pending',
-        price_unit: data.price_unit || "per hour",
+        price_unit: sanitizedData.price_unit || "per hour",
         price_range_min: priceRangeMin,
         price_range_max: priceRangeMax,
-        availability: data.availability || null,
-        languages: data.languages || [],
-        experience: data.experience || null,
-        tags: data.tags || [],
-        images: data.images || [],
+        availability: sanitizedData.availability,
+        languages: sanitizedData.languages || [],
+        experience: sanitizedData.experience,
+        tags: sanitizedData.tags || [],
+        images: sanitizedData.images || [],
       };
 
       console.log("Formatted business data for Supabase:", businessData);
@@ -228,9 +271,9 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
       }
 
       // Handle language selections if any languages were selected
-      if (data.language_ids && data.language_ids.length > 0 && businessId) {
+      if (sanitizedData.language_ids && sanitizedData.language_ids.length > 0 && businessId) {
         console.log("Processing language selections for business:", businessId);
-        console.log("Selected language IDs:", data.language_ids);
+        console.log("Selected language IDs:", sanitizedData.language_ids);
         
         // First, delete existing language associations for this business
         const { error: deleteError } = await supabase
@@ -245,7 +288,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         }
 
         // Then insert new language associations
-        const languageInserts = data.language_ids.map(languageId => ({
+        const languageInserts = sanitizedData.language_ids.map(languageId => ({
           business_id: businessId,
           language_id: languageId
         }));
