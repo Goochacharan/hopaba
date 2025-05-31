@@ -11,6 +11,7 @@ import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import StarRating from '@/components/marketplace/StarRating';
 import { useToast } from '@/hooks/use-toast';
+import { useBusinessLanguages } from '@/hooks/useBusinessLanguages';
 
 interface BusinessCardPublicProps {
   business: Business;
@@ -20,6 +21,9 @@ interface BusinessCardPublicProps {
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Use the new hook to fetch business languages
+  const { data: businessLanguages } = useBusinessLanguages(business.id || '');
   
   // Use the new Supabase-based review hook
   const {
@@ -142,6 +146,23 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
               criteriaRatings={averageCriteriaRatings}
               locationId={business.id}
             />
+          </div>
+        )}
+        
+        {/* Languages badges - displayed above price details */}
+        {businessLanguages && businessLanguages.length > 0 && (
+          <div className="mb-2">
+            <div className="flex flex-wrap gap-1.5">
+              {businessLanguages.map((language, index) => (
+                <Badge 
+                  key={index} 
+                  variant="outline" 
+                  className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                >
+                  {language.name}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
         
