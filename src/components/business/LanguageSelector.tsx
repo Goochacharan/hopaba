@@ -7,26 +7,10 @@ import { Languages } from 'lucide-react';
 
 interface LanguageSelectorProps {
   form: any;
-  selectedLanguages: string[];
-  onLanguageChange: (languages: string[]) => void;
 }
 
-const LanguageSelector: React.FC<LanguageSelectorProps> = ({
-  form,
-  selectedLanguages,
-  onLanguageChange
-}) => {
+const LanguageSelector: React.FC<LanguageSelectorProps> = ({ form }) => {
   const { data: languages, isLoading } = useLanguages();
-
-  const handleLanguageToggle = (languageId: string, checked: boolean) => {
-    let updatedLanguages;
-    if (checked) {
-      updatedLanguages = [...selectedLanguages, languageId];
-    } else {
-      updatedLanguages = selectedLanguages.filter(id => id !== languageId);
-    }
-    onLanguageChange(updatedLanguages);
-  };
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading languages...</div>;
@@ -36,7 +20,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     <FormField
       control={form.control}
       name="language_ids"
-      render={() => (
+      render={({ field }) => (
         <FormItem>
           <FormLabel className="flex items-center gap-2">
             <Languages className="h-4 w-4" />
@@ -53,9 +37,14 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               >
                 <FormControl>
                   <Checkbox
-                    checked={selectedLanguages.includes(language.id)}
+                    checked={field.value?.includes(language.id) || false}
                     onCheckedChange={(checked) => {
-                      handleLanguageToggle(language.id, checked as boolean);
+                      const currentValue = field.value || [];
+                      if (checked) {
+                        field.onChange([...currentValue, language.id]);
+                      } else {
+                        field.onChange(currentValue.filter((id: string) => id !== language.id));
+                      }
                     }}
                   />
                 </FormControl>

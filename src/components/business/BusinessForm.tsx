@@ -22,8 +22,8 @@ export interface Business {
   approval_status?: string;
   instagram?: string;
   map_link?: string;
-  contact_phone: string;  // Changed from optional to required
-  whatsapp: string;  // Ensuring this is required too to match BusinessFormSimple
+  contact_phone: string;
+  whatsapp: string;
   contact_email?: string;
   tags?: string[];
   languages?: string[];
@@ -118,7 +118,6 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [selectedLanguageIds, setSelectedLanguageIds] = useState<string[]>([]);
 
   const form = useForm<BusinessFormValues>({
     resolver: zodResolver(businessSchema),
@@ -228,7 +227,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
       }
 
       // Handle language selections if any languages were selected
-      if (selectedLanguageIds.length > 0 && businessId) {
+      if (data.language_ids && data.language_ids.length > 0 && businessId) {
         // First, delete existing language associations for this business
         const { error: deleteError } = await supabase
           .from('business_languages')
@@ -240,7 +239,7 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         }
 
         // Then insert new language associations
-        const languageInserts = selectedLanguageIds.map(languageId => ({
+        const languageInserts = data.language_ids.map(languageId => ({
           business_id: businessId,
           language_id: languageId
         }));
@@ -288,8 +287,6 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
             isSubmitting={isSubmitting} 
             onCancel={onCancel} 
             business={business}
-            selectedLanguageIds={selectedLanguageIds}
-            onLanguageIdsChange={setSelectedLanguageIds}
           />
         </form>
         

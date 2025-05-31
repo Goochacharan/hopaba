@@ -38,8 +38,6 @@ interface BusinessFormContentProps {
   isSubmitting: boolean;
   business?: Business;
   onCancel?: () => void;
-  selectedLanguageIds?: string[];
-  onLanguageIdsChange?: (languageIds: string[]) => void;
 }
 
 const DAYS_OF_WEEK = [
@@ -97,9 +95,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
   subcategories,
   setShowAddSubcategoryDialog,
   isSubmitting,
-  business,
-  selectedLanguageIds = [],
-  onLanguageIdsChange = () => {}
+  business
 }) => {
   return (
     <div className="space-y-8">
@@ -455,11 +451,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           )}
         />
 
-        <LanguageSelector
-          form={form}
-          selectedLanguages={selectedLanguageIds}
-          onLanguageChange={onLanguageIdsChange}
-        />
+        <LanguageSelector form={form} />
       </div>
 
       <Separator />
