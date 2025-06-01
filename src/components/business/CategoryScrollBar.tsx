@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,9 +19,9 @@ const borderStyle = "border border-[#eaeaea]";
 // Shadow for depth
 const depthShadow = "shadow-[0_2px_14px_0_rgba(22,25,34,0.13)]";
 
-// Square shape & spacing - buttons are now square (height matches width)
+// Rectangular shape & spacing - fixed size for all buttons
 const buttonShapeStyles =
-  "flex-shrink-0 px-2 py-1 rounded-[11px] text-xs font-medium select-none cursor-pointer w-12 h-12 transition-all duration-150 flex flex-col items-center justify-center";
+  "flex-shrink-0 px-3 py-2 rounded-[11px] text-sm font-medium select-none cursor-pointer w-32 h-12 transition-all duration-150 flex items-center justify-center";
 
 // Selected and idle states
 const selectedStyles = "ring-2 ring-amber-700 border-amber-700 scale-105";
@@ -157,7 +158,8 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   buttonBaseStyles,
                   borderStyle,
                   depthShadow,
-                  isSelected ? selectedStyles : idleStyles
+                  isSelected ? selectedStyles : idleStyles,
+                  "break-words justify-between"
                 )}
                 onClick={() => handleCategorySelect(cat)}
                 type="button"
@@ -166,9 +168,9 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   boxShadow: "0px 4px 18px rgba(22,25,34,0.11)",
                 }}
               >
-                <span className="block whitespace-normal text-center leading-tight">{cat}</span>
+                <span className="block truncate text-center leading-tight px-1">{cat}</span>
                 {cat !== "All" && onSubcategorySelect && (
-                  <ChevronDown className="h-3 w-3 opacity-70 flex-shrink-0 mt-0.5" />
+                  <ChevronDown className="ml-1 h-4 w-4 opacity-70 flex-shrink-0" />
                 )}
               </button>
             );
