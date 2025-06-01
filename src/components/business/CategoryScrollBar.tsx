@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,7 +167,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   boxShadow: "0px 4px 18px rgba(22,25,34,0.11)",
                 }}
               >
-                <span className="block truncate text-center leading-tight px-1">{cat}</span>
+                <span className="block whitespace-normal text-center leading-tight px-1 break-words">{cat}</span>
                 {cat !== "All" && onSubcategorySelect && (
                   <ChevronDown className="ml-1 h-4 w-4 opacity-70 flex-shrink-0" />
                 )}
