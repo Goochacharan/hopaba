@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,9 +18,12 @@ const borderStyle = "border border-[#eaeaea]";
 // Shadow for depth
 const depthShadow = "shadow-[0_2px_14px_0_rgba(22,25,34,0.13)]";
 
-// Rectangular shape & spacing - fixed size for all buttons
+// Square shape & spacing - calculated to fit 4 buttons across page width with gaps
 const buttonShapeStyles =
-  "flex-shrink-0 px-3 py-2 rounded-[11px] text-sm font-medium select-none cursor-pointer w-32 h-12 transition-all duration-150 flex items-center justify-center";
+  "flex-shrink-0 px-2 py-2 rounded-[11px] text-xs font-medium select-none cursor-pointer transition-all duration-150 flex flex-col items-center justify-center aspect-square";
+
+// Calculate width to fit 4 buttons with gaps (approximately 22% each with 2% gaps)
+const buttonWidthStyles = "w-[22%] min-h-[5rem]";
 
 // Selected and idle states
 const selectedStyles = "ring-2 ring-amber-700 border-amber-700 scale-105";
@@ -135,12 +137,12 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
     <div className="space-y-4">
       <div
         className={cn(
-          "w-full overflow-x-auto scrollbar-none flex gap-3 py-2 px-2",
+          "w-full overflow-x-auto scrollbar-none flex gap-2 py-2 px-2",
           className
         )}
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <div className="flex gap-3 min-w-max">
+        <div className="flex gap-2 min-w-max w-full">
           {categories.map((cat, idx) => {
             // Fix the category comparison logic - make it case-insensitive
             const normalizedCat = normalizeCategory(cat);
@@ -155,11 +157,11 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                 key={cat}
                 className={cn(
                   buttonShapeStyles,
+                  buttonWidthStyles,
                   buttonBaseStyles,
                   borderStyle,
                   depthShadow,
-                  isSelected ? selectedStyles : idleStyles,
-                  "break-words justify-between"
+                  isSelected ? selectedStyles : idleStyles
                 )}
                 onClick={() => handleCategorySelect(cat)}
                 type="button"
@@ -168,9 +170,11 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   boxShadow: "0px 4px 18px rgba(22,25,34,0.11)",
                 }}
               >
-                <span className="block truncate text-center leading-tight px-1">{cat}</span>
+                <span className="text-center leading-tight whitespace-normal break-words hyphens-auto">
+                  {cat}
+                </span>
                 {cat !== "All" && onSubcategorySelect && (
-                  <ChevronDown className="ml-1 h-4 w-4 opacity-70 flex-shrink-0" />
+                  <ChevronDown className="mt-1 h-3 w-3 opacity-70 flex-shrink-0" />
                 )}
               </button>
             );
