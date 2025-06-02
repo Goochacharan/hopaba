@@ -26,7 +26,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   className
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

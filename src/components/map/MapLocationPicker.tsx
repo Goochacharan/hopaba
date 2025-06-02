@@ -17,9 +17,9 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   height = "400px"
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState(initialLocation);
 
@@ -74,7 +74,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           });
 
           // Handle map click
-          mapInstanceRef.current.addListener('click', async (event: google.maps.MapMouseEvent) => {
+          mapInstanceRef.current.addListener('click', async (event: any) => {
             if (event.latLng) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
@@ -113,12 +113,12 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     try {
       if (!geocoderRef.current) return;
 
-      const response = await new Promise<google.maps.GeocoderResponse>((resolve, reject) => {
+      const response = await new Promise<any>((resolve, reject) => {
         geocoderRef.current!.geocode(
           { location },
-          (results, status) => {
+          (results: any, status: any) => {
             if (status === window.google.maps.GeocoderStatus.OK) {
-              resolve({ results: results || [] } as google.maps.GeocoderResponse);
+              resolve({ results: results || [] });
             } else {
               reject(new Error(`Geocoding failed: ${status}`));
             }
