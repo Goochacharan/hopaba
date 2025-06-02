@@ -144,3 +144,104 @@ export function getUserLocation(): Promise<{ lat: number, lng: number } | null> 
     );
   });
 }
+
+/**
+ * Calculate precise distance between user location and business
+ * Uses exact coordinates when available, falls back to postal code estimation
+ * @param userLocation User's current coordinates
+ * @param business Business object with location data
+ * @returns Distance in kilometers or null if calculation fails
+ */
+export function calculatePreciseBusinessDistance(
+  userLocation: { lat: number, lng: number },
+  business: {
+    latitude?: number;
+    longitude?: number;
+    postal_code?: string;
+    map_link?: string;
+  }
+): number | null {
+  try {
+    // First priority: Use exact coordinates if available
+    if (business.latitude && business.longitude) {
+      console.log('Using exact coordinates for distance calculation:', {
+        business: { lat: business.latitude, lng: business.longitude },
+        user: userLocation
+      });
+      
+      return calculateDistance(
+        userLocation.lat,
+        userLocation.lng,
+        business.latitude,
+        business.longitude,
+        'K'
+      );
+    }
+
+    // Second priority: Extract coordinates from Google Maps link
+    if (business.map_link) {
+      const coords = extractCoordinatesFromMapLink(business.map_link);
+      if (coords) {
+        console.log('Using coordinates extracted from map link:', coords);
+        return calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          coords.lat,
+          coords.lng,
+          'K'
+        );
+      }
+    }
+
+    // Fallback: Use postal code (approximate)
+    if (business.postal_code) {
+      console.log('Falling back to postal code approximation for:', business.postal_code);
+      // This would need a postal code to coordinates database
+      // For now, return null to indicate we can't calculate precise distance
+      return null;
+    }
+
+    console.log('No location data available for distance calculation');
+    return null;
+  } catch (error) {
+    console.error('Error calculating precise business distance:', error);
+    return null;
+  }
+}
+
+/**
+ * Get business coordinates from various sources
+ * @param business Business object with location data
+ * @returns Coordinates or null if not available
+ */
+export function getBusinessCoordinates(business: {
+  latitude?: number;
+  longitude?: number;
+  map_link?: string;
+}): { lat: number, lng: number } | null {
+  // First check if we have exact coordinates
+  if (business.latitude && business.longitude) {
+    return {
+      lat: business.latitude,
+      lng: business.longitude
+    };
+  }
+
+  // Try to extract from map link
+  if (business.map_link) {
+    return extractCoordinatesFromMapLink(business.map_link);
+  }
+
+  return null;
+}
+
+/**
+ * Format distance with precision indicator
+ * @param distance Distance in kilometers
+ * @param isPrecise Whether the distance was calculated using exact coordinates
+ * @returns Formatted distance string with precision indicator
+ */
+export function formatPreciseDistance(distance: number, isPrecise: boolean): string {
+  const formattedDistance = formatDistance(distance);
+  return isPrecise ? formattedDistance : `~${formattedDistance}`;
+}

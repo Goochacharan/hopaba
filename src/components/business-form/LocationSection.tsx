@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
   FormField, 
@@ -13,6 +13,10 @@ import { Input } from '@/components/ui/input';
 import { MapPin, Link2 } from 'lucide-react';
 import { BusinessFormValues } from '../AddBusinessForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
+import MapLocationPicker from '@/components/map/MapLocationPicker';
+import AddressAutocomplete from '@/components/map/AddressAutocomplete';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = [
@@ -23,6 +27,7 @@ const INDIAN_CITIES = [
 
 const LocationSection = () => {
   const form = useFormContext<BusinessFormValues>();
+  const [showMap, setShowMap] = useState(false);
   
   const handleLocationChange = (value: string, onChange: (value: string) => void) => {
     // Check if the input is a Google Maps URL
@@ -33,6 +38,47 @@ const LocationSection = () => {
       // For regular text, just use it directly
       onChange(value);
     }
+  };
+
+  const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    // Update coordinates in form
+    form.setValue('latitude', location.lat);
+    form.setValue('longitude', location.lng);
+    
+    // Update address if it's not already filled
+    if (!form.getValues('address') || form.getValues('address').trim() === '') {
+      form.setValue('address', location.address);
+    }
+
+    console.log('Map location selected:', location);
+  };
+
+  const handleAddressPlaceSelect = (place: {
+    address: string;
+    lat: number;
+    lng: number;
+    city?: string;
+    area?: string;
+    postalCode?: string;
+  }) => {
+    // Update form with place data
+    form.setValue('address', place.address);
+    form.setValue('latitude', place.lat);
+    form.setValue('longitude', place.lng);
+    
+    if (place.city && INDIAN_CITIES.includes(place.city)) {
+      form.setValue('city', place.city);
+    }
+    
+    if (place.area) {
+      form.setValue('area', place.area);
+    }
+    
+    if (place.postalCode) {
+      form.setValue('postal_code', place.postalCode);
+    }
+
+    console.log('Address place selected:', place);
   };
   
   return (
@@ -51,16 +97,47 @@ const LocationSection = () => {
           <FormItem className="md:col-span-2">
             <FormLabel>Address*</FormLabel>
             <FormControl>
-              <Input 
-                placeholder="Enter your street address" 
-                value={field.value} 
-                onChange={(e) => handleLocationChange(e.target.value, field.onChange)}
-              />
+              <GoogleMapsLoader apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+                <AddressAutocomplete
+                  value={field.value}
+                  onChange={(value) => handleLocationChange(value, field.onChange)}
+                  onPlaceSelect={handleAddressPlaceSelect}
+                  placeholder="Enter your business address"
+                />
+              </GoogleMapsLoader>
             </FormControl>
+            <FormDescription>
+              Start typing your address and select from suggestions for automatic coordinate detection
+            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
+
+      {/* Interactive Map Section */}
+      <div className="md:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Precise Location (Recommended)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Set your exact business location for accurate distance calculations and better discoverability.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <GoogleMapsLoader apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+              <MapLocationPicker
+                initialLocation={
+                  form.getValues('latitude') && form.getValues('longitude')
+                    ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
+                    : undefined
+                }
+                onLocationSelect={handleMapLocationSelect}
+                height="350px"
+              />
+            </GoogleMapsLoader>
+          </CardContent>
+        </Card>
+      </div>
 
       <FormField
         control={form.control}
@@ -70,7 +147,7 @@ const LocationSection = () => {
             <FormLabel>
               <div className="flex items-center gap-2">
                 <Link2 className="h-4 w-4" />
-                Google Maps Link
+                Google Maps Link (Optional)
               </div>
             </FormLabel>
             <FormControl>
@@ -80,7 +157,7 @@ const LocationSection = () => {
               />
             </FormControl>
             <FormDescription>
-              Adding a Google Maps link will enable distance calculation and make your listing more discoverable to nearby users
+              You can also paste a Google Maps link as an alternative to using the map above
             </FormDescription>
             <FormMessage />
           </FormItem>
@@ -126,6 +203,31 @@ const LocationSection = () => {
               <Input placeholder="Enter neighborhood or area" {...field} />
             </FormControl>
             <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Hidden coordinate fields for form submission */}
+      <FormField
+        control={form.control}
+        name="latitude"
+        render={({ field }) => (
+          <FormItem className="hidden">
+            <FormControl>
+              <Input type="hidden" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="longitude"
+        render={({ field }) => (
+          <FormItem className="hidden">
+            <FormControl>
+              <Input type="hidden" {...field} />
+            </FormControl>
           </FormItem>
         )}
       />

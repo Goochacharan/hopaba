@@ -47,6 +47,8 @@ export interface Business {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 const businessSchema = z.object({
@@ -106,6 +108,8 @@ const businessSchema = z.object({
     })
     .optional(),
   images: z.array(z.string()).optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export type BusinessFormValues = z.infer<typeof businessSchema>;
@@ -140,6 +144,8 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
       instagram: business?.instagram || "",
       map_link: business?.map_link || "",
       tags: business?.tags || [],
+      latitude: business?.latitude || undefined,
+      longitude: business?.longitude || undefined,
     },
   });
 
@@ -178,6 +184,8 @@ export default function AddBusinessForm({ business, onSaved, onCancel }: AddBusi
         website: data.website || null,
         instagram: data.instagram || null,
         map_link: data.map_link || null,
+        latitude: data.latitude || null,
+        longitude: data.longitude || null,
         user_id: user.id,
         approval_status: 'pending',
         price_unit: data.price_unit || "per hour",

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,15 +13,26 @@ import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import StarRating from '@/components/marketplace/StarRating';
 import { useToast } from '@/hooks/use-toast';
 import { useBusinessLanguages } from '@/hooks/useBusinessLanguages';
+import { getUserLocation, calculatePreciseBusinessDistance, getBusinessCoordinates, formatPreciseDistance } from '@/lib/locationUtils';
 
 interface BusinessCardPublicProps {
-  business: Business;
+  business: Business & {
+    latitude?: number;
+    longitude?: number;
+    calculatedDistance?: number;
+    distanceText?: string;
+  };
   className?: string;
 }
 
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [distanceInfo, setDistanceInfo] = useState<{
+    distance: number;
+    isPrecise: boolean;
+    text: string;
+  } | null>(null);
   
   // Use the new hook to fetch business languages
   const { data: businessLanguages } = useBusinessLanguages(business.id || '');
@@ -31,6 +43,46 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     averageCriteriaRatings,
     totalReviews
   } = useBusinessReviews(business.id || '');
+
+  // Calculate precise distance on component mount
+  useEffect(() => {
+    const calculateDistance = async () => {
+      try {
+        // Get user's current location
+        const userLocation = await getUserLocation();
+        if (!userLocation) {
+          console.log('User location not available');
+          return;
+        }
+
+        // Calculate precise distance
+        const distance = calculatePreciseBusinessDistance(userLocation, business);
+        if (distance !== null) {
+          // Check if we used exact coordinates
+          const businessCoords = getBusinessCoordinates(business);
+          const isPrecise = businessCoords !== null;
+          
+          setDistanceInfo({
+            distance,
+            isPrecise,
+            text: formatPreciseDistance(distance, isPrecise)
+          });
+
+          console.log('Distance calculated:', {
+            business: business.name,
+            distance,
+            isPrecise,
+            userLocation,
+            businessLocation: businessCoords
+          });
+        }
+      } catch (error) {
+        console.error('Error calculating distance:', error);
+      }
+    };
+
+    calculateDistance();
+  }, [business]);
   
   // Map days numbers to actual day names
   const dayMap: Record<string, string> = {
@@ -75,6 +127,17 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
       });
     }
   };
+
+  // Use either the new precise distance or the existing calculated distance
+  const displayDistance = distanceInfo || (
+    business.calculatedDistance !== null && business.calculatedDistance !== undefined 
+      ? {
+          distance: business.calculatedDistance,
+          isPrecise: false,
+          text: business.distanceText || `${business.calculatedDistance.toFixed(1)} km away`
+        }
+      : null
+  );
 
   return (
     <Card 
@@ -187,12 +250,15 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
             </div>
           )}
           
-          {/* Distance display */}
-          {(business as any).calculatedDistance !== null && (business as any).calculatedDistance !== undefined && (
+          {/* Enhanced Distance display with precision indicator */}
+          {displayDistance && (
             <div className="flex items-center gap-2">
               <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className="text-primary font-medium">
-                {(business as any).calculatedDistance.toFixed(1)} km away
+              <span className={`font-medium ${displayDistance.isPrecise ? 'text-primary' : 'text-orange-600'}`}>
+                {displayDistance.text}
+                {displayDistance.isPrecise && (
+                  <span className="text-xs ml-1 text-green-600">(exact)</span>
+                )}
               </span>
             </div>
           )}
