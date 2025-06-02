@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
@@ -97,7 +96,7 @@ const LocationSection = () => {
           <FormItem className="md:col-span-2">
             <FormLabel>Address*</FormLabel>
             <FormControl>
-              <GoogleMapsLoader apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+              <GoogleMapsLoader>
                 <AddressAutocomplete
                   value={field.value}
                   onChange={(value) => handleLocationChange(value, field.onChange)}
@@ -124,7 +123,7 @@ const LocationSection = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <GoogleMapsLoader apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+            <GoogleMapsLoader>
               <MapLocationPicker
                 initialLocation={
                   form.getValues('latitude') && form.getValues('longitude')

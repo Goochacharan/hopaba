@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface GoogleMapsLoaderProps {
   children: React.ReactNode;
@@ -11,22 +12,47 @@ interface GoogleMapsLoaderProps {
 
 const GoogleMapsLoader: React.FC<GoogleMapsLoaderProps> = ({
   children,
-  apiKey,
   libraries = ['places', 'geometry']
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        console.log('Fetching Google Maps API key from Supabase...');
+        const { data, error } = await supabase.functions.invoke('get-google-maps-key');
+        
+        if (error) {
+          console.error('Error fetching API key:', error);
+          setError('Failed to load Google Maps API key. Please check your configuration.');
+          return;
+        }
+
+        if (!data?.apiKey) {
+          console.error('No API key returned from function');
+          setError('Google Maps API key is not configured. Please add it to your Supabase secrets.');
+          return;
+        }
+
+        console.log('Successfully retrieved Google Maps API key');
+        setApiKey(data.apiKey);
+      } catch (err) {
+        console.error('Error calling get-google-maps-key function:', err);
+        setError('Failed to retrieve Google Maps API key. Please try again.');
+      }
+    };
+
+    fetchApiKey();
+  }, []);
+
+  useEffect(() => {
+    if (!apiKey) return;
+
     // Check if already loaded
     if (window.google?.maps) {
       setIsLoaded(true);
-      return;
-    }
-
-    // Check if API key is available (from Supabase secrets or prop)
-    if (!apiKey) {
-      setError('Google Maps API key is not configured. Please add it to your Supabase secrets.');
       return;
     }
 
@@ -85,7 +111,7 @@ const GoogleMapsLoader: React.FC<GoogleMapsLoaderProps> = ({
     );
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || !apiKey) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
