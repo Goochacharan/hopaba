@@ -42,7 +42,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
         // Initialize map
         if (mapRef.current) {
-          mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+          mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
             center: defaultLocation,
             zoom: 15,
             mapTypeControl: false,
@@ -51,10 +51,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           });
 
           // Initialize geocoder
-          geocoderRef.current = new google.maps.Geocoder();
+          geocoderRef.current = new window.google.maps.Geocoder();
 
           // Create marker
-          markerRef.current = new google.maps.Marker({
+          markerRef.current = new window.google.maps.Marker({
             position: defaultLocation,
             map: mapInstanceRef.current,
             draggable: true,
@@ -117,7 +117,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         geocoderRef.current!.geocode(
           { location },
           (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK) {
+            if (status === window.google.maps.GeocoderStatus.OK) {
               resolve({ results: results || [] } as google.maps.GeocoderResponse);
             } else {
               reject(new Error(`Geocoding failed: ${status}`));

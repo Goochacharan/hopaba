@@ -38,7 +38,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         }
 
         // Initialize autocomplete
-        autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
           types: ['establishment', 'geocode'],
           componentRestrictions: { country: 'IN' }, // Restrict to India
           fields: ['formatted_address', 'geometry', 'address_components', 'name']
@@ -114,7 +114,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
     return () => {
       if (autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
   }, [onPlaceSelect]);
