@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
 import MapLocationPicker from '@/components/map/MapLocationPicker';
 import AddressAutocomplete from '@/components/map/AddressAutocomplete';
+import MapDebugInfo from '@/components/map/MapDebugInfo';
 
 // Added list of major Indian cities
 const INDIAN_CITIES = [
@@ -26,9 +27,18 @@ const INDIAN_CITIES = [
 
 const LocationSection = () => {
   const form = useFormContext<BusinessFormValues>();
-  const [showMap, setShowMap] = useState(false);
+  const [showDebug] = useState(process.env.NODE_ENV === 'development');
+  
+  console.log('🏪 LocationSection rendering - form values:', {
+    address: form.getValues('address'),
+    latitude: form.getValues('latitude'),
+    longitude: form.getValues('longitude'),
+    city: form.getValues('city'),
+    area: form.getValues('area')
+  });
   
   const handleLocationChange = (value: string, onChange: (value: string) => void) => {
+    console.log('📍 Location change:', value);
     // Check if the input is a Google Maps URL
     if (value.includes('google.com/maps') || value.includes('goo.gl/maps')) {
       // Just store the URL directly - this preserves the exact link pasted by user
@@ -40,6 +50,7 @@ const LocationSection = () => {
   };
 
   const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    console.log('🗺️ Map location selected:', location);
     // Update coordinates in form
     form.setValue('latitude', location.lat);
     form.setValue('longitude', location.lng);
@@ -49,7 +60,7 @@ const LocationSection = () => {
       form.setValue('address', location.address);
     }
 
-    console.log('Map location selected:', location);
+    console.log('✅ Form updated with map location');
   };
 
   const handleAddressPlaceSelect = (place: {
@@ -60,6 +71,7 @@ const LocationSection = () => {
     area?: string;
     postalCode?: string;
   }) => {
+    console.log('🏠 Address place selected:', place);
     // Update form with place data
     form.setValue('address', place.address);
     form.setValue('latitude', place.lat);
@@ -77,7 +89,7 @@ const LocationSection = () => {
       form.setValue('postal_code', place.postalCode);
     }
 
-    console.log('Address place selected:', place);
+    console.log('✅ Form updated with address place data');
   };
   
   return (
@@ -136,6 +148,9 @@ const LocationSection = () => {
             </GoogleMapsLoader>
           </CardContent>
         </Card>
+        
+        {/* Debug info for development */}
+        <MapDebugInfo showDebug={showDebug} />
       </div>
 
       <FormField
