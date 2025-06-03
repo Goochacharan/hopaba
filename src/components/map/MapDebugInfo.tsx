@@ -14,7 +14,7 @@ const MapDebugInfo: React.FC<MapDebugInfoProps> = ({ showDebug = false }) => {
     scriptLoaded: !!document.querySelector('script[src*="maps.googleapis.com"]'),
     apiAvailable: !!window.google?.maps,
     placesAvailable: !!window.google?.maps?.places,
-    geometryAvailable: !!window.google?.maps?.geometry,
+    geometryAvailable: !!(window.google?.maps && (window.google.maps as any).geometry),
   };
 
   return (
