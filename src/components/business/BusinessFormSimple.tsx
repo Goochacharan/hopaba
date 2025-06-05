@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,6 +46,9 @@ export interface Business {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  approval_status?: string;
+  availability?: string;
+  hours?: string;
 }
 
 // Updated schema to include latitude and longitude
@@ -183,12 +187,33 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     
     try {
       const businessData = {
-        ...data,
-        user_id: user.id,
+        name: data.name,
+        category: data.category,
+        subcategory: data.subcategory || [],
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        area: data.area,
+        postal_code: data.postal_code,
+        contact_phone: data.contact_phone,
+        whatsapp: data.whatsapp,
+        contact_email: data.contact_email || null,
+        website: data.website || null,
+        instagram: data.instagram || null,
+        images: data.images || [],
+        tags: data.tags || [],
+        price_range_min: data.price_range_min,
+        price_range_max: data.price_range_max,
+        price_unit: data.price_unit || null,
+        experience: data.experience || null,
         availability_days: selectedDays,
-        // Include the latitude and longitude in the submission
+        hours_from: data.hours_from || null,
+        hours_to: data.hours_to || null,
+        languages: data.languages || [],
+        map_link: data.map_link || null,
         latitude: data.latitude,
         longitude: data.longitude,
+        user_id: user.id,
       };
 
       let result;
@@ -201,7 +226,7 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
       } else {
         result = await supabase
           .from('service_providers')
-          .insert([businessData]);
+          .insert(businessData);
       }
 
       if (result.error) {

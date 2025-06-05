@@ -43,6 +43,8 @@ export interface Business {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 const businessSchema = z.object({
@@ -105,6 +107,8 @@ const businessSchema = z.object({
     })
     .optional(),
   images: z.array(z.string()).optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export type BusinessFormValues = z.infer<typeof businessSchema>;
@@ -146,6 +150,8 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
       price_unit: business?.price_unit || "per hour",
       price_range_min: business?.price_range_min,
       price_range_max: business?.price_range_max,
+      latitude: business?.latitude,
+      longitude: business?.longitude,
     },
   });
 
@@ -234,6 +240,8 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         experience: sanitizedData.experience,
         tags: sanitizedData.tags || [],
         images: sanitizedData.images || [],
+        latitude: sanitizedData.latitude,
+        longitude: sanitizedData.longitude,
       };
 
       console.log("Formatted business data for Supabase:", businessData);
