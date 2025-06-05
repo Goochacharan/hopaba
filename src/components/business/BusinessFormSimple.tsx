@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export interface Business {
-  id: string;
+  id?: string;  // Made optional to match BusinessForm.tsx
   name: string;
   category: string;
   subcategory?: string[];
@@ -317,10 +316,17 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
       </form>
       
       {isAdmin && (
-        <AddCategoryDialog 
-          open={showAddCategoryDialog}
-          onOpenChange={setShowAddCategoryDialog}
-        />
+        <Dialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Category</DialogTitle>
+              <DialogDescription>
+                Add a new category for businesses
+              </DialogDescription>
+            </DialogHeader>
+            <AddCategoryDialog />
+          </DialogContent>
+        </Dialog>
       )}
 
       <Dialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
