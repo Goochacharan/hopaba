@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
@@ -27,6 +26,11 @@ const INDIAN_CITIES = [
 const LocationSection = () => {
   const form = useFormContext<BusinessFormValues>();
   const [showDebug] = useState(process.env.NODE_ENV === 'development');
+  const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | undefined>(
+    form.getValues('latitude') && form.getValues('longitude')
+      ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
+      : undefined
+  );
   
   console.log('🏪 LocationSection rendering - form values:', {
     address: form.getValues('address'),
@@ -38,11 +42,7 @@ const LocationSection = () => {
   
   const handleLocationChange = (value: string, onChange: (value: string) => void) => {
     console.log('📍 Location change:', value);
-    if (value.includes('google.com/maps') || value.includes('goo.gl/maps')) {
-      onChange(value);
-    } else {
-      onChange(value);
-    }
+    onChange(value);
   };
 
   const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
@@ -69,6 +69,9 @@ const LocationSection = () => {
     form.setValue('address', place.address);
     form.setValue('latitude', place.lat);
     form.setValue('longitude', place.lng);
+    
+    // Update map location to trigger map update
+    setMapLocation({ lat: place.lat, lng: place.lng });
     
     if (place.city && INDIAN_CITIES.includes(place.city)) {
       form.setValue('city', place.city);
@@ -111,14 +114,14 @@ const LocationSection = () => {
               </GoogleMapsLoader>
             </FormControl>
             <FormDescription>
-              Start typing your address and select from suggestions for automatic coordinate detection
+              Start typing your address and select from suggestions. The map will automatically update to show your selected location.
             </FormDescription>
             <FormMessage />
           </FormItem>
         )}
       />
 
-      {/* Enhanced Map Section - No Card Container */}
+      {/* Enhanced Map Section */}
       <div className="md:col-span-2 space-y-4">
         <GoogleMapsLoader>
           <MapLocationPicker
@@ -127,6 +130,7 @@ const LocationSection = () => {
                 ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
                 : undefined
             }
+            selectedLocation={mapLocation}
             onLocationSelect={handleMapLocationSelect}
             height="450px"
           />

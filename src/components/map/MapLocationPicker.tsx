@@ -3,27 +3,37 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import GoogleMapsLoader from './GoogleMapsLoader';
-import AddressAutocomplete from './AddressAutocomplete';
 
 interface MapLocationPickerProps {
   initialLocation?: { lat: number; lng: number };
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
   height?: string;
+  selectedLocation?: { lat: number; lng: number }; // Add this to track external location changes
 }
 
 const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   initialLocation,
   onLocationSelect,
-  height = "500px"
+  height = "500px",
+  selectedLocation
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedLocation, setSelectedLocation] = useState(initialLocation);
-  const [searchValue, setSearchValue] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(initialLocation);
+
+  // Update map when external location changes (from address field)
+  useEffect(() => {
+    if (selectedLocation && mapInstanceRef.current && markerRef.current) {
+      const { lat, lng } = selectedLocation;
+      mapInstanceRef.current.setCenter({ lat, lng });
+      mapInstanceRef.current.setZoom(16);
+      markerRef.current.setPosition({ lat, lng });
+      setCurrentLocation(selectedLocation);
+    }
+  }, [selectedLocation]);
 
   useEffect(() => {
     const initializeMap = async () => {
@@ -122,7 +132,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       const address = response.results?.[0]?.formatted_address || `${location.lat}, ${location.lng}`;
       
-      setSelectedLocation(location);
+      setCurrentLocation(location);
       onLocationSelect({
         lat: location.lat,
         lng: location.lng,
@@ -132,7 +142,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       console.log('Location selected:', { ...location, address });
     } catch (error) {
       console.error('Error geocoding location:', error);
-      setSelectedLocation(location);
+      setCurrentLocation(location);
       onLocationSelect({
         lat: location.lat,
         lng: location.lng,
@@ -185,34 +195,6 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     );
   };
 
-  const handleSearchPlaceSelect = (place: {
-    address: string;
-    lat: number;
-    lng: number;
-    city?: string;
-    area?: string;
-    postalCode?: string;
-  }) => {
-    const location = { lat: place.lat, lng: place.lng };
-    
-    // Update map center and marker
-    if (mapInstanceRef.current && markerRef.current) {
-      mapInstanceRef.current.setCenter(location);
-      mapInstanceRef.current.setZoom(16);
-      markerRef.current.setPosition(location);
-    }
-
-    // Update location state and notify parent
-    setSelectedLocation(location);
-    onLocationSelect({
-      lat: place.lat,
-      lng: place.lng,
-      address: place.address
-    });
-
-    setSearchValue(place.address);
-  };
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -222,38 +204,26 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       </div>
       
       <p className="text-sm text-muted-foreground mb-4">
-        Search for your address below, click on the map, or drag the marker to set your exact business location.
+        Click on the map or drag the marker to set your exact business location. You can also use your current location.
       </p>
 
-      {/* Integrated Search Bar */}
-      <div className="space-y-3">
-        <GoogleMapsLoader>
-          <AddressAutocomplete
-            value={searchValue}
-            onChange={setSearchValue}
-            onPlaceSelect={handleSearchPlaceSelect}
-            placeholder="Search for your business address..."
-            className="w-full"
-          />
-        </GoogleMapsLoader>
-
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={getCurrentLocation}
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Navigation className="h-4 w-4" />
-            )}
-            Use Current Location
-          </Button>
-        </div>
+      {/* Controls */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={getCurrentLocation}
+          disabled={isLoading}
+          className="flex items-center gap-2"
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Navigation className="h-4 w-4" />
+          )}
+          Use Current Location
+        </Button>
       </div>
 
       {/* Map Container */}
@@ -264,11 +234,11 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       />
 
       {/* Selected Coordinates Display */}
-      {selectedLocation && (
+      {currentLocation && (
         <div className="p-3 bg-muted rounded-lg">
           <p className="text-sm font-medium">Selected Coordinates:</p>
           <p className="text-xs text-muted-foreground">
-            Lat: {selectedLocation.lat.toFixed(6)}, Lng: {selectedLocation.lng.toFixed(6)}
+            Lat: {currentLocation.lat.toFixed(6)}, Lng: {currentLocation.lng.toFixed(6)}
           </p>
         </div>
       )}
