@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
@@ -12,13 +13,11 @@ import { Input } from '@/components/ui/input';
 import { MapPin, Link2 } from 'lucide-react';
 import { BusinessFormValues } from '../AddBusinessForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
 import MapLocationPicker from '@/components/map/MapLocationPicker';
 import AddressAutocomplete from '@/components/map/AddressAutocomplete';
 import MapDebugInfo from '@/components/map/MapDebugInfo';
 
-// Added list of major Indian cities
 const INDIAN_CITIES = [
   "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
   "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
@@ -39,23 +38,18 @@ const LocationSection = () => {
   
   const handleLocationChange = (value: string, onChange: (value: string) => void) => {
     console.log('📍 Location change:', value);
-    // Check if the input is a Google Maps URL
     if (value.includes('google.com/maps') || value.includes('goo.gl/maps')) {
-      // Just store the URL directly - this preserves the exact link pasted by user
       onChange(value);
     } else {
-      // For regular text, just use it directly
       onChange(value);
     }
   };
 
   const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
     console.log('🗺️ Map location selected:', location);
-    // Update coordinates in form
     form.setValue('latitude', location.lat);
     form.setValue('longitude', location.lng);
     
-    // Update address if it's not already filled
     if (!form.getValues('address') || form.getValues('address').trim() === '') {
       form.setValue('address', location.address);
     }
@@ -72,7 +66,6 @@ const LocationSection = () => {
     postalCode?: string;
   }) => {
     console.log('🏠 Address place selected:', place);
-    // Update form with place data
     form.setValue('address', place.address);
     form.setValue('latitude', place.lat);
     form.setValue('longitude', place.lng);
@@ -125,29 +118,19 @@ const LocationSection = () => {
         )}
       />
 
-      {/* Interactive Map Section */}
-      <div className="md:col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Precise Location (Recommended)</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Set your exact business location for accurate distance calculations and better discoverability.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <GoogleMapsLoader>
-              <MapLocationPicker
-                initialLocation={
-                  form.getValues('latitude') && form.getValues('longitude')
-                    ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
-                    : undefined
-                }
-                onLocationSelect={handleMapLocationSelect}
-                height="350px"
-              />
-            </GoogleMapsLoader>
-          </CardContent>
-        </Card>
+      {/* Enhanced Map Section - No Card Container */}
+      <div className="md:col-span-2 space-y-4">
+        <GoogleMapsLoader>
+          <MapLocationPicker
+            initialLocation={
+              form.getValues('latitude') && form.getValues('longitude')
+                ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
+                : undefined
+            }
+            onLocationSelect={handleMapLocationSelect}
+            height="450px"
+          />
+        </GoogleMapsLoader>
         
         {/* Debug info for development */}
         <MapDebugInfo showDebug={showDebug} />
