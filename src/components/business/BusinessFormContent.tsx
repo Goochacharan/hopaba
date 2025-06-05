@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Business, BusinessFormValues } from './BusinessFormSimple';
@@ -9,17 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TagsInput } from '@/components/ui/tags-input';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building, Clock, MapPin, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
+import { Building, Clock, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plus, ListOrdered } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SubcategorySelector from './SubcategorySelector';
 import LanguageSelector from './LanguageSelector';
-
-// Added list of major Indian cities
-const INDIAN_CITIES = [
-  "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
-  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", 
-  "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"
-];
+import LocationSection from '@/components/business-form/LocationSection';
 
 interface BusinessFormContentProps {
   form?: UseFormReturn<BusinessFormValues>;
@@ -42,7 +37,7 @@ interface BusinessFormContentProps {
 
 const DAYS_OF_WEEK = [
   "Monday",
-  "Tuesday",
+  "Tuesday", 
   "Wednesday",
   "Thursday",
   "Friday",
@@ -253,101 +248,9 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
 
       <Separator />
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-medium">Location Information</h3>
-        </div>
-        
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address*</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter your street address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>City*</FormLabel>
-                <FormControl>
-                  <Select 
-                    value={field.value} 
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select city" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {INDIAN_CITIES.map((city) => (
-                        <SelectItem key={city} value={city}>
-                          {city}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="area"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Area/Neighborhood*</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter neighborhood or area" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="postal_code"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Postal Code*</FormLabel>
-              <FormControl>
-                <Input placeholder="6-digit postal code" {...field} maxLength={6} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="map_link"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Maps Link</FormLabel>
-              <FormControl>
-                <Input placeholder="Paste your Google Maps link here" {...field} />
-              </FormControl>
-              <FormDescription>
-                Optional: Add a link to your business on Google Maps
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      {/* Enhanced Location Section with Interactive Map */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <LocationSection />
       </div>
 
       <Separator />

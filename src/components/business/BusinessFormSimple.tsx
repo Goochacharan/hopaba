@@ -2,721 +2,332 @@ import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCategories } from '@/hooks/useCategories';
 import { useAdmin } from '@/hooks/useAdmin';
-import { useToast } from '@/hooks/use-toast';
-import { Form } from '@/components/ui/form';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle,
-  AlertDialogCancel
-} from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
 import BusinessFormContent from './BusinessFormContent';
-import { useCategories, useSubcategories } from '@/hooks/useCategories';
-
-export interface BusinessFormValues {
-  name: string;
-  category: string;
-  subcategory: string[];
-  description: string;
-  area: string;
-  city: string;
-  address: string;
-  postal_code: string;
-  contact_phone: string;
-  whatsapp: string;
-  contact_email?: string;
-  website?: string;
-  instagram?: string;
-  price_range_min?: number;
-  price_range_max?: number;
-  price_unit?: string;
-  map_link?: string;
-  tags?: string[];
-  experience?: string;
-  availability?: string;
-  hours?: string;
-  hours_from?: string;
-  hours_to?: string;
-  availability_days?: string[];
-  images?: string[];
-}
+import AddCategoryDialog from '@/components/admin/CategoryManager';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface Business {
-  id?: string;
+  id: string;
   name: string;
   category: string;
   subcategory?: string[];
   description: string;
-  area: string;
-  city: string;
   address: string;
+  city: string;
+  area: string;
   postal_code: string;
   contact_phone: string;
   whatsapp: string;
   contact_email?: string;
   website?: string;
   instagram?: string;
+  images?: string[];
+  tags: string[];
   price_range_min?: number;
   price_range_max?: number;
   price_unit?: string;
-  map_link?: string;
-  tags?: string[];
   experience?: string;
-  availability?: string;
-  hours?: string;
+  availability_days?: string[];
   hours_from?: string;
   hours_to?: string;
-  availability_days?: string[];
-  images?: string[];
-  approval_status?: string;
   languages?: string[];
-  user_id?: string;
+  map_link?: string;
+  latitude?: number;
+  longitude?: number;
   created_at?: string;
   updated_at?: string;
+  user_id?: string;
 }
 
-const businessSchema = z.object({
-  name: z.string().min(2, { message: "Business name must be at least 2 characters." }),
-  category: z.string().min(1, { message: "Please select a category." }),
-  subcategory: z.array(z.string()).optional().default([]),
-  description: z.string().min(10, { message: "Description must be at least 10 characters." }),
-  area: z.string().min(2, { message: "Area must be at least 2 characters." }),
-  city: z.string().min(2, { message: "City must be at least 2 characters." }),
-  address: z.string().min(5, { message: "Address must be at least 5 characters." }),
-  postal_code: z.string().regex(/^\d{6}$/, { message: "Postal code must be 6 digits" }),
-  contact_phone: z.string()
-    .refine(phone => phone.startsWith('+91'), {
-      message: "Phone number must start with +91."
-    })
-    .refine(phone => phone.slice(3).replace(/\D/g, '').length === 10, {
-      message: "Please enter a 10-digit phone number (excluding +91)."
-    }),
-  whatsapp: z.string()
-    .refine(phone => phone.startsWith('+91'), {
-      message: "WhatsApp number must start with +91."
-    })
-    .refine(phone => phone.slice(3).replace(/\D/g, '').length === 10, {
-      message: "Please enter a 10-digit WhatsApp number (excluding +91)."
-    }),
-  contact_email: z.string().email({ message: "Please enter a valid email address." }).optional().or(z.literal('')),
-  website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  instagram: z.string().optional().or(z.literal('')),
-  price_range_min: z.number().optional(),
-  price_range_max: z.number().optional(),
+// Updated schema to include latitude and longitude
+const businessFormSchema = z.object({
+  name: z.string().min(2, 'Business name must be at least 2 characters'),
+  category: z.string().min(1, 'Please select a category'),
+  subcategory: z.array(z.string()).optional(),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
+  address: z.string().min(5, 'Please enter a valid address'),
+  city: z.string().min(2, 'Please enter a valid city'),
+  area: z.string().min(2, 'Please enter a valid area'),
+  postal_code: z.string().min(6, 'Please enter a valid 6-digit postal code').max(6),
+  contact_phone: z.string().min(10, 'Please enter a valid phone number'),
+  whatsapp: z.string().min(10, 'Please enter a valid WhatsApp number'),
+  contact_email: z.string().email('Please enter a valid email').optional().or(z.literal('')),
+  website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  instagram: z.string().optional(),
+  images: z.array(z.string()).optional(),
+  tags: z.array(z.string()).min(3, 'Please add at least 3 tags describing your services'),
+  price_range_min: z.number().min(0).optional(),
+  price_range_max: z.number().min(0).optional(),
   price_unit: z.string().optional(),
-  map_link: z.string().optional().or(z.literal('')),
-  tags: z.array(z.string()).min(3, { message: "Please add at least 3 tags describing your services or items." }).optional(),
-  experience: z.string().optional().or(z.literal('')),
-  availability: z.string().optional().or(z.literal('')),
-  hours: z.string().optional().or(z.literal('')),
+  experience: z.string().optional(),
+  availability_days: z.array(z.string()).optional(),
   hours_from: z.string().optional(),
   hours_to: z.string().optional(),
-  availability_days: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
+  map_link: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
-interface BusinessFormProps {
+export type BusinessFormValues = z.infer<typeof businessFormSchema>;
+
+interface BusinessFormSimpleProps {
   business?: Business;
   onSaved: () => void;
   onCancel: () => void;
 }
 
-let CATEGORIES = [
-  "Actor/Actress",
-  "Auto Services",
-  "Bakery & Chats",
-  "Beauty & Wellness",
-  "Choreographer",
-  "Education",
-  "Electrician",
-  "Entertainment",
-  "Event Planning",
-  "Fashion Designer",
-  "Financial Services",
-  "Fitness",
-  "Food & Dining",
-  "Graphic Designer",
-  "Hair Salons",
-  "Healthcare",
-  "Home Services",
-  "Ice Cream Shop",
-  "Laser Hair Removal",
-  "Massage Therapy",
-  "Medical Spas",
-  "Model",
-  "Musician",
-  "Nail Technicians",
-  "Painter",
-  "Photographer",
-  "Plumber",
-  "Professional Services",
-  "Real Estate",
-  "Retail",
-  "Skin Care",
-  "Technology",
-  "Travel Agents",
-  "Vacation Rentals",
-  "Videographers",
-  "Weight Loss Centers",
-  "Writer",
-  "Other"
-].sort();
-
-const PRICE_UNITS = [
-  "per hour", 
-  "per day", 
-  "per session", 
-  "per month", 
-  "per person",
-  "fixed price"
-];
-
-const DAYS_OF_WEEK = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday"
-];
-
-const TIME_OPTIONS = [
-  "12:00 AM", "12:30 AM",
-  "1:00 AM", "1:30 AM", "2:00 AM", "2:30 AM", "3:00 AM", "3:30 AM", 
-  "4:00 AM", "4:30 AM", "5:00 AM", "5:30 AM", "6:00 AM", "6:30 AM",
-  "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM",
-  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "12:00 PM", "12:30 PM",
-  "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", 
-  "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM",
-  "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM", "9:30 PM",
-  "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM",
-];
-
-const EXPERIENCE_OPTIONS = [
-  "Less than 1 year",
-  "1-3 years",
-  "3-5 years",
-  "5-10 years",
-  "More than 10 years"
-];
-
-const AVAILABILITY_OPTIONS = [
-  "Weekdays Only",
-  "Weekends Only",
-  "All Days",
-  "Monday to Friday",
-  "Weekends and Evenings",
-  "By Appointment Only",
-  "Seasonal"
-];
-
-const BusinessFormSimple: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel }) => {
-  const { toast } = useToast();
+const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
+  business,
+  onSaved,
+  onCancel
+}) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { isAdmin } = useAdmin();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>(business?.availability_days || []);
-  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
-  const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
-  const [newSubcategory, setNewSubcategory] = useState("");
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  
-  // Fetch categories from database
   const { data: dbCategories, isLoading: loadingCategories } = useCategories();
   
-  // Fetch subcategories based on selected category
-  const { data: subcategories, isLoading: loadingSubcategories } = useSubcategories(selectedCategoryId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false);
+  const [showAddSubcategoryDialog, setShowAddSubcategoryDialog] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedCategories = localStorage.getItem('customCategories');
-    let customCategories: string[] = [];
-    
-    if (savedCategories) {
-      try {
-        customCategories = JSON.parse(savedCategories);
-      } catch (error) {
-        console.error('Error parsing custom categories:', error);
-      }
-    }
-    
-    const allCategories = [...CATEGORIES, ...customCategories];
-    const uniqueCategories = Array.from(new Set(allCategories)).sort();
-    
-    setCategories(uniqueCategories);
-  }, []);
-
-  // Finding category ID when form loads with existing category
-  useEffect(() => {
-    if (business?.category && dbCategories?.length) {
-      const categoryMatch = dbCategories.find(cat => cat.name === business.category);
-      if (categoryMatch) {
-        setSelectedCategoryId(categoryMatch.id);
-      }
-    }
-  }, [business?.category, dbCategories]);
-
-  const parseHours = () => {
-    if (business?.hours) {
-      const hoursMatch = business.hours.match(/(\d+:\d+ [AP]M)\s*-\s*(\d+:\d+ [AP]M)/);
-      if (hoursMatch) {
-        return {
-          from: hoursMatch[1],
-          to: hoursMatch[2]
-        };
-      }
-    }
-    return { from: "9:00 AM", to: "5:00 PM" };
+  const defaultValues: Partial<BusinessFormValues> = {
+    name: business?.name || '',
+    category: business?.category || '',
+    subcategory: business?.subcategory || [],
+    description: business?.description || '',
+    address: business?.address || '',
+    city: business?.city || '',
+    area: business?.area || '',
+    postal_code: business?.postal_code || '',
+    contact_phone: business?.contact_phone || '',
+    whatsapp: business?.whatsapp || '',
+    contact_email: business?.contact_email || '',
+    website: business?.website || '',
+    instagram: business?.instagram || '',
+    images: business?.images || [],
+    tags: business?.tags || [],
+    price_range_min: business?.price_range_min,
+    price_range_max: business?.price_range_max,
+    price_unit: business?.price_unit || '',
+    experience: business?.experience || '',
+    availability_days: business?.availability_days || [],
+    hours_from: business?.hours_from || '9:00 AM',
+    hours_to: business?.hours_to || '5:00 PM',
+    languages: business?.languages || [],
+    map_link: business?.map_link || '',
+    latitude: business?.latitude,
+    longitude: business?.longitude,
   };
 
-  const { from: defaultHoursFrom, to: defaultHoursTo } = parseHours();
-
   const form = useForm<BusinessFormValues>({
-    resolver: zodResolver(businessSchema),
-    defaultValues: {
-      name: business?.name || "",
-      category: business?.category || "",
-      subcategory: business?.subcategory || [],
-      description: business?.description || "",
-      area: business?.area || "",
-      city: business?.city || "",
-      address: business?.address || "",
-      postal_code: business?.postal_code || "",
-      contact_phone: business?.contact_phone || "+91",
-      whatsapp: business?.whatsapp || "+91",
-      contact_email: business?.contact_email || "",
-      website: business?.website || "",
-      instagram: business?.instagram || "",
-      price_range_min: business?.price_range_min,
-      price_range_max: business?.price_range_max,
-      price_unit: business?.price_unit || "per hour",
-      map_link: business?.map_link || "",
-      tags: business?.tags || [],
-      experience: business?.experience || "",
-      availability: business?.availability || "",
-      hours: business?.hours || "",
-      hours_from: defaultHoursFrom,
-      hours_to: defaultHoursTo,
-      availability_days: business?.availability_days || [],
-      images: business?.images || [],
-    },
+    resolver: zodResolver(businessFormSchema),
+    defaultValues,
   });
 
-  // Watch the category field to update the category ID when it changes
-  const selectedCategory = form.watch("category");
-  
   useEffect(() => {
-    if (selectedCategory && dbCategories?.length) {
-      const categoryMatch = dbCategories.find(cat => cat.name === selectedCategory);
-      if (categoryMatch) {
-        setSelectedCategoryId(categoryMatch.id);
-        // Reset subcategory when category changes
-        form.setValue("subcategory", []);
-      } else {
-        setSelectedCategoryId(null);
-      }
-    }
-  }, [selectedCategory, dbCategories, form]);
-
-  useEffect(() => {
-    if (business?.availability_days && business.availability_days.length > 0) {
+    if (business?.availability_days) {
       setSelectedDays(business.availability_days);
-      form.setValue("availability_days", business.availability_days);
     }
-  }, [business, form]);
+  }, [business]);
 
   useEffect(() => {
-    const hoursFrom = form.getValues("hours_from");
-    const hoursTo = form.getValues("hours_to");
-    
-    if (hoursFrom && hoursTo) {
-      form.setValue("hours", `${hoursFrom} - ${hoursTo}`);
-    }
-  }, [form.watch("hours_from"), form.watch("hours_to")]);
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'category') {
+        const selectedCategory = dbCategories?.find(cat => cat.name === value.category);
+        setSelectedCategoryId(selectedCategory?.id || null);
+        form.setValue('subcategory', []);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, dbCategories]);
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => {
-    let value = e.target.value;
-    
-    if (!value.startsWith('+91')) {
-      value = '+91' + value.replace('+91', '');
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 10) {
+      form.setValue(fieldName, value, { shouldValidate: true });
     }
-    
-    const digits = value.slice(3).replace(/\D/g, '');
-    const limitedDigits = digits.slice(0, 10);
-    
-    form.setValue(fieldName, '+91' + limitedDigits, { shouldValidate: true });
   };
 
   const handleDayToggle = (day: string, checked: boolean) => {
-    let updatedDays = [...selectedDays];
+    const newDays = checked 
+      ? [...selectedDays, day]
+      : selectedDays.filter(d => d !== day);
     
-    if (checked) {
-      if (!updatedDays.includes(day)) {
-        updatedDays.push(day);
-      }
-    } else {
-      updatedDays = updatedDays.filter(d => d !== day);
-    }
-    
-    setSelectedDays(updatedDays);
-    form.setValue("availability_days", updatedDays, { shouldValidate: true });
-    
-    form.setValue("availability", updatedDays.join(', '), { shouldValidate: true });
-    
-    console.log("Updated days:", updatedDays);
+    setSelectedDays(newDays);
+    form.setValue('availability_days', newDays, { shouldValidate: true });
   };
 
-  const handleAddCategory = () => {
-    if (newCategory && !categories.includes(newCategory)) {
-      const updatedCategories = [...categories, newCategory].sort();
-      setCategories(updatedCategories);
-      
-      const savedCategories = localStorage.getItem('customCategories');
-      let customCategories: string[] = [];
-      
-      try {
-        if (savedCategories) {
-          customCategories = JSON.parse(savedCategories);
-        }
-        
-        if (!customCategories.includes(newCategory)) {
-          customCategories.push(newCategory);
-          localStorage.setItem('customCategories', JSON.stringify(customCategories));
-        }
-      } catch (error) {
-        console.error('Error saving custom category:', error);
-      }
-      
-      form.setValue("category", newCategory);
-      setNewCategory("");
-      setShowAddCategoryDialog(false);
-      
-      toast({
-        title: "Category Added",
-        description: `${newCategory} has been added to the categories list.`
-      });
-    } else if (categories.includes(newCategory)) {
-      toast({
-        title: "Category Exists",
-        description: "This category already exists in the list.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleAddSubcategory = async () => {
-    if (!selectedCategoryId) {
-      toast({
-        title: "No category selected",
-        description: "Please select a category first before adding a subcategory.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!newSubcategory) {
-      toast({
-        title: "Subcategory name required",
-        description: "Please enter a name for the subcategory.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      // Add to database
-      const { error } = await supabase
-        .from('subcategories')
-        .insert([
-          { 
-            name: newSubcategory, 
-            category_id: selectedCategoryId 
-          }
-        ]);
-        
-      if (error) throw error;
-      
-      // Set the current subcategory to the newly created one
-      // Get current subcategories first
-      const currentSubcategories = form.getValues("subcategory") || [];
-      // Add the new subcategory to the existing ones
-      form.setValue("subcategory", [...currentSubcategories, newSubcategory]);
-      setNewSubcategory("");
-      setShowAddSubcategoryDialog(false);
-      
-      toast({
-        title: "Subcategory Added",
-        description: `${newSubcategory} has been added to the selected category.`
-      });
-      
-      // Refresh subcategories - query key will be invalidated due to the category ID
-    } catch (error: any) {
-      toast({
-        title: "Error adding subcategory",
-        description: error.message || "Failed to add subcategory.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSubmit = async (data: BusinessFormValues) => {
+  const onSubmit = async (data: BusinessFormValues) => {
     if (!user) {
       toast({
         title: "Authentication required",
-        description: "You must be logged in to list your business.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!data.tags || data.tags.length < 3) {
-      toast({
-        title: "Tags required",
-        description: "Please add at least 3 tags describing your services or items.",
-        variant: "destructive",
+        description: "Please log in to save your business",
+        variant: "destructive"
       });
       return;
     }
 
     setIsSubmitting(true);
-
+    
     try {
-      const priceRangeMin = data.price_range_min ? Number(data.price_range_min) : undefined;
-      const priceRangeMax = data.price_range_max ? Number(data.price_range_max) : undefined;
-      
-      const hours = `${data.hours_from} - ${data.hours_to}`;
-      
-      const availabilityDays = selectedDays;
-      const availabilityString = availabilityDays.join(', ');
-      
-      console.log("Submitting availability days:", availabilityDays);
-      console.log("Subcategory values:", data.subcategory);
-      
-      // Ensure subcategory is always an array
-      const subcategoryArray = Array.isArray(data.subcategory) ? data.subcategory : 
-                              (data.subcategory ? [data.subcategory] : []);
-      
-      // Prepare business data with correct subcategory array
       const businessData = {
-        name: data.name,
-        category: data.category,
-        subcategory: subcategoryArray,
-        description: data.description,
-        area: data.area,
-        city: data.city,
-        address: data.address,
-        postal_code: data.postal_code,
-        contact_phone: data.contact_phone,
-        whatsapp: data.whatsapp,
-        contact_email: data.contact_email || null,
-        website: data.website || null,
-        instagram: data.instagram || null,
-        map_link: data.map_link || null,
+        ...data,
         user_id: user.id,
-        approval_status: 'pending',
-        price_unit: data.price_unit || "per hour",
-        price_range_min: priceRangeMin,
-        price_range_max: priceRangeMax,
-        tags: data.tags || [],
-        experience: data.experience || null,
-        availability: availabilityString || null,
-        hours: hours,
-        availability_start_time: data.hours_from || null,
-        availability_end_time: data.hours_to || null,
-        availability_days: availabilityDays,
-        images: data.images || [],
+        availability_days: selectedDays,
+        // Include the latitude and longitude in the submission
+        latitude: data.latitude,
+        longitude: data.longitude,
       };
 
-      console.log("Submitting business data:", businessData);
-
       let result;
-      
       if (business?.id) {
-        console.log("Updating business with ID:", business.id);
         result = await supabase
           .from('service_providers')
           .update(businessData)
-          .eq('id', business.id);
-
-        if (result.error) {
-          console.error("Supabase update error:", result.error);
-          throw new Error(`Update failed: ${result.error.message}`);
-        }
-
-        console.log("Business updated successfully:", result);
-        toast({
-          title: "Business Updated",
-          description: "Your business listing has been updated and will be reviewed by an admin.",
-        });
+          .eq('id', business.id)
+          .eq('user_id', user.id);
       } else {
-        console.log("Creating new business");
         result = await supabase
           .from('service_providers')
           .insert([businessData]);
-
-        if (result.error) {
-          console.error("Supabase insert error:", result.error);
-          throw new Error(`Creation failed: ${result.error.message}`);
-        }
-
-        console.log("Business created successfully:", result);
-        toast({
-          title: "Business Added",
-          description: "Your business has been listed and will be reviewed by an admin.",
-        });
       }
 
-      setShowSuccessDialog(true);
-    } catch (error: any) {
+      if (result.error) {
+        throw result.error;
+      }
+
+      onSaved();
+    } catch (error) {
       console.error('Error saving business:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to save your business. Please try again.",
-        variant: "destructive",
+        description: "Failed to save business. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleAddSubcategory = async () => {
+    if (!newSubcategoryName.trim() || !selectedCategoryId) return;
+
+    try {
+      const { error } = await supabase
+        .from('subcategories')
+        .insert([{ 
+          name: newSubcategoryName.trim(),
+          category_id: selectedCategoryId 
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Subcategory added successfully"
+      });
+      
+      setNewSubcategoryName('');
+      setShowAddSubcategoryDialog(false);
+    } catch (error) {
+      console.error('Error adding subcategory:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to add subcategory",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const categories = dbCategories?.map(cat => cat.name) || [];
+
   return (
-    <>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-          <Card>
-            <CardContent className="pt-6">
-              <BusinessFormContent 
-                form={form}
-                handlePhoneInput={handlePhoneInput}
-                handleDayToggle={handleDayToggle}
-                selectedDays={selectedDays}
-                loadingCategories={loadingCategories}
-                dbCategories={dbCategories}
-                categories={categories}
-                isAdmin={isAdmin}
-                setShowAddCategoryDialog={setShowAddCategoryDialog}
-                selectedCategoryId={selectedCategoryId}
-                loadingSubcategories={loadingSubcategories}
-                subcategories={subcategories}
-                setShowAddSubcategoryDialog={setShowAddSubcategoryDialog}
-                isSubmitting={isSubmitting}
-                business={business}
+    <FormProvider {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <BusinessFormContent
+          form={form}
+          handlePhoneInput={handlePhoneInput}
+          handleDayToggle={handleDayToggle}
+          selectedDays={selectedDays}
+          loadingCategories={loadingCategories}
+          dbCategories={dbCategories}
+          categories={categories}
+          isAdmin={isAdmin}
+          setShowAddCategoryDialog={setShowAddCategoryDialog}
+          selectedCategoryId={selectedCategoryId}
+          setShowAddSubcategoryDialog={setShowAddSubcategoryDialog}
+          isSubmitting={isSubmitting}
+          business={business}
+        />
+
+        <div className="flex gap-4 pt-6">
+          <Button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="flex-1"
+          >
+            {isSubmitting ? 'Saving...' : business ? 'Update Business' : 'Create Business'}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+      
+      {isAdmin && (
+        <AddCategoryDialog 
+          open={showAddCategoryDialog}
+          onOpenChange={setShowAddCategoryDialog}
+        />
+      )}
+
+      <Dialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Subcategory</DialogTitle>
+            <DialogDescription>
+              Add a new subcategory to the selected category
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="subcategory-name">Subcategory Name</Label>
+              <Input
+                id="subcategory-name"
+                value={newSubcategoryName}
+                onChange={(e) => setNewSubcategoryName(e.target.value)}
+                placeholder="Enter subcategory name"
               />
-            </CardContent>
-          </Card>
-          
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 
-                "Saving..." : 
-                business?.id ? "Update Business" : "Submit Business"
-              }
-            </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleAddSubcategory} disabled={!newSubcategoryName.trim()}>
+                Add Subcategory
+              </Button>
+              <Button variant="outline" onClick={() => setShowAddSubcategoryDialog(false)}>
+                Cancel
+              </Button>
+            </div>
           </div>
-        </form>
-      </Form>
-      
-      {/* Add Category Dialog */}
-      <AlertDialog open={showAddCategoryDialog} onOpenChange={setShowAddCategoryDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add New Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter a new business category to add to the list.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Category name"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddCategory}>Add Category</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      {/* Add Subcategory Dialog */}
-      <AlertDialog open={showAddSubcategoryDialog} onOpenChange={setShowAddSubcategoryDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add New Subcategory</AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter a new subcategory for {selectedCategory || "the selected category"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Subcategory name"
-              value={newSubcategory}
-              onChange={(e) => setNewSubcategory(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddSubcategory}>Add Subcategory</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      
-      <AlertDialog 
-        open={showSuccessDialog} 
-        onOpenChange={(open) => {
-          setShowSuccessDialog(open);
-          if (!open) onSaved();
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {business?.id ? "Business Updated" : "Business Added"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {business?.id ? 
-                "Your business listing has been updated and will be reviewed by an admin." :
-                "Your business has been listed and will be reviewed by an admin."
-              }
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => {
-              setShowSuccessDialog(false);
-              onSaved();
-            }}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </DialogContent>
+      </Dialog>
+    </FormProvider>
   );
 };
 
