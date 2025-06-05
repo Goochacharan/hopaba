@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,7 +31,7 @@ export interface Business {
   website?: string;
   instagram?: string;
   images?: string[];
-  tags: string[];
+  tags?: string[];  // Made optional to match BusinessForm.tsx
   price_range_min?: number;
   price_range_max?: number;
   price_unit?: string;
