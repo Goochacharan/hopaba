@@ -1,20 +1,40 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Loader2, Search } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import GoogleMapsLoader from './GoogleMapsLoader';
+import AddressAutocomplete from './AddressAutocomplete';
 
 interface MapLocationPickerProps {
   initialLocation?: { lat: number; lng: number };
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
   height?: string;
   selectedLocation?: { lat: number; lng: number };
+  addressValue: string;
+  onAddressChange: (value: string) => void;
+  onAddressPlaceSelect: (place: {
+    address: string;
+    lat: number;
+    lng: number;
+    city?: string;
+    area?: string;
+    postalCode?: string;
+  }) => void;
+  onSearchLocation: () => void;
+  isSearching: boolean;
 }
 
 const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   initialLocation,
   onLocationSelect,
   height = "500px",
-  selectedLocation
+  selectedLocation,
+  addressValue,
+  onAddressChange,
+  onAddressPlaceSelect,
+  onSearchLocation,
+  isSearching
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -208,8 +228,37 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       </div>
       
       <p className="text-sm text-muted-foreground mb-4">
-        Click on the map or drag the marker to set your exact business location. You can also use your current location.
+        Enter address or select location on map
       </p>
+
+      {/* Address Input */}
+      <div className="flex gap-2 mb-4">
+        <div className="flex-1">
+          <GoogleMapsLoader>
+            <AddressAutocomplete
+              value={addressValue}
+              onChange={onAddressChange}
+              onPlaceSelect={onAddressPlaceSelect}
+              placeholder="Enter your business address"
+            />
+          </GoogleMapsLoader>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          onClick={onSearchLocation}
+          disabled={isSearching || !addressValue?.trim()}
+          className="px-3"
+          title="Search and pin location on map"
+        >
+          {isSearching ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
 
       {/* Controls */}
       <div className="flex gap-2 mb-4">

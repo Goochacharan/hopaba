@@ -6,19 +6,15 @@ import {
   FormItem, 
   FormLabel, 
   FormControl, 
-  FormMessage,
-  FormDescription
+  FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { MapPin, Link2, Search, Loader2 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { BusinessFormValues } from '../AddBusinessForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
 import MapLocationPicker from '@/components/map/MapLocationPicker';
-import AddressAutocomplete from '@/components/map/AddressAutocomplete';
 import MapDebugInfo from '@/components/map/MapDebugInfo';
-import { toast } from '@/components/ui/use-toast';
 
 const INDIAN_CITIES = [
   "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
@@ -43,11 +39,6 @@ const LocationSection = () => {
     city: form.getValues('city'),
     area: form.getValues('area')
   });
-  
-  const handleLocationChange = (value: string, onChange: (value: string) => void) => {
-    console.log('📍 Location change:', value);
-    onChange(value);
-  };
 
   const handleMapLocationSelect = (location: { lat: number; lng: number; address: string }) => {
     console.log('🗺️ Map location selected:', location);
@@ -59,6 +50,11 @@ const LocationSection = () => {
     }
 
     console.log('✅ Form updated with map location');
+  };
+
+  const handleAddressChange = (value: string) => {
+    console.log('📍 Address change:', value);
+    form.setValue('address', value);
   };
 
   const handleAddressPlaceSelect = (place: {
@@ -95,11 +91,6 @@ const LocationSection = () => {
   const handleSearchLocation = async () => {
     const currentAddress = form.getValues('address');
     if (!currentAddress || currentAddress.trim() === '') {
-      toast({
-        title: "No address entered",
-        description: "Please enter an address to search for",
-        variant: "destructive"
-      });
       return;
     }
 
@@ -156,19 +147,9 @@ const LocationSection = () => {
         }
       }
 
-      toast({
-        title: "Location found",
-        description: "Map updated to the searched address",
-      });
-
       console.log('🔍 Location searched and found:', { lat, lng, address: currentAddress });
     } catch (error) {
       console.error('Error searching location:', error);
-      toast({
-        title: "Search failed",
-        description: "Could not find the location. Please try a different address.",
-        variant: "destructive"
-      });
     } finally {
       setIsSearching(false);
     }
@@ -183,50 +164,7 @@ const LocationSection = () => {
         </h3>
       </div>
 
-      <FormField
-        control={form.control}
-        name="address"
-        render={({ field }) => (
-          <FormItem className="md:col-span-2">
-            <FormLabel>Address*</FormLabel>
-            <FormControl>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <GoogleMapsLoader>
-                    <AddressAutocomplete
-                      value={field.value}
-                      onChange={(value) => handleLocationChange(value, field.onChange)}
-                      onPlaceSelect={handleAddressPlaceSelect}
-                      placeholder="Enter your business address"
-                    />
-                  </GoogleMapsLoader>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="default"
-                  onClick={handleSearchLocation}
-                  disabled={isSearching || !field.value?.trim()}
-                  className="px-3"
-                  title="Search and pin location on map"
-                >
-                  {isSearching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </FormControl>
-            <FormDescription>
-              Start typing your address and select from suggestions, or click the search button to pin the location on the map.
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {/* Enhanced Map Section */}
+      {/* Enhanced Map Section with integrated address input */}
       <div className="md:col-span-2 space-y-4">
         <GoogleMapsLoader>
           <MapLocationPicker
@@ -237,6 +175,11 @@ const LocationSection = () => {
             }
             selectedLocation={mapLocation}
             onLocationSelect={handleMapLocationSelect}
+            addressValue={form.getValues('address') || ''}
+            onAddressChange={handleAddressChange}
+            onAddressPlaceSelect={handleAddressPlaceSelect}
+            onSearchLocation={handleSearchLocation}
+            isSearching={isSearching}
             height="450px"
           />
         </GoogleMapsLoader>
@@ -250,21 +193,13 @@ const LocationSection = () => {
         name="map_link"
         render={({ field }) => (
           <FormItem className="md:col-span-2">
-            <FormLabel>
-              <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4" />
-                Google Maps Link (Optional)
-              </div>
-            </FormLabel>
+            <FormLabel>Google Maps Link (Optional)</FormLabel>
             <FormControl>
               <Input 
                 placeholder="Paste your Google Maps link here" 
                 {...field} 
               />
             </FormControl>
-            <FormDescription>
-              You can also paste a Google Maps link as an alternative to using the map above
-            </FormDescription>
             <FormMessage />
           </FormItem>
         )}
