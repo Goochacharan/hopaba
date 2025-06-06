@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { 
@@ -114,8 +115,7 @@ const LocationSection = () => {
       const result = await new Promise<any>((resolve, reject) => {
         geocoder.geocode(
           { 
-            address: currentAddress,
-            componentRestrictions: { country: 'IN' }
+            address: currentAddress
           },
           (results, status) => {
             if (status === window.google.maps.GeocoderStatus.OK && results?.[0]) {
