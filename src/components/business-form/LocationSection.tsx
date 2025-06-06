@@ -9,13 +9,15 @@ import {
   FormDescription
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { MapPin, Link2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Link2, Search, Loader2 } from 'lucide-react';
 import { BusinessFormValues } from '../AddBusinessForm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
 import MapLocationPicker from '@/components/map/MapLocationPicker';
 import AddressAutocomplete from '@/components/map/AddressAutocomplete';
 import MapDebugInfo from '@/components/map/MapDebugInfo';
+import { toast } from '@/components/ui/use-toast';
 
 const INDIAN_CITIES = [
   "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", 
@@ -26,6 +28,7 @@ const INDIAN_CITIES = [
 const LocationSection = () => {
   const form = useFormContext<BusinessFormValues>();
   const [showDebug] = useState(process.env.NODE_ENV === 'development');
+  const [isSearching, setIsSearching] = useState(false);
   const [mapLocation, setMapLocation] = useState<{ lat: number; lng: number } | undefined>(
     form.getValues('latitude') && form.getValues('longitude')
       ? { lat: form.getValues('latitude'), lng: form.getValues('longitude') }
@@ -70,7 +73,7 @@ const LocationSection = () => {
     form.setValue('latitude', place.lat);
     form.setValue('longitude', place.lng);
     
-    // Update map location to trigger map update
+    // Update map location immediately to trigger map update
     setMapLocation({ lat: place.lat, lng: place.lng });
     
     if (place.city && INDIAN_CITIES.includes(place.city)) {
@@ -86,6 +89,89 @@ const LocationSection = () => {
     }
 
     console.log('✅ Form updated with address place data');
+  };
+
+  const handleSearchLocation = async () => {
+    const currentAddress = form.getValues('address');
+    if (!currentAddress || currentAddress.trim() === '') {
+      toast({
+        title: "No address entered",
+        description: "Please enter an address to search for",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    
+    try {
+      if (!window.google?.maps) {
+        throw new Error('Google Maps API not loaded');
+      }
+
+      const geocoder = new window.google.maps.Geocoder();
+      
+      const result = await new Promise<any>((resolve, reject) => {
+        geocoder.geocode(
+          { 
+            address: currentAddress,
+            componentRestrictions: { country: 'IN' }
+          },
+          (results, status) => {
+            if (status === window.google.maps.GeocoderStatus.OK && results?.[0]) {
+              resolve(results[0]);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      const location = result.geometry.location;
+      const lat = location.lat();
+      const lng = location.lng();
+      
+      // Update form coordinates
+      form.setValue('latitude', lat);
+      form.setValue('longitude', lng);
+      
+      // Update map location to trigger map update
+      setMapLocation({ lat, lng });
+
+      // Extract location details from geocoding result
+      if (result.address_components) {
+        for (const component of result.address_components) {
+          const types = component.types;
+          
+          if (types.includes('locality')) {
+            const city = component.long_name;
+            if (INDIAN_CITIES.includes(city)) {
+              form.setValue('city', city);
+            }
+          } else if (types.includes('sublocality_level_1') || types.includes('sublocality')) {
+            form.setValue('area', component.long_name);
+          } else if (types.includes('postal_code')) {
+            form.setValue('postal_code', component.long_name);
+          }
+        }
+      }
+
+      toast({
+        title: "Location found",
+        description: "Map updated to the searched address",
+      });
+
+      console.log('🔍 Location searched and found:', { lat, lng, address: currentAddress });
+    } catch (error) {
+      console.error('Error searching location:', error);
+      toast({
+        title: "Search failed",
+        description: "Could not find the location. Please try a different address.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSearching(false);
+    }
   };
   
   return (
@@ -104,17 +190,36 @@ const LocationSection = () => {
           <FormItem className="md:col-span-2">
             <FormLabel>Address*</FormLabel>
             <FormControl>
-              <GoogleMapsLoader>
-                <AddressAutocomplete
-                  value={field.value}
-                  onChange={(value) => handleLocationChange(value, field.onChange)}
-                  onPlaceSelect={handleAddressPlaceSelect}
-                  placeholder="Enter your business address"
-                />
-              </GoogleMapsLoader>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <GoogleMapsLoader>
+                    <AddressAutocomplete
+                      value={field.value}
+                      onChange={(value) => handleLocationChange(value, field.onChange)}
+                      onPlaceSelect={handleAddressPlaceSelect}
+                      placeholder="Enter your business address"
+                    />
+                  </GoogleMapsLoader>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  onClick={handleSearchLocation}
+                  disabled={isSearching || !field.value?.trim()}
+                  className="px-3"
+                  title="Search and pin location on map"
+                >
+                  {isSearching ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </FormControl>
             <FormDescription>
-              Start typing your address and select from suggestions. The map will automatically update to show your selected location.
+              Start typing your address and select from suggestions, or click the search button to pin the location on the map.
             </FormDescription>
             <FormMessage />
           </FormItem>

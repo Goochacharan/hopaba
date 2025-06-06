@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Loader2 } from 'lucide-react';
@@ -8,7 +7,7 @@ interface MapLocationPickerProps {
   initialLocation?: { lat: number; lng: number };
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
   height?: string;
-  selectedLocation?: { lat: number; lng: number }; // Add this to track external location changes
+  selectedLocation?: { lat: number; lng: number };
 }
 
 const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
@@ -24,14 +23,19 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(initialLocation);
 
-  // Update map when external location changes (from address field)
+  // Update map when external location changes (from address field or search button)
   useEffect(() => {
     if (selectedLocation && mapInstanceRef.current && markerRef.current) {
       const { lat, lng } = selectedLocation;
+      console.log('🗺️ Updating map to external location:', selectedLocation);
+      
+      // Center map and update marker position
       mapInstanceRef.current.setCenter({ lat, lng });
       mapInstanceRef.current.setZoom(16);
       markerRef.current.setPosition({ lat, lng });
       setCurrentLocation(selectedLocation);
+      
+      console.log('✅ Map updated to external location');
     }
   }, [selectedLocation]);
 
