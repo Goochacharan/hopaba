@@ -551,12 +551,12 @@ const Shop = () => {
     <MainLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
+        {/* <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">Discover Local Businesses</h1>
           <p className="text-muted-foreground">
             Find the best service providers in your area
           </p>
-        </div>
+        </div> */}
 
         {/* Search and Filters */}
         <div className="space-y-4">
