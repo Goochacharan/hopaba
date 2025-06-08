@@ -31,6 +31,8 @@ export interface Business {
   updated_at: string;
   rating?: number;
   postal_code?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export const useBusinesses = () => {

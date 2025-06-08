@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/useAuth';
+import { LocationProvider } from '@/contexts/LocationContext';
 import { queryClient } from '@/lib/queryClient';
 import { lazy, Suspense } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -35,38 +36,40 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <div className="App">
-            <Suspense fallback={<LoadingScreen />}>
-              <Routes>
-                <Route path="/" element={<Shop />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/search" element={<SearchResults />} />
-                <Route path="/business/:id" element={<BusinessDetails />} />
-                <Route path="/seller/:id" element={<SellerDetails />} />
-                <Route path="/listing/:id" element={<MarketplaceListingDetails />} />
-                <Route path="/location/:id" element={<LocationDetails />} />
-                <Route path="/messages/:id?" element={<Messages />} />
-                <Route path="/messages-listing" element={<MessagesListing />} />
-                <Route path="/inbox" element={<Inbox />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/post-request" element={<PostRequest />} />
-                <Route path="/requests" element={<Requests />} />
-                <Route path="/request/:id" element={<RequestDetail />} />
-                <Route path="/service-requests" element={<ServiceRequests />} />
-                <Route path="/provider-requests" element={<ProviderRequests />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/admin" element={<AdminPanel />} />
-                <Route path="/map" element={<Map />} />
-                <Route path="/distance-demo" element={<DistanceDemo />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-            <Toaster />
-          </div>
-        </Router>
+        <LocationProvider>
+          <Router>
+            <div className="App">
+              <Suspense fallback={<LoadingScreen />}>
+                <Routes>
+                  <Route path="/" element={<Shop />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/search" element={<SearchResults />} />
+                  <Route path="/business/:id" element={<BusinessDetails />} />
+                  <Route path="/seller/:id" element={<SellerDetails />} />
+                  <Route path="/listing/:id" element={<MarketplaceListingDetails />} />
+                  <Route path="/location/:id" element={<LocationDetails />} />
+                  <Route path="/messages/:id?" element={<Messages />} />
+                  <Route path="/messages-listing" element={<MessagesListing />} />
+                  <Route path="/inbox" element={<Inbox />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/post-request" element={<PostRequest />} />
+                  <Route path="/requests" element={<Requests />} />
+                  <Route path="/request/:id" element={<RequestDetail />} />
+                  <Route path="/service-requests" element={<ServiceRequests />} />
+                  <Route path="/provider-requests" element={<ProviderRequests />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/map" element={<Map />} />
+                  <Route path="/distance-demo" element={<DistanceDemo />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+              <Toaster />
+            </div>
+          </Router>
+        </LocationProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

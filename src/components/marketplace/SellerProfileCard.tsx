@@ -17,6 +17,7 @@ interface SellerProfileCardProps {
   mapLink?: string | null;
   listingId?: string;
   avatarUrl?: string | null;
+  businessName?: string;
 }
 const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
   sellerName,
@@ -28,7 +29,8 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
   location,
   mapLink,
   listingId,
-  avatarUrl
+  avatarUrl,
+  businessName
 }) => {
   const {
     toast
@@ -120,19 +122,49 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       });
       return;
     }
+
+    // Normalize and clean the location data
+    const cleanLocation = location.trim();
+    const cleanMapLink = mapLink?.trim() || '';
+
     let mapsUrl;
-    if (mapLink && mapLink.trim() !== '') {
-      mapsUrl = mapLink;
-    } else if (location && (location.includes('google.com/maps') || location.includes('goo.gl/maps'))) {
-      mapsUrl = location;
-    } else {
-      const destination = encodeURIComponent(location || '');
-      if (isMobile && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        mapsUrl = `maps://maps.apple.com/?q=${destination}`;
+
+    // Priority order for location handling:
+    // 1. Use explicit map link if provided
+    // 2. Use location if it's a maps URL
+    // 3. Use geocoding search as fallback
+    
+    if (cleanMapLink !== '') {
+      // If map link is provided, ensure it's a proper Google Maps URL
+      if (cleanMapLink.includes('goo.gl') || cleanMapLink.includes('maps.app.goo.gl')) {
+        // For short links, convert to search URL
+        const searchQuery = encodeURIComponent(cleanLocation || businessName || '');
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
       } else {
-        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${destination}`;
+        mapsUrl = cleanMapLink;
+      }
+    } else if (cleanLocation.includes('google.com/maps') || cleanLocation.includes('goo.gl/maps')) {
+      // If location is a maps URL
+      if (cleanLocation.includes('goo.gl')) {
+        // Convert short link to search
+        const searchQuery = encodeURIComponent(businessName || cleanLocation);
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+      } else {
+        mapsUrl = cleanLocation;
+      }
+    } else {
+      // Fallback to search URL
+      const searchQuery = encodeURIComponent(cleanLocation || businessName || '');
+      if (isMobile && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        // Use Apple Maps on iOS devices
+        mapsUrl = `maps://maps.apple.com/?q=${searchQuery}`;
+      } else {
+        // Use Google Maps search
+        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
       }
     }
+
+    // Open the maps URL in a new tab
     const link = document.createElement('a');
     link.href = mapsUrl;
     link.target = '_blank';
@@ -140,9 +172,10 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
     toast({
       title: "Opening Directions",
-      description: `Getting directions to location...`,
+      description: `Getting directions to ${businessName || 'location'}...`,
       duration: 2000
     });
   };

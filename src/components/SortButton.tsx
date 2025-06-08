@@ -11,7 +11,7 @@ import { ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export type SortOption = 'rating' | 'distance' | 'reviewCount' | 'newest';
+export type SortOption = 'rating' | 'distance' | 'reviewCount' | 'newest' | 'price';
 
 interface SortButtonProps {
   onSortChange: (option: SortOption) => void;
@@ -24,6 +24,7 @@ const SortButton: React.FC<SortButtonProps> = ({ onSortChange, currentSort }) =>
     { value: 'distance', label: 'Distance (Near to Far)' },
     { value: 'reviewCount', label: 'Review Count' },
     { value: 'newest', label: 'Newest First' },
+    { value: 'price', label: 'Price (Low to High)' },
   ];
 
   // Check if a non-default sort is applied (something other than 'rating')

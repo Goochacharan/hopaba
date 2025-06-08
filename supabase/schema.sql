@@ -114,6 +114,8 @@ BEGIN
         WHERE LOWER(sub) = LOWER(TRIM(sr.subcategory))
       )
     )
+    -- NEW: Add city matching (case insensitive)
+    AND LOWER(sp.city) = LOWER(sr.city)
     AND sp.approval_status = 'approved';
 END;
 $$;

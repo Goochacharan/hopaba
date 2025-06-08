@@ -18,8 +18,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone } from 'lucide-react';
-import { useConversations } from '@/hooks/useConversations';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages } from 'lucide-react';
+import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
@@ -28,18 +28,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { NotificationPrompt } from '@/components/notifications/NotificationPrompt';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { distanceService, type Location } from '@/services/distanceService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  calculateItemDistance,
-  getDistanceDisplayText,
-  type ProviderWithDistance 
-} from '@/utils/locationFilterUtils';
+import { useLocation } from '@/contexts/LocationContext';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
+import { useDistanceCache } from '@/hooks/useDistanceCache';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
+import { useInboxFilters } from '@/hooks/useSearchFilters';
+import InboxFilters from '@/components/InboxFilters';
 import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import ChatDialog from '@/components/messaging/ChatDialog';
+import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -64,11 +63,27 @@ const SidebarToggleButton = () => {
   );
 };
 
+// Component to display provider languages
+const ProviderLanguages: React.FC<{ providerId: string }> = ({ providerId }) => {
+  const { data: languages } = useServiceProviderLanguages(providerId);
+  
+  if (!languages || languages.length === 0) return null;
+  
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Languages className="h-4 w-4" />
+      <span className="line-clamp-1">
+        {languages.map(lang => lang.name).join(', ')}
+      </span>
+    </div>
+  );
+};
+
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
-  const { conversations, isLoadingConversations, conversationsError, refetchConversations, unreadCount } = useConversations();
+  const { conversations, isLoading: isLoadingConversations, unreadCount } = useConversationsOptimized();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
@@ -80,25 +95,25 @@ const Inbox: React.FC = () => {
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
   
-  // Location and sorting state for messages
-  const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
-  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
+  // Sorting state for messages
   const [messagesSortBy, setMessagesSortBy] = useState<string>('recent');
-  const [conversationsWithDistance, setConversationsWithDistance] = useState<any[]>([]);
+  
+  // Initialize inbox filters
+  const { filters: inboxFilters, setters: inboxSetters } = useInboxFilters();
+  
+  // Use global location context
+  const { isLocationEnabled, userLocation } = useLocation();
+  
+  // Distance caching
+  const { calculateDistancesForBusinesses } = useDistanceCache();
 
-  // Enhanced debug logging for conversations
+  // Auto-select first request if none selected and requests are available
   useEffect(() => {
-    console.log('Inbox - Conversations data:', conversations);
-    console.log('Inbox - Loading state:', isLoadingConversations);
-    console.log('Inbox - Error state:', conversationsError);
-    console.log('Inbox - Selected request ID:', selectedRequestId);
-    console.log('Inbox - User ID:', user?.id);
-    
-    if (conversationsError) {
-      console.error('Detailed conversation error:', conversationsError);
+    if (!selectedRequestId && userRequests && userRequests.length > 0 && !isLoadingUserRequests) {
+      console.log('Auto-selecting first request:', userRequests[0].id);
+      setSelectedRequestId(userRequests[0].id);
     }
-  }, [conversations, isLoadingConversations, conversationsError, selectedRequestId, user]);
+  }, [selectedRequestId, userRequests, isLoadingUserRequests]);
   
   // Redirect to login if not authenticated
   if (!user) {
@@ -128,9 +143,21 @@ const Inbox: React.FC = () => {
   const selectedRequest = userRequests?.find(req => req.id === selectedRequestId);
   
   // Filter conversations for the selected request with debugging
-  const requestConversations = conversations?.filter(
-    conv => conv.request_id === selectedRequestId
-  ) || [];
+  const requestConversations = useMemo(() => {
+    if (!conversations || !selectedRequestId) {
+      console.log('No conversations or selectedRequestId:', { conversations: !!conversations, selectedRequestId });
+      return [];
+    }
+    
+    const filtered = conversations.filter(conv => conv.request_id === selectedRequestId);
+    console.log('Filtering conversations:', {
+      totalConversations: conversations.length,
+      selectedRequestId,
+      filteredCount: filtered.length
+    });
+    
+    return filtered;
+  }, [conversations, selectedRequestId]);
   
   // Get unread counts for the selected request
   const conversationIds = requestConversations.map(conv => conv.id);
@@ -160,8 +187,7 @@ const Inbox: React.FC = () => {
     return counts;
   }, [userRequests, conversations, allConversationUnreadCounts]);
   
-  console.log('Filtered conversations for request:', selectedRequestId, requestConversations);
-  console.log('Conversation unread counts:', conversationUnreadCounts);
+
 
   // Fetch enhanced provider details for conversations
   const { data: enhancedProviderDetails = {} } = useQuery({
@@ -280,128 +306,109 @@ const Inbox: React.FC = () => {
   const handleRetryConversations = () => {
     console.log('Retrying conversation fetch, attempt:', retryCount + 1);
     setRetryCount(prev => prev + 1);
-    refetchConversations();
+    // Note: refetchConversations not available in optimized hook
+    // Real-time subscription will handle updates automatically
     
     toast({
       title: "Retrying...",
-      description: `Attempting to reload conversations (${retryCount + 1}/3)`,
+      description: `Real-time updates will refresh conversations automatically`,
     });
   };
 
-  // Handle location enable/disable for messages
-  const handleLocationToggle = async () => {
-    if (isLocationEnabled) {
-      // Disable location
-      setIsLocationEnabled(false);
-      setUserLocation(null);
-      setConversationsWithDistance([]);
-      toast({
-        title: "Location disabled",
-        description: "Distance sorting is now disabled",
-      });
-    } else {
-      // Enable location
-      setIsCalculatingDistances(true);
-      try {
-        console.log('🔍 Getting user location for messages...');
-        const location = await distanceService.getUserLocation();
-        setUserLocation(location);
-        setIsLocationEnabled(true);
-        console.log('📍 User location obtained:', location);
-        
-        toast({
-          title: "Location enabled",
-          description: "Distance calculation enabled for message sorting",
-        });
+  // Removed location calculation logic - now handled by global context
 
-        // Calculate distances for current conversations
-        if (requestConversations && requestConversations.length > 0) {
-          await calculateDistancesForConversations(requestConversations, location);
+  // State for conversations with distance calculations
+  const [conversationsWithDistance, setConversationsWithDistance] = useState<any[]>([]);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+
+  // Calculate distances for conversations when location is enabled
+  // Using a more efficient approach to prevent infinite loops
+  useEffect(() => {
+    let isMounted = true;
+
+    const calculateDistances = async () => {
+      if (!requestConversations?.length || !userLocation || !isLocationEnabled) {
+        if (isMounted) {
+          setConversationsWithDistance([]);
         }
-      } catch (error) {
-        console.error('❌ Failed to get user location:', error);
-        toast({
-          title: "Location access denied",
-          description: "Please allow location access to enable distance sorting",
-          variant: "destructive"
-        });
-      } finally {
-        setIsCalculatingDistances(false);
+        return;
       }
-    }
-  };
 
-  // Calculate distances for conversations
-  const calculateDistancesForConversations = async (conversations: any[], userLoc: Location) => {
-    setIsCalculatingDistances(true);
-    try {
-      const conversationsWithDist = await Promise.all(
-        conversations.map(async (conversation) => {
-          let calculatedDistance = null;
-          let distanceText = null;
-
-          // Get provider details for distance calculation
-          const providerDetails = enhancedProviderDetails[conversation.provider_id];
-          
-          if (providerDetails && providerDetails.postal_code) {
-            try {
-              // Get coordinates from postal code (use fallback first as it's more reliable from browser)
-              let providerLocation: Location;
-              try {
-                providerLocation = await distanceService.getCoordinatesFromPostalCodeFallback(providerDetails.postal_code);
-                console.log(`📍 Geocoded ${providerDetails.postal_code} to:`, providerLocation);
-              } catch (error) {
-                console.warn('⚠️ Fallback geocoding failed, trying Google API...');
-                providerLocation = await distanceService.getCoordinatesFromPostalCode(providerDetails.postal_code);
-                console.log(`📍 Geocoded ${providerDetails.postal_code} to:`, providerLocation);
-              }
-
-              // Calculate straight-line distance
-              const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, providerLocation);
-              calculatedDistance = straightLineDistance; // Already in km
-              distanceText = `${straightLineDistance.toFixed(1)} km`;
-              console.log(`📍 Distance calculated for ${conversation.service_providers.name}: ${calculatedDistance.toFixed(2)} km`);
-            } catch (error) {
-              console.warn(`Failed to calculate distance for ${conversation.service_providers.name}:`, error);
-            }
-          } else {
-            console.log(`⚠️ No postal code available for ${conversation.service_providers.name}`);
-          }
-
-          return {
-            ...conversation,
-            calculatedDistance,
-            distanceText
-          };
-        })
+      // Check if we have provider details for all conversations
+      const hasAllProviderDetails = requestConversations.every(conv => 
+        enhancedProviderDetails[conv.provider_id]
       );
       
-      setConversationsWithDistance(conversationsWithDist);
-      console.log('✅ Distance calculation completed for', conversationsWithDist.length, 'conversations');
-      
-      // Log summary of distance calculations
-      const withDistance = conversationsWithDist.filter(c => c.calculatedDistance !== null);
-      const withoutDistance = conversationsWithDist.filter(c => c.calculatedDistance === null);
-      console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
-      
-    } catch (error) {
-      console.error('❌ Failed to calculate distances:', error);
-      toast({
-        title: "Distance calculation failed",
-        description: "Using conversations without distance data",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCalculatingDistances(false);
-    }
-  };
+      if (!hasAllProviderDetails) {
+        // Provider details not loaded yet, skip distance calculation
+        return;
+      }
 
-  // Recalculate distances when conversations change and location is enabled
-  useEffect(() => {
-    if (requestConversations && requestConversations.length > 0 && userLocation && isLocationEnabled) {
-      calculateDistancesForConversations(requestConversations, userLocation);
+      if (isMounted) {
+        setIsCalculatingDistances(true);
+      }
+
+      try {
+        // Prepare businesses data for distance calculation
+        const businessesForDistanceCalc = requestConversations.map(conversation => {
+          const providerDetails = enhancedProviderDetails[conversation.provider_id];
+          return {
+            id: conversation.provider_id,
+            name: conversation.service_providers?.name || 'Unknown Provider',
+            postal_code: providerDetails?.postal_code,
+            latitude: undefined, // We don't have exact coordinates for providers
+            longitude: undefined,
+            map_link: undefined
+          };
+        }).filter(business => business.postal_code); // Only include businesses with postal codes
+
+        // Use cached distance calculation
+        const distanceResults = await calculateDistancesForBusinesses(userLocation, businessesForDistanceCalc);
+        
+        // Create a map of provider_id to distance
+        const distanceMap = new Map();
+        distanceResults.forEach(result => {
+          if (result.distance !== null) {
+            distanceMap.set(result.business.id, result.distance);
+          }
+        });
+
+        // Apply distances to conversations
+        const conversationsWithDistanceData = requestConversations.map(conversation => ({
+          ...conversation,
+          calculatedDistance: distanceMap.get(conversation.provider_id) || null
+        }));
+
+        if (isMounted) {
+          setConversationsWithDistance(conversationsWithDistanceData);
+        }
+      } catch (error) {
+        console.error('Error calculating distances for conversations:', error);
+        if (isMounted) {
+          setConversationsWithDistance([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsCalculatingDistances(false);
+        }
+      }
+    };
+
+    // Only calculate distances if we have all the required data
+    if (requestConversations?.length && userLocation && isLocationEnabled && Object.keys(enhancedProviderDetails).length > 0) {
+      calculateDistances();
     }
-  }, [requestConversations, userLocation, isLocationEnabled, enhancedProviderDetails]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    requestConversations?.length,
+    userLocation?.lat,
+    userLocation?.lng,
+    isLocationEnabled,
+    Object.keys(enhancedProviderDetails).join(',') // Convert to string to avoid object reference issues
+  ]);
 
   // Enhanced error message based on error type
   const getErrorMessage = (error: any) => {
@@ -422,15 +429,60 @@ const Inbox: React.FC = () => {
     return errorMessage;
   };
 
-  // Sort conversations based on selected criteria
-  const sortedConversations = useMemo(() => {
-    // Use conversations with distance if location is enabled, otherwise use regular conversations
-    const conversationsToSort = isLocationEnabled && conversationsWithDistance.length > 0
+  // Apply filters and sort conversations
+  const filteredAndSortedConversations = useMemo(() => {
+    // Use conversations with distance if location is enabled and distances are calculated
+    const conversationsToFilter = isLocationEnabled && conversationsWithDistance.length > 0
       ? conversationsWithDistance 
       : requestConversations || [];
 
-    const sorted = [...conversationsToSort].sort((a, b) => {
-      switch (messagesSortBy) {
+    // Apply filters
+    let filtered = conversationsToFilter.filter(conversation => {
+      const providerDetails = enhancedProviderDetails[conversation.provider_id];
+      
+      // Apply rating filter
+      if (inboxFilters.minRating[0] > 0) {
+        const overallScore = providerDetails?.overallScore || 0;
+        if (overallScore === 0 || overallScore < inboxFilters.minRating[0]) {
+          return false;
+        }
+      }
+      
+      // Apply city filter
+      if (inboxFilters.city.trim() !== '') {
+        const providerCity = providerDetails?.city || '';
+        if (!providerCity.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      // Apply postal code filter
+      if (inboxFilters.postalCode.trim() !== '') {
+        const providerPostalCode = providerDetails?.postal_code || '';
+        if (!providerPostalCode.includes(inboxFilters.postalCode)) {
+          return false;
+        }
+      }
+      
+      // Apply price type filter
+      if (inboxFilters.priceType !== 'all') {
+        const pricingType = providerDetails?.latestPricing?.pricing_type;
+        if (pricingType !== inboxFilters.priceType) {
+          return false;
+        }
+      }
+      
+      // TODO: Apply language filter when provider language data is available
+      // if (inboxFilters.languages.length > 0) {
+      //   // Check if provider speaks any of the selected languages
+      // }
+      
+      return true;
+    });
+
+    // Sort the filtered conversations
+    const sorted = [...filtered].sort((a, b) => {
+      switch (inboxFilters.sortBy) {
         case 'distance':
           // Sort by calculated distance if available
           const aDistance = a.calculatedDistance ?? null;
@@ -444,21 +496,21 @@ const Inbox: React.FC = () => {
           // Fall back to recent if no distance data
           return new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime();
         case 'rating':
-          const aRating = enhancedProviderDetails[a.provider_id]?.rating || 0;
-          const bRating = enhancedProviderDetails[b.provider_id]?.rating || 0;
+          const aRating = enhancedProviderDetails[a.provider_id]?.overallScore || 0;
+          const bRating = enhancedProviderDetails[b.provider_id]?.overallScore || 0;
           return bRating - aRating;
-        case 'quotation':
-          const aQuotation = a.latest_quotation || 0;
-          const bQuotation = b.latest_quotation || 0;
-          return aQuotation - bQuotation; // Lowest quotation first
-        case 'recent':
+        case 'price':
+          const aPrice = enhancedProviderDetails[a.provider_id]?.latestPricing?.quotation_price || 0;
+          const bPrice = enhancedProviderDetails[b.provider_id]?.latestPricing?.quotation_price || 0;
+          return aPrice - bPrice; // Lowest price first
+        case 'latest':
         default:
           return new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime();
       }
     });
 
     return sorted;
-  }, [requestConversations, conversationsWithDistance, isLocationEnabled, messagesSortBy, enhancedProviderDetails]);
+  }, [requestConversations, conversationsWithDistance, isLocationEnabled, inboxFilters, enhancedProviderDetails]);
   
   // Helper function to get pricing type badge
   const getPricingTypeBadge = (pricingType: string | undefined) => {
@@ -628,22 +680,7 @@ const Inbox: React.FC = () => {
                     <SidebarTrigger className="md:hidden" />
                   </div>
                   
-                  {/* Location Toggle - moved above tabs */}
-                  <div className="mb-4">
-                    <Button
-                      variant={isLocationEnabled ? "default" : "outline"}
-                      onClick={handleLocationToggle}
-                      disabled={isCalculatingDistances}
-                      className="flex items-center gap-2"
-                    >
-                      {isCalculatingDistances ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Navigation className="h-4 w-4" />
-                      )}
-                      {isLocationEnabled ? "Disable Location" : "Enable Location"}
-                    </Button>
-                  </div>
+                  {/* Location is managed globally via the header toggle */}
                   
                   <Tabs defaultValue="messages" value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -663,64 +700,34 @@ const Inbox: React.FC = () => {
                     </TabsList>
                     
                     <TabsContent value="messages">
-                      {/* Sorting Controls */}
-                      <div className="mb-4 flex items-center gap-4">
-                        <label className="text-sm font-medium">Sort by:</label>
-                        <Select value={messagesSortBy} onValueChange={setMessagesSortBy}>
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="recent">Most Recent</SelectItem>
-                            <SelectItem value="rating">Highest Rating</SelectItem>
-                            <SelectItem value="quotation">Lowest Quotation</SelectItem>
-                            {isLocationEnabled && (
-                              <SelectItem value="distance">Nearest Distance</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
+                      {/* Filter and Sort Controls */}
+                      <div className="mb-4">
+                        <InboxFilters
+                          minRating={inboxFilters.minRating}
+                          setMinRating={inboxSetters.setMinRating}
+                          languages={inboxFilters.languages}
+                          setLanguages={inboxSetters.setLanguages}
+                          city={inboxFilters.city}
+                          setCity={inboxSetters.setCity}
+                          postalCode={inboxFilters.postalCode}
+                          setPostalCode={inboxSetters.setPostalCode}
+                          priceType={inboxFilters.priceType}
+                          setPriceType={inboxSetters.setPriceType}
+                          sortBy={inboxFilters.sortBy}
+                          setSortBy={inboxSetters.setSortBy}
+                          isLocationEnabled={isLocationEnabled}
+                        />
                       </div>
 
                       <div className="space-y-4">
-                        {conversationsError ? (
-                          <Alert variant="destructive" className="border-red-200 bg-red-50">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                              <div className="flex flex-col gap-2">
-                                <span className="font-medium">Failed to load messages</span>
-                                <span className="text-sm">
-                                  {getErrorMessage(conversationsError)}
-                                </span>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Button 
-                                    onClick={handleRetryConversations} 
-                                    variant="outline" 
-                                    size="sm"
-                                    disabled={retryCount >= 3}
-                                  >
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    {retryCount >= 3 ? 'Max retries reached' : `Retry (${retryCount}/3)`}
-                                  </Button>
-                                  <Button 
-                                    onClick={() => window.location.reload()} 
-                                    variant="outline" 
-                                    size="sm"
-                                  >
-                                    <Database className="h-4 w-4 mr-2" />
-                                    Refresh Page
-                                  </Button>
-                                </div>
-                              </div>
-                            </AlertDescription>
-                          </Alert>
-                        ) : isLoadingConversations ? (
+                        {isLoadingConversations ? (
                           <div className="flex justify-center py-8">
                             <div className="flex items-center gap-2">
                               <Loader2 className="h-6 w-6 animate-spin text-primary" />
                               <span className="text-sm text-muted-foreground">Loading messages...</span>
                             </div>
                           </div>
-                        ) : sortedConversations.length === 0 ? (
+                        ) : filteredAndSortedConversations.length === 0 ? (
                           <div className="text-center py-8 border rounded-md">
                             <MessageSquare className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
                             <h3 className="text-lg font-medium">No messages yet</h3>
@@ -736,7 +743,7 @@ const Inbox: React.FC = () => {
                             </Button>
                           </div>
                         ) : (
-                          sortedConversations.map((conversation) => {
+                          filteredAndSortedConversations.map((conversation) => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
                             const providerDetails = enhancedProviderDetails[conversation.provider_id];
                             const isProviderOnline = isUserOnline(conversation.service_providers?.user_id);
@@ -862,6 +869,9 @@ const Inbox: React.FC = () => {
                                     
                                     {/* Enhanced Quotation Price with Type */}
                                     {providerDetails?.latestPricing && getPricingDisplay(providerDetails.latestPricing)}
+                                    
+                                    {/* Languages Spoken */}
+                                    <ProviderLanguages providerId={conversation.provider_id} />
                                   </div>
                                 </CardContent>
                                 

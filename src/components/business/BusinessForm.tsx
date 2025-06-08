@@ -283,6 +283,31 @@ const BusinessForm: React.FC<BusinessFormProps> = ({ business, onSaved, onCancel
         console.log("Processing language selections for business:", businessId);
         console.log("Selected language IDs:", sanitizedData.language_ids);
         
+        // First, get the language names for the text array
+        const { data: selectedLanguages, error: languagesFetchError } = await supabase
+          .from('languages')
+          .select('id, name')
+          .in('id', sanitizedData.language_ids);
+
+        if (languagesFetchError) {
+          console.error("Error fetching language names:", languagesFetchError);
+        } else {
+          // Update the service_providers table with language names array for backward compatibility
+          const languageNames = selectedLanguages?.map(lang => lang.name) || [];
+          console.log("Updating service_providers with language names:", languageNames);
+          
+          const { error: updateLanguagesError } = await supabase
+            .from('service_providers')
+            .update({ languages: languageNames })
+            .eq('id', businessId);
+
+          if (updateLanguagesError) {
+            console.error("Error updating languages in service_providers:", updateLanguagesError);
+          } else {
+            console.log("Successfully updated languages in service_providers table");
+          }
+        }
+        
         // First, delete existing language associations for this business
         const { error: deleteError } = await supabase
           .from('business_languages')

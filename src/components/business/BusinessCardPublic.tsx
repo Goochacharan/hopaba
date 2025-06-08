@@ -12,8 +12,8 @@ import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import StarRating from '@/components/marketplace/StarRating';
 import { useToast } from '@/hooks/use-toast';
-import { useBusinessLanguages } from '@/hooks/useBusinessLanguages';
-import { getUserLocation, calculatePreciseBusinessDistance, getBusinessCoordinates, formatPreciseDistance } from '@/lib/locationUtils';
+import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
+import { useLocation } from '@/contexts/LocationContext';
 
 interface BusinessCardPublicProps {
   business: Business & {
@@ -28,14 +28,12 @@ interface BusinessCardPublicProps {
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [distanceInfo, setDistanceInfo] = useState<{
-    distance: number;
-    isPrecise: boolean;
-    text: string;
-  } | null>(null);
+  
+  // Use global location context only for checking if location is enabled
+  const { isLocationEnabled } = useLocation();
   
   // Use the new hook to fetch business languages
-  const { data: businessLanguages } = useBusinessLanguages(business.id || '');
+  const { data: businessLanguages } = useServiceProviderLanguages(business.id || '');
   
   // Use the new Supabase-based review hook
   const {
@@ -43,46 +41,6 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     averageCriteriaRatings,
     totalReviews
   } = useBusinessReviews(business.id || '');
-
-  // Calculate precise distance on component mount
-  useEffect(() => {
-    const calculateDistance = async () => {
-      try {
-        // Get user's current location
-        const userLocation = await getUserLocation();
-        if (!userLocation) {
-          console.log('User location not available');
-          return;
-        }
-
-        // Calculate precise distance
-        const distance = calculatePreciseBusinessDistance(userLocation, business);
-        if (distance !== null) {
-          // Check if we used exact coordinates
-          const businessCoords = getBusinessCoordinates(business);
-          const isPrecise = businessCoords !== null;
-          
-          setDistanceInfo({
-            distance,
-            isPrecise,
-            text: formatPreciseDistance(distance, isPrecise)
-          });
-
-          console.log('Distance calculated:', {
-            business: business.name,
-            distance,
-            isPrecise,
-            userLocation,
-            businessLocation: businessCoords
-          });
-        }
-      } catch (error) {
-        console.error('Error calculating distance:', error);
-      }
-    };
-
-    calculateDistance();
-  }, [business]);
   
   // Map days numbers to actual day names
   const dayMap: Record<string, string> = {
@@ -128,8 +86,8 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
     }
   };
 
-  // Use either the new precise distance or the existing calculated distance
-  const displayDistance = distanceInfo || (
+  // Use the pre-calculated distance from the optimized distance cache system
+  const displayDistance = (
     business.calculatedDistance !== null && business.calculatedDistance !== undefined 
       ? {
           distance: business.calculatedDistance,

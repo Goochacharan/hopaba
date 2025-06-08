@@ -10,15 +10,17 @@ interface ServiceProviderDashboardProps {
   providerId: string;
   category: string;
   subcategory?: string[];
+  providerCity?: string;
 }
 
 /**
  * Dashboard component for service providers to view and respond to matching service requests
  */
-const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
-  providerId,
-  category,
-  subcategory
+const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({ 
+  providerId, 
+  category, 
+  subcategory,
+  providerCity
 }) => {
   // Fetch criteria ratings for this provider
   const { data: criteriaRatings } = useQuery({
@@ -80,6 +82,7 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
         providerId={providerId}
         category={category}
         subcategory={subcategory}
+        providerCity={providerCity}
       />
     </div>
   );

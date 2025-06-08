@@ -12,16 +12,21 @@ import { Navigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { distanceService, type Location } from '@/services/distanceService';
 import { toast } from '@/components/ui/use-toast';
+import { useLocation } from '@/contexts/LocationContext';
 
 const ServiceRequests: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'new' | 'responded'>('new');
   
-  // Location state
-  const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
-  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
+  // Use global location context
+  const { 
+    userLocation, 
+    isLocationEnabled, 
+    isCalculatingLocation,
+    enableLocation, 
+    disableLocation 
+  } = useLocation();
   
   // If not authenticated, redirect to login
   if (!user) {
@@ -87,21 +92,14 @@ const ServiceRequests: React.FC = () => {
   // Handle location toggle
   const handleLocationToggle = async () => {
     if (isLocationEnabled) {
-      setIsLocationEnabled(false);
-      setUserLocation(null);
+      disableLocation();
       toast({
         title: "Location disabled",
         description: "Distance sorting is now disabled",
       });
     } else {
-      setIsCalculatingDistances(true);
       try {
-        console.log('🔍 Getting user location...');
-        const location = await distanceService.getUserLocation();
-        setUserLocation(location);
-        setIsLocationEnabled(true);
-        console.log('📍 User location obtained:', location);
-        
+        await enableLocation();
         toast({
           title: "Location enabled",
           description: "Distance calculation enabled for request sorting",
@@ -113,8 +111,6 @@ const ServiceRequests: React.FC = () => {
           description: "Please allow location access to enable distance sorting",
           variant: "destructive"
         });
-      } finally {
-        setIsCalculatingDistances(false);
       }
     }
   };
@@ -186,10 +182,10 @@ const ServiceRequests: React.FC = () => {
               <Button
                 variant={isLocationEnabled ? "default" : "outline"}
                 onClick={handleLocationToggle}
-                disabled={isCalculatingDistances}
+                disabled={isCalculatingLocation}
                 className="flex items-center gap-2"
               >
-                {isCalculatingDistances ? (
+                {isCalculatingLocation ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Navigation className="h-4 w-4" />
@@ -216,6 +212,7 @@ const ServiceRequests: React.FC = () => {
                     section="new"
                     userLocation={userLocation}
                     isLocationEnabled={isLocationEnabled}
+                    providerCity={provider.city}
                   />
                 </div>
               ))}
@@ -231,6 +228,7 @@ const ServiceRequests: React.FC = () => {
                     section="responded"
                     userLocation={userLocation}
                     isLocationEnabled={isLocationEnabled}
+                    providerCity={provider.city}
                   />
                 </div>
               ))}

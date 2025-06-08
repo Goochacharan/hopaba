@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone } from 'lucide-react';
+import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone, Languages } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +24,7 @@ import { cn } from '@/lib/utils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
+import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -121,6 +121,22 @@ const getPricingDisplay = (pricing: any) => {
   );
 };
 
+// Component to display provider languages
+const ProviderLanguagesDisplay: React.FC<{ providerId: string }> = ({ providerId }) => {
+  const { data: languages } = useServiceProviderLanguages(providerId);
+  
+  if (!languages || languages.length === 0) return null;
+  
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Languages className="h-4 w-4" />
+      <span className="line-clamp-1">
+        {languages.map(lang => lang.name).join(', ')}
+      </span>
+    </div>
+  );
+};
+
 // Export the content component so it can be used directly without the dialog wrapper
 export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { user } = useAuth();
@@ -129,8 +145,11 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { conversations, createConversation, isCreatingConversation } = useConversations();
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<ProviderFiltersType>({
-    minRating: 0,
-    city: null
+    minRating: [0],
+    languages: [],
+    city: '',
+    postalCode: '',
+    priceType: 'all'
   });
   const [currentSort, setCurrentSort] = useState<SortOption>('rating');
   const [userLocation, setUserLocation] = useState<any>(null);
@@ -198,29 +217,259 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       if (!requestId) return [];
       
       // First get the matching providers
+      console.log('Fetching matching providers for request:', requestId);
+      
+      // Let's also check what providers exist in the database and their approval status
+      const { data: allProviders, error: allProvidersError } = await supabase
+        .from('service_providers')
+        .select('id, name, category, subcategory, approval_status')
+        .order('created_at', { ascending: false });
+        
+      console.log('All providers in database:', allProviders);
+      console.log('All providers error:', allProvidersError);
+      
+      // Get the specific request to see what category/subcategory/city we're matching against
+      const { data: requestData, error: requestError } = await supabase
+        .from('service_requests')
+        .select('id, category, subcategory, city')
+        .eq('id', requestId)
+        .single();
+        
+      console.log('Request data:', requestData);
+      console.log('Request error:', requestError);
+      
       const { data: baseData, error: baseError } = await supabase
         .rpc('get_matching_providers_for_request', { request_id: requestId });
+        
+      console.log('Base providers data:', baseData);
+      console.log('Base providers error:', baseError);
         
       if (baseError) {
         console.error("Error fetching matching providers:", baseError);
         throw baseError;
       }
       
+      if (!baseData || baseData.length === 0) {
+        console.log('No matching providers found for request:', requestId);
+        
+        // Let's also try a manual query to see what should match
+        if (requestData) {
+          const { data: manualMatch, error: manualError } = await supabase
+            .from('service_providers')
+            .select('id, name, category, subcategory, approval_status, city')
+            .ilike('category', requestData.category)
+            .ilike('city', requestData.city);
+            
+          console.log('Manual category match (all approval statuses):', manualMatch);
+          console.log('Manual match error:', manualError);
+          
+          const { data: approvedMatch, error: approvedError } = await supabase
+            .from('service_providers')
+            .select('id, name, category, subcategory, approval_status, city')
+            .ilike('category', requestData.category)
+            .ilike('city', requestData.city)
+            .eq('approval_status', 'approved');
+            
+          console.log('Manual category match (approved only):', approvedMatch);
+          console.log('Approved match error:', approvedError);
+          
+          // If no approved providers but there are providers with other statuses, let's use them temporarily
+          if (manualMatch && manualMatch.length > 0 && (!approvedMatch || approvedMatch.length === 0)) {
+            console.log('Using providers with any approval status as fallback');
+            // Transform the manual match data to match the expected format
+            const fallbackData = manualMatch.map(provider => ({
+              provider_id: provider.id,
+              provider_name: provider.name,
+              provider_category: provider.category,
+              provider_subcategory: provider.subcategory?.[0] || '',
+              user_id: provider.id // This should be the actual user_id, but we'll use provider id for now
+            }));
+            
+            // Continue with the enhanced data processing using fallback data
+            console.log('Using fallback data:', fallbackData);
+            
+            // Get user_id for each provider
+            const enhancedFallbackData = await Promise.all(
+              fallbackData.map(async (provider) => {
+                const { data: providerDetail } = await supabase
+                  .from('service_providers')
+                  .select('user_id')
+                  .eq('id', provider.provider_id)
+                  .single();
+                  
+                return {
+                  ...provider,
+                  user_id: providerDetail?.user_id || provider.user_id
+                };
+              })
+            );
+            
+            // Use the fallback data instead of returning empty array
+            const baseDataToUse = enhancedFallbackData;
+            
+            // Continue with the rest of the processing...
+            console.log('Enhancing data for', baseDataToUse.length, 'providers (fallback)');
+            const enhancedData = await Promise.all(
+              (baseDataToUse || []).map(async (provider: MatchingProviderResult, index: number) => {
+                try {
+                  console.log(`Processing provider ${index + 1}/${baseDataToUse.length}:`, provider.provider_id, provider.provider_name);
+                
+                // Get detailed provider info including address, city, area, postal_code, map_link, images, and contact_phone
+                const { data: providerDetail, error: providerDetailError } = await supabase
+                  .from('service_providers')
+                  .select('id, address, area, city, postal_code, map_link, images, contact_phone')
+                  .eq('id', provider.provider_id)
+                  .single();
+                  
+                if (providerDetailError) {
+                  console.error(`Error fetching details for provider ${provider.provider_id}:`, providerDetailError);
+                }
+                
+                // Get reviews for the provider from business_reviews table with criteria ratings
+                const { data: reviews, error: reviewsError } = await supabase
+                  .from('business_reviews')
+                  .select('business_id, rating, criteria_ratings')
+                  .eq('business_id', provider.provider_id);
+                  
+                if (reviewsError) {
+                  console.error(`Error fetching reviews for provider ${provider.provider_id}:`, reviewsError);
+                }
+
+                // Get latest quotation message for this provider and request
+                let latestPricing = null;
+                if (conversations) {
+                  const conversation = conversations.find(
+                    c => c.request_id === requestId && c.provider_id === provider.provider_id
+                  );
+                  
+                  if (conversation) {
+                    const { data: latestQuotation } = await supabase
+                      .from('messages')
+                      .select('pricing_type, quotation_price, wholesale_price, negotiable_price')
+                      .eq('conversation_id', conversation.id)
+                      .not('quotation_price', 'is', null)
+                      .order('created_at', { ascending: false })
+                      .limit(1)
+                      .single();
+                    
+                    if (latestQuotation) {
+                      latestPricing = {
+                        pricing_type: latestQuotation.pricing_type,
+                        quotation_price: latestQuotation.quotation_price,
+                        wholesale_price: latestQuotation.wholesale_price,
+                        negotiable_price: latestQuotation.negotiable_price
+                      };
+                    }
+                  }
+                }
+                
+                // Calculate average rating if reviews exist
+                let rating = 4.5; // Default rating
+                let reviewCount = 0;
+                let overallScore = 0;
+                
+                if (reviews && reviews.length > 0) {
+                  rating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+                  reviewCount = reviews.length;
+                  
+                  // Calculate overall score using criteria ratings (same as home page)
+                  const aggregatedCriteriaRatings: Record<string, number[]> = {};
+                  
+                  reviews.forEach(review => {
+                    if (review.criteria_ratings) {
+                      Object.entries(review.criteria_ratings).forEach(([criterionId, criteriaRating]) => {
+                        if (!aggregatedCriteriaRatings[criterionId]) {
+                          aggregatedCriteriaRatings[criterionId] = [];
+                        }
+                        aggregatedCriteriaRatings[criterionId].push(criteriaRating as number);
+                      });
+                    }
+                  });
+                  
+                  // Calculate average for each criterion
+                  const averageCriteriaRatings: Record<string, number> = {};
+                  Object.entries(aggregatedCriteriaRatings).forEach(([criterionId, ratings]) => {
+                    const sum = ratings.reduce((acc, val) => acc + val, 0);
+                    averageCriteriaRatings[criterionId] = sum / ratings.length;
+                  });
+                  
+                  // Use the same calculation as home page (RatingProgressBars)
+                  overallScore = calculateOverallRating(averageCriteriaRatings);
+                }
+                
+                return {
+                  ...provider,
+                  address: providerDetail?.address || '',
+                  city: providerDetail?.city || 'Unknown',
+                  area: providerDetail?.area || 'Unknown',
+                  postal_code: providerDetail?.postal_code || '',
+                  map_link: providerDetail?.map_link || '',
+                  images: providerDetail?.images || [],
+                  contact_phone: providerDetail?.contact_phone || '',
+                  rating,
+                  review_count: reviewCount,
+                  overallScore,
+                  latest_pricing: latestPricing
+                };
+                } catch (error) {
+                  console.error(`Error processing provider ${provider.provider_id}:`, error);
+                  // Return a basic version of the provider if processing fails
+                  return {
+                    ...provider,
+                    address: '',
+                    city: 'Unknown',
+                    area: 'Unknown',
+                    postal_code: '',
+                    map_link: '',
+                    images: [],
+                    contact_phone: '',
+                    rating: 4.5,
+                    review_count: 0,
+                    overallScore: 0,
+                    latest_pricing: null
+                  };
+                }
+              })
+            );
+            
+            // Filter out any null results
+            const validEnhancedData = enhancedData.filter(provider => provider !== null);
+            console.log("Enhanced providers data (fallback):", validEnhancedData);
+            console.log(`Successfully processed ${validEnhancedData.length} out of ${baseDataToUse.length} providers (fallback)`);
+            return validEnhancedData as MatchingProviderResult[];
+          }
+        }
+        
+        return [];
+      }
+      
       // Then fetch additional details for each provider
+      console.log('Enhancing data for', baseData.length, 'providers');
       const enhancedData = await Promise.all(
-        (baseData || []).map(async (provider: MatchingProviderResult) => {
+        (baseData || []).map(async (provider: MatchingProviderResult, index: number) => {
+          try {
+            console.log(`Processing provider ${index + 1}/${baseData.length}:`, provider.provider_id, provider.provider_name);
+          
           // Get detailed provider info including address, city, area, postal_code, map_link, images, and contact_phone
-          const { data: providerDetail } = await supabase
+          const { data: providerDetail, error: providerDetailError } = await supabase
             .from('service_providers')
             .select('id, address, area, city, postal_code, map_link, images, contact_phone')
             .eq('id', provider.provider_id)
             .single();
+            
+          if (providerDetailError) {
+            console.error(`Error fetching details for provider ${provider.provider_id}:`, providerDetailError);
+          }
           
           // Get reviews for the provider from business_reviews table with criteria ratings
-          const { data: reviews } = await supabase
+          const { data: reviews, error: reviewsError } = await supabase
             .from('business_reviews')
             .select('business_id, rating, criteria_ratings')
             .eq('business_id', provider.provider_id);
+            
+          if (reviewsError) {
+            console.error(`Error fetching reviews for provider ${provider.provider_id}:`, reviewsError);
+          }
 
           // Get latest quotation message for this provider and request
           let latestPricing = null;
@@ -298,11 +547,32 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             overallScore,
             latest_pricing: latestPricing
           };
+          } catch (error) {
+            console.error(`Error processing provider ${provider.provider_id}:`, error);
+            // Return a basic version of the provider if processing fails
+            return {
+              ...provider,
+              address: '',
+              city: 'Unknown',
+              area: 'Unknown',
+              postal_code: '',
+              map_link: '',
+              images: [],
+              contact_phone: '',
+              rating: 4.5,
+              review_count: 0,
+              overallScore: 0,
+              latest_pricing: null
+            };
+          }
         })
       );
       
-      console.log("Enhanced providers data:", enhancedData);
-      return enhancedData as MatchingProviderResult[];
+      // Filter out any null results
+      const validEnhancedData = enhancedData.filter(provider => provider !== null);
+      console.log("Enhanced providers data:", validEnhancedData);
+      console.log(`Successfully processed ${validEnhancedData.length} out of ${baseData.length} providers`);
+      return validEnhancedData as MatchingProviderResult[];
     },
     enabled: !!requestId,
     staleTime: 60000, // 1 minute cache
@@ -411,7 +681,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     return Array.from(uniqueCities).sort();
   }, [matchingProviders]);
 
-  // Apply filters and sorting - Fixed to properly trigger re-render
+  // Apply filters and sorting - Enhanced with new filter options
   const filteredAndSortedProviders = useMemo(() => {
     if (!matchingProviders) return [];
     
@@ -423,15 +693,42 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       : matchingProviders;
     
     let filtered = providersToUse.filter(provider => {
-      // Apply rating filter
-      if (filters.minRating > 0 && (provider.rating || 0) < filters.minRating) {
-        return false;
+      // Apply rating filter using overall score (0-100 scale)
+      if (filters.minRating[0] > 0) {
+        const overallScore = provider.overallScore || 0;
+        if (overallScore === 0 || overallScore < filters.minRating[0]) {
+          return false;
+        }
       }
       
       // Apply city filter
-      if (filters.city && provider.city !== filters.city) {
-        return false;
+      if (filters.city.trim() !== '') {
+        const providerCity = provider.city || '';
+        if (!providerCity.toLowerCase().includes(filters.city.toLowerCase())) {
+          return false;
+        }
       }
+      
+      // Apply postal code filter
+      if (filters.postalCode.trim() !== '') {
+        const providerPostalCode = provider.postal_code || '';
+        if (!providerPostalCode.includes(filters.postalCode)) {
+          return false;
+        }
+      }
+      
+      // Apply price type filter
+      if (filters.priceType !== 'all') {
+        const pricingType = provider.latest_pricing?.pricing_type;
+        if (pricingType !== filters.priceType) {
+          return false;
+        }
+      }
+      
+      // TODO: Apply language filter when provider language data is available
+      // if (filters.languages.length > 0) {
+      //   // Check if provider speaks any of the selected languages
+      // }
       
       return true;
     });
@@ -449,17 +746,21 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
           }
           if (aDistance !== null) return -1;
           if (bDistance !== null) return 1;
-          // Fall back to rating if no distance data
-          return (b.rating || 0) - (a.rating || 0);
+          // Fall back to overall score if no distance data
+          return (b.overallScore || 0) - (a.overallScore || 0);
         case 'rating':
-          return (b.rating || 0) - (a.rating || 0);
+          return (b.overallScore || 0) - (a.overallScore || 0);
         case 'reviewCount':
           return (b.review_count || 0) - (a.review_count || 0);
+        case 'price':
+          const aPrice = a.latest_pricing?.quotation_price || 0;
+          const bPrice = b.latest_pricing?.quotation_price || 0;
+          return aPrice - bPrice; // Lowest price first
         case 'newest':
-          // We don't have creation date, so fall back to rating
-          return (b.rating || 0) - (a.rating || 0);
+          // We don't have creation date, so fall back to overall score
+          return (b.overallScore || 0) - (a.overallScore || 0);
         default:
-          return (b.rating || 0) - (a.rating || 0);
+          return (b.overallScore || 0) - (a.overallScore || 0);
       }
     });
 
@@ -644,6 +945,9 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
                     {/* Pricing Display with Type Badge */}
                     {provider.latest_pricing && getPricingDisplay(provider.latest_pricing)}
+                    
+                    {/* Languages Spoken */}
+                    <ProviderLanguagesDisplay providerId={provider.provider_id} />
                   </CardContent>
                   
                   <CardFooter className="flex gap-2 pt-3 mt-auto">

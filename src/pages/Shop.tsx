@@ -1,24 +1,48 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 import { useBusinessesOptimized } from '@/hooks/useBusinessesOptimized';
-import BusinessCardPublic from '@/components/business/BusinessCardPublic';
-import { Loader2, Search, FilterX, MapPin, Navigation, X } from 'lucide-react';
+import { useBusinessReviewsAggregated } from '@/hooks/useBusinessReviewsAggregated';
+import { calculateOverallRating } from '@/utils/ratingUtils';
+import { Loader2, Search, FilterX, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
-import SearchControls from '@/components/search/SearchControls';
 import { SortOption } from '@/components/SortButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { distanceService, type Location } from '@/services/distanceService';
 import { useToast } from '@/hooks/use-toast';
-import { filterBusinessesByPostalCode, getDistanceDisplayText, type BusinessWithDistance } from '@/utils/locationFilterUtils';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useLocation } from '@/contexts/LocationContext';
+import { filterBusinessesByLocation } from '@/utils/locationFilterUtils';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useDistanceCache } from '@/hooks/useDistanceCache';
+
+// Lazy load heavy components
+const BusinessCardPublic = lazy(() => import('@/components/business/BusinessCardPublic'));
+const SearchControls = lazy(() => import('@/components/search/SearchControls'));
 
 // Added list of major Indian cities
 const INDIAN_CITIES = ["All Cities", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Bhopal", "Visakhapatnam", "Patna", "Gwalior"];
+
+// Skeleton component for business cards
+const BusinessCardSkeleton = () => (
+  <div className="bg-white rounded-lg shadow-sm border p-4 space-y-4">
+    <div className="flex space-x-4">
+      <Skeleton className="w-20 h-20 rounded-lg" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+      </div>
+    </div>
+    <div className="flex justify-between items-center">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-8 w-32" />
+    </div>
+  </div>
+);
 
 const Shop = () => {
   const navigate = useNavigate();
@@ -45,11 +69,11 @@ const Shop = () => {
   const debouncedCity = useDebounce(selectedCity, 200);
   const debouncedPostalCode = useDebounce(postalCode, 200);
 
-  // Location state for distance calculation
-  const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [isLocationEnabled, setIsLocationEnabled] = useState<boolean>(false);
-  const [isCalculatingDistances, setIsCalculatingDistances] = useState<boolean>(false);
-  const [businessesWithDistance, setBusinessesWithDistance] = useState<BusinessWithDistance[]>([]);
+  // Location context
+  const { userLocation } = useLocation();
+
+  // Distance caching
+  const { calculateDistancesForBusinesses } = useDistanceCache();
 
   // Filters
   const { filters, setters } = useSearchFilters();
@@ -63,348 +87,446 @@ const Shop = () => {
     debouncedSearchTerm || undefined
   );
 
-  // Update URL when filters change
-  useEffect(() => {
-    const newParams = new URLSearchParams();
-    if (selectedCategory !== 'All') newParams.set('category', selectedCategory);
-    if (selectedSubcategories.length > 0) newParams.set('subcategory', selectedSubcategories[0]);
-    if (searchTerm) newParams.set('q', searchTerm);
-    if (selectedCity !== 'All Cities') newParams.set('city', selectedCity);
-    if (postalCode) newParams.set('postalCode', postalCode);
-    setSearchParams(newParams);
-  }, [selectedCategory, selectedSubcategories, searchTerm, selectedCity, postalCode, setSearchParams]);
+  // Fetch aggregated review data for all businesses
+  const businessIds = useMemo(() => businesses?.map(b => b.id) || [], [businesses]);
+  const { data: reviewAggregations = {} } = useBusinessReviewsAggregated(businessIds);
+  
 
-  // Recalculate distances when businesses change and location is enabled
-  useEffect(() => {
-    if (businesses && userLocation && isLocationEnabled) {
-      calculateDistancesForBusinesses(businesses, userLocation);
-    }
-  }, [businesses, userLocation, isLocationEnabled]);
 
-  // Handle location enable/disable
-  const handleLocationToggle = async () => {
-    if (isLocationEnabled) {
-      setIsLocationEnabled(false);
-      setUserLocation(null);
-      setBusinessesWithDistance([]);
-      toast({
-        title: "Location disabled",
-        description: "Distance sorting is now disabled"
-      });
-    } else {
-      setIsCalculatingDistances(true);
+  // Memoize filtered businesses to avoid recalculation
+  const filteredBusinesses = useMemo(() => {
+    if (!businesses) return [];
+    
+    // Only log when filters actually change, not on every render
+    const filterKey = `${filters.minRating[0]}-${filters.priceRange}-${filters.openNowOnly}-${filters.hiddenGemOnly}-${filters.mustVisitOnly}`;
+    
+    const filtered = businesses.filter(business => {
+      // Apply rating filter using overall score from aggregated review data
+      const reviewData = reviewAggregations[business.id];
+      const overallScore = reviewData?.average_criteria_ratings && Object.keys(reviewData.average_criteria_ratings).length > 0 
+        ? calculateOverallRating(reviewData.average_criteria_ratings)
+        : 0;
+      // Only apply rating filter if user has set a minimum rating (> 0)
+      if (filters.minRating[0] > 0) {
+        // If business has no reviews/ratings, exclude it when rating filter is active
+        if (overallScore === 0) {
+          return false;
+        }
+        // If business has ratings but below minimum, exclude it
+        if (overallScore < filters.minRating[0]) {
+          return false;
+        }
+      }
+      
+      // Apply price range filter
+      if (business.price_range_min && business.price_range_max) {
+        const avgPrice = (business.price_range_min + business.price_range_max) / 2;
+        if (avgPrice > filters.priceRange) {
+          return false;
+        }
+      } else if (business.price_range_max) {
+        // If only max price is available, use that
+        if (business.price_range_max > filters.priceRange) {
+          return false;
+        }
+      } else if (business.price_range_min) {
+        // If only min price is available, use that
+        if (business.price_range_min > filters.priceRange) {
+          return false;
+        }
+      }
+      
+      // Apply open now filter (if we had this data)
+      // if (filters.openNowOnly && !business.isOpenNow) return false;
+      
+      // Apply hidden gem filter (if we had this data)
+      // if (filters.hiddenGemOnly && !business.isHiddenGem) return false;
+      
+      // Apply must visit filter (if we had this data)  
+      // if (filters.mustVisitOnly && !business.isMustVisit) return false;
+      
+      return true;
+    });
+    
+    return filtered;
+  }, [businesses, reviewAggregations, filters.minRating[0], filters.priceRange, filters.openNowOnly, filters.hiddenGemOnly, filters.mustVisitOnly]);
+
+  // State for businesses with distance calculations
+  const [businessesWithDistance, setBusinessesWithDistance] = useState<any[]>([]);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+
+  // Calculate distances for businesses when location is enabled
+  // Use a ref to store the latest businesses to avoid dependency issues
+  const businessesRef = useRef(businesses);
+  businessesRef.current = businesses;
+
+  // Use a ref to track the last location to prevent unnecessary recalculations
+  const lastLocationRef = useRef<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    const calculateDistances = async () => {
+      const currentBusinesses = businessesRef.current;
+      
+      if (!userLocation || !currentBusinesses?.length) {
+        if (isMounted) {
+          setBusinessesWithDistance([]);
+        }
+        return;
+      }
+
+      // Check if location has changed significantly (more than ~100 meters)
+      const lastLocation = lastLocationRef.current;
+      if (lastLocation) {
+        const distance = Math.sqrt(
+          Math.pow(userLocation.lat - lastLocation.lat, 2) + 
+          Math.pow(userLocation.lng - lastLocation.lng, 2)
+        );
+        // If location change is less than ~0.001 degrees (~100m), skip recalculation
+        if (distance < 0.001) {
+          console.log('📍 Location change too small, skipping distance recalculation');
+          return;
+        }
+      }
+
+      // Update last location
+      lastLocationRef.current = { lat: userLocation.lat, lng: userLocation.lng };
+
+      if (isMounted) {
+        setIsCalculatingDistances(true);
+      }
+
       try {
-        console.log('🔍 Getting user location...');
-        const location = await distanceService.getUserLocation();
-        setUserLocation(location);
-        setIsLocationEnabled(true);
-        console.log('📍 User location obtained:', location);
-        toast({
-          title: "Location enabled",
-          description: "Distance calculation enabled for sorting"
-        });
+        // Use the cached distance calculation with the raw businesses (not filtered)
+        const distanceResults = await calculateDistancesForBusinesses(userLocation, currentBusinesses);
+        
+        const businessesWithDistanceData = distanceResults.map(result => ({
+          ...result.business,
+          calculatedDistance: result.distance
+        }));
 
-        if (businesses) {
-          await calculateDistancesForBusinesses(businesses, location);
+        if (isMounted) {
+          setBusinessesWithDistance(businessesWithDistanceData);
         }
       } catch (error) {
-        console.error('❌ Failed to get user location:', error);
-        toast({
-          title: "Location access denied",
-          description: "Please allow location access to enable distance sorting",
-          variant: "destructive"
-        });
-      } finally {
-        setIsCalculatingDistances(false);
-      }
-    }
-  };
-
-  // Calculate distances for businesses
-  const calculateDistancesForBusinesses = async (businessList: any[], userLoc: Location) => {
-    setIsCalculatingDistances(true);
-    try {
-      const businessesWithDist = await Promise.all(businessList.map(async business => {
-        let calculatedDistance = null;
-        let distanceText = null;
-
-        if (business.latitude && business.longitude) {
-          const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, {
-            lat: business.latitude,
-            lng: business.longitude
-          });
-          calculatedDistance = straightLineDistance;
-          distanceText = `${straightLineDistance.toFixed(1)} km`;
-          console.log(`📍 Distance calculated for ${business.name} using coordinates: ${calculatedDistance.toFixed(2)} km`);
-        } else if (business.postal_code) {
-          try {
-            console.log(`🔍 Calculating distance for ${business.name} using postal code: ${business.postal_code}`);
-
-            let businessLocation: Location;
-            try {
-              businessLocation = await distanceService.getCoordinatesFromPostalCodeFallback(business.postal_code);
-              console.log(`📍 Geocoded ${business.postal_code} to:`, businessLocation);
-            } catch (error) {
-              console.warn('⚠️ Fallback geocoding failed, trying Google API...');
-              businessLocation = await distanceService.getCoordinatesFromPostalCode(business.postal_code);
-              console.log(`📍 Geocoded ${business.postal_code} to:`, businessLocation);
-            }
-
-            const straightLineDistance = distanceService.calculateStraightLineDistance(userLoc, businessLocation);
-            calculatedDistance = straightLineDistance;
-            distanceText = `${straightLineDistance.toFixed(1)} km`;
-            console.log(`📍 Distance calculated for ${business.name} using postal code: ${calculatedDistance.toFixed(2)} km`);
-          } catch (error) {
-            console.warn(`Failed to calculate distance for ${business.name} using postal code ${business.postal_code}:`, error);
-          }
-        } else {
-          console.log(`⚠️ No location data available for ${business.name} (no coordinates or postal code)`);
+        console.error('Error calculating distances for businesses:', error);
+        if (isMounted) {
+          setBusinessesWithDistance([]);
         }
-        return {
-          ...business,
-          calculatedDistance,
-          distanceText
-        } as BusinessWithDistance;
-      }));
-      setBusinessesWithDistance(businessesWithDist);
-      console.log('✅ Distance calculation completed for', businessesWithDist.length, 'businesses');
+      } finally {
+        if (isMounted) {
+          setIsCalculatingDistances(false);
+        }
+      }
+    };
 
-      const withDistance = businessesWithDist.filter(b => b.calculatedDistance !== null);
-      const withoutDistance = businessesWithDist.filter(b => b.calculatedDistance === null);
-      console.log(`📊 Distance calculation summary: ${withDistance.length} with distance, ${withoutDistance.length} without distance`);
-    } catch (error) {
-      console.error('❌ Failed to calculate distances:', error);
-      toast({
-        title: "Distance calculation failed",
-        description: "Using businesses without distance data",
-        variant: "destructive"
+    // Debounce distance calculations to prevent rapid successive calls
+    timeoutId = setTimeout(() => {
+    calculateDistances();
+    }, 500); // 500ms debounce
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [businesses?.length, userLocation?.lat, userLocation?.lng]); // Only depend on business count and location
+
+  // Apply all filters (including distance) to businesses with calculated distances
+  const finalFilteredBusinesses = useMemo(() => {
+    // Start with businesses that have distance calculations if location is enabled
+    const businessesToFilter = userLocation && businessesWithDistance.length > 0 
+      ? businessesWithDistance 
+      : filteredBusinesses;
+
+    if (!businessesToFilter.length) return [];
+
+    // Apply distance filter if location is enabled
+    let filtered = businessesToFilter;
+    if (userLocation && businessesWithDistance.length > 0) {
+      const maxDistance = filters.distance[0];
+      filtered = businessesToFilter.filter(business => {
+        // Always include businesses without location data (they'll appear at the end)
+        if (business.calculatedDistance === null) return true;
+        // Only apply distance filter if it's reasonable (less than 50km)
+        if (maxDistance >= 50) return true; // No distance filter if max distance
+        return business.calculatedDistance <= maxDistance;
       });
-    } finally {
-      setIsCalculatingDistances(false);
     }
-  };
+
+    // Apply other filters (rating, price, etc.) if we're using businesses with distance
+    if (userLocation && businessesWithDistance.length > 0) {
+      filtered = filtered.filter(business => {
+        // Apply rating filter using overall score from aggregated review data
+        const reviewData = reviewAggregations[business.id];
+        const overallScore = reviewData?.average_criteria_ratings && Object.keys(reviewData.average_criteria_ratings).length > 0 
+          ? calculateOverallRating(reviewData.average_criteria_ratings)
+          : 0;
+        // Only apply rating filter if user has set a minimum rating (> 0)
+        if (filters.minRating[0] > 0) {
+          // If business has no reviews/ratings, exclude it when rating filter is active
+          if (overallScore === 0) {
+            return false;
+          }
+          // If business has ratings but below minimum, exclude it
+          if (overallScore < filters.minRating[0]) {
+            return false;
+          }
+        }
+        
+        // Apply price range filter
+        if (business.price_range_min && business.price_range_max) {
+          const avgPrice = (business.price_range_min + business.price_range_max) / 2;
+          if (avgPrice > filters.priceRange) {
+            return false;
+          }
+        } else if (business.price_range_max) {
+          if (business.price_range_max > filters.priceRange) {
+            return false;
+          }
+        } else if (business.price_range_min) {
+          if (business.price_range_min > filters.priceRange) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [businessesWithDistance, filteredBusinesses, userLocation, reviewAggregations, filters.distance, filters.minRating, filters.priceRange]);
+
+  // Sort businesses based on selected sort option
+  const sortBusinesses = useCallback((businesses: any[]) => {
+    const sorted = [...businesses];
+    
+    switch (filters.sortBy) {
+      case 'rating':
+        return sorted.sort((a, b) => {
+          // Calculate overall scores using the same method as displayed in UI
+          const reviewDataA = reviewAggregations[a.id];
+          const reviewDataB = reviewAggregations[b.id];
+          const overallScoreA = reviewDataA?.average_criteria_ratings && Object.keys(reviewDataA.average_criteria_ratings).length > 0 
+            ? calculateOverallRating(reviewDataA.average_criteria_ratings)
+            : 0;
+          const overallScoreB = reviewDataB?.average_criteria_ratings && Object.keys(reviewDataB.average_criteria_ratings).length > 0 
+            ? calculateOverallRating(reviewDataB.average_criteria_ratings)
+            : 0;
+          
+
+          
+          // If overall scores are equal, sort by review count as tiebreaker
+          if (overallScoreA === overallScoreB) {
+            const reviewA = reviewAggregations[a.id];
+            const reviewB = reviewAggregations[b.id];
+            const countA = reviewA?.review_count || 0;
+            const countB = reviewB?.review_count || 0;
+            return countB - countA;
+          }
+          
+          return overallScoreB - overallScoreA; // High to low
+        });
+        
+      case 'distance':
+        return sorted.sort((a, b) => {
+          // If both have distances, sort by distance
+          if (a.calculatedDistance !== null && b.calculatedDistance !== null) {
+            return a.calculatedDistance - b.calculatedDistance; // Near to far
+          }
+          // Businesses with distance come first
+          if (a.calculatedDistance !== null && b.calculatedDistance === null) return -1;
+          if (a.calculatedDistance === null && b.calculatedDistance !== null) return 1;
+          // If neither has distance, fall back to overall score
+          const reviewDataA = reviewAggregations[a.id];
+          const reviewDataB = reviewAggregations[b.id];
+          const overallScoreA = reviewDataA?.average_criteria_ratings && Object.keys(reviewDataA.average_criteria_ratings).length > 0 
+            ? calculateOverallRating(reviewDataA.average_criteria_ratings)
+            : 0;
+          const overallScoreB = reviewDataB?.average_criteria_ratings && Object.keys(reviewDataB.average_criteria_ratings).length > 0 
+            ? calculateOverallRating(reviewDataB.average_criteria_ratings)
+            : 0;
+          return overallScoreB - overallScoreA;
+        });
+        
+      case 'reviewCount':
+        return sorted.sort((a, b) => {
+          // Use aggregated review count data
+          const reviewA = reviewAggregations[a.id];
+          const reviewB = reviewAggregations[b.id];
+          const countA = reviewA?.review_count || 0;
+          const countB = reviewB?.review_count || 0;
+          
+          // If review counts are equal, sort by overall score as tiebreaker
+          if (countA === countB) {
+            const reviewDataA = reviewAggregations[a.id];
+            const reviewDataB = reviewAggregations[b.id];
+            const overallScoreA = reviewDataA?.average_criteria_ratings && Object.keys(reviewDataA.average_criteria_ratings).length > 0 
+              ? calculateOverallRating(reviewDataA.average_criteria_ratings)
+              : 0;
+            const overallScoreB = reviewDataB?.average_criteria_ratings && Object.keys(reviewDataB.average_criteria_ratings).length > 0 
+              ? calculateOverallRating(reviewDataB.average_criteria_ratings)
+              : 0;
+            return overallScoreB - overallScoreA;
+          }
+          
+          return countB - countA; // High to low
+        });
+        
+      case 'newest':
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateB - dateA; // Newest first
+        });
+        
+      default:
+        return sorted;
+    }
+  }, [filters.sortBy, reviewAggregations]);
+
+  // Final businesses to display with sorting applied
+  const finalBusinesses = useMemo(() => {
+    return sortBusinesses(finalFilteredBusinesses);
+  }, [finalFilteredBusinesses, sortBusinesses]);
+  
+  // Debug logging for final businesses (reduced frequency)
+  // Only log when the count changes significantly or sort changes
+  const businessCount = finalBusinesses.length;
+  const sortBy = filters.sortBy;
 
   // Handle category change
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
-  };
+    setSelectedSubcategories([]);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('category', category);
+    newParams.delete('subcategory');
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
 
-  // Handle subcategory change
-  const handleSubcategoryChange = (subcategories: string[]) => {
-    setSelectedSubcategories(subcategories);
-  };
 
-  // Handle search - now triggers immediately since we're using optimized backend filtering
-  const handleSearch = () => {
+
+  // Handle search
+  const handleSearch = useCallback(() => {
     setSearchTerm(inputValue);
-  };
+    const newParams = new URLSearchParams(searchParams);
+    if (inputValue.trim()) {
+      newParams.set('q', inputValue.trim());
+    } else {
+      newParams.delete('q');
+    }
+    setSearchParams(newParams);
+  }, [inputValue, searchParams, setSearchParams]);
 
   // Handle city change
-  const handleCityChange = (city: string) => {
+  const handleCityChange = useCallback((city: string) => {
     setSelectedCity(city);
-  };
-
-  // Handle postal code search
-  const handlePostalCodeSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedPostalCode = postalCode.trim();
-    if (!trimmedPostalCode) {
-      toast({
-        title: "Please enter a postal code",
-        description: "Enter a 6-digit postal code to search for listings",
-        variant: "destructive"
-      });
-      return;
+    const newParams = new URLSearchParams(searchParams);
+    if (city !== 'All Cities') {
+      newParams.set('city', city);
+    } else {
+      newParams.delete('city');
     }
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
 
-    const isValidPostalCode = /^\d{6}$/.test(trimmedPostalCode);
-    if (!isValidPostalCode) {
-      toast({
-        title: "Invalid postal code",
-        description: "Postal code must be 6 digits",
-        variant: "destructive"
-      });
-      return;
+  // Handle postal code change
+  const handlePostalCodeChange = useCallback((code: string) => {
+    setPostalCode(code);
+    const newParams = new URLSearchParams(searchParams);
+    if (code.trim()) {
+      newParams.set('postalCode', code.trim());
+    } else {
+      newParams.delete('postalCode');
     }
-    console.log("Searching for listings with postal code:", trimmedPostalCode);
-  };
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
 
-  // Clear postal code
-  const clearPostalCode = () => {
-    setPostalCode('');
-  };
+  // Handle sort change
+  const handleSortChange = useCallback((sortBy: 'rating' | 'distance' | 'reviewCount' | 'newest') => {
+    setters.setSortBy(sortBy);
+  }, [setters]);
 
-  // Handle reset filters
-  const handleResetFilters = () => {
-    setSelectedCategory('All');
-    setSelectedSubcategories([]);
-    setSearchTerm('');
-    setInputValue('');
-    setSelectedCity('All Cities');
-    setPostalCode('');
-    setIsLocationEnabled(false);
-    setUserLocation(null);
-    setBusinessesWithDistance([]);
-    setters.setMinRating([0]);
-    setters.setPriceRange(50000);
-    setters.setOpenNowOnly(false);
-    setters.setHiddenGemOnly(false);
-    setters.setMustVisitOnly(false);
-    navigate('/shop');
-  };
+  // Categories are now loaded by CategoryScrollBar component from database
 
-  // Sort by
-  const handleSortChange = (option: SortOption) => {
-    setters.setSortBy(option);
-  };
-
-  // Filter and sort businesses - now using already filtered data from backend
-  const filteredBusinesses = useMemo(() => {
-    const businessesToFilter = isLocationEnabled && businessesWithDistance.length > 0 ? businessesWithDistance : (businesses || []).map(b => b as BusinessWithDistance);
-
-    return businessesToFilter.filter(business => {
-      // Apply rating filter
-      const businessRating = business.rating || 0;
-      if (filters.minRating[0] > 0 && businessRating < filters.minRating[0]) {
-        return false;
-      }
-
-      // Apply price filter
-      if (business.price_range_max && filters.priceRange < business.price_range_max) {
-        return false;
-      }
-
-      // Apply open now filter
-      if (filters.openNowOnly) {
-        const now = new Date();
-        const day = now.getDay().toString();
-        const isOpen = business.availability_days?.includes(day);
-        if (!isOpen) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      switch (filters.sortBy) {
-        case 'distance':
-          const aDistance = a.calculatedDistance ?? null;
-          const bDistance = b.calculatedDistance ?? null;
-          if (aDistance !== null && bDistance !== null) {
-            return aDistance - bDistance;
-          }
-          if (aDistance !== null) return -1;
-          if (bDistance !== null) return 1;
-          return (b.rating || 0) - (a.rating || 0);
-        case 'rating':
-          return (b.rating || 0) - (a.rating || 0);
-        case 'reviewCount':
-          return (b.rating || 0) - (a.rating || 0);
-        case 'newest':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        default:
-          return (b.rating || 0) - (a.rating || 0);
-      }
-    });
-  }, [businesses, businessesWithDistance, isLocationEnabled, filters]);
-
-  const hasActiveFilters = selectedCategory !== 'All' || selectedSubcategories.length > 0 || searchTerm || selectedCity !== 'All Cities' || postalCode || filters.minRating[0] > 0 || filters.openNowOnly || isLocationEnabled;
+  const cities = useMemo(() => [
+    'All Cities', 'Bengaluru', 'Mumbai', 'Delhi', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'
+  ], []);
 
   return (
     <MainLayout>
-      <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* City Filter, Postal Code Search and Location Toggle - All in One Row */}
-        <div className="flex flex-row gap-2 mb-3">
-          <div className="flex-1">
-            <Select value={selectedCity} onValueChange={handleCityChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select city" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDIAN_CITIES.map(city => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-32">
-            <form onSubmit={handlePostalCodeSearch} className="relative">
-              <Input 
-                type="text" 
-                placeholder="PIN code" 
-                value={postalCode} 
-                onChange={e => setPostalCode(e.target.value)} 
-                className="w-full pr-8 text-sm" 
-                maxLength={6}
-              />
-              {postalCode && (
-                <button
-                  type="button"
-                  onClick={clearPostalCode}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </form>
-          </div>
-          <div className="w-12">
-            <Button 
-              variant={isLocationEnabled ? "default" : "outline"} 
-              onClick={handleLocationToggle} 
-              disabled={isCalculatingDistances} 
-              className="flex items-center justify-center w-full h-10 p-0"
-              title={isLocationEnabled ? "Disable Location" : "Enable Location"}
-            >
-              {isCalculatingDistances ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Navigation className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold">Discover Local Businesses</h1>
+          <p className="text-muted-foreground">
+            Find the best service providers in your area
+          </p>
         </div>
-        
-        {/* Search Bar */}
-        <div className="relative mb-4 flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input 
-              placeholder="Search shops & services..." 
-              value={inputValue} 
-              onChange={e => setInputValue(e.target.value)} 
-              onKeyDown={e => e.key === 'Enter' && handleSearch()} 
-              className="pl-10" 
+
+        {/* Search and Filters */}
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search businesses..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Search
+            </button>
+          </div>
+
+          {/* Category Filter */}
+          <CategoryScrollBar
+            selected={selectedCategory}
+            onSelect={handleCategoryChange}
+            selectedSubcategory={selectedSubcategories}
+            onSubcategorySelect={(subcategories) => {
+              setSelectedSubcategories(subcategories);
+              const newParams = new URLSearchParams(searchParams);
+              if (subcategories.length > 0) {
+                newParams.set('subcategory', subcategories[0]);
+              } else {
+                newParams.delete('subcategory');
+              }
+              setSearchParams(newParams);
+            }}
+          />
+
+          {/* Location Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select
+              value={selectedCity}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {cities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+            
+            <input
+              type="text"
+              placeholder="Postal Code"
+              value={postalCode}
+              onChange={(e) => handlePostalCodeChange(e.target.value)}
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <Button onClick={handleSearch} className="shrink-0">
-            Search
-          </Button>
         </div>
-        
-        {/* Categories with improved subcategory selector */}
-        <div className="mb-6">
-          <CategoryScrollBar 
-            selected={selectedCategory} 
-            onSelect={handleCategoryChange} 
-            selectedSubcategory={selectedSubcategories} 
-            onSubcategorySelect={handleSubcategoryChange} 
-          />
-        </div>
-        
-        <div className="mb-4 flex flex-wrap gap-2">
-          {hasActiveFilters && (
-            <>
-              <div className="text-sm text-muted-foreground mr-2 flex items-center">Active filters:</div>
-              <Button size="sm" variant="destructive" onClick={handleResetFilters} className="h-7 gap-1">
-                <FilterX className="h-3.5 w-3.5" />
-                Reset All
-              </Button>
-            </>
-          )}
-        </div>
-        
-        {/* Filters and Sort Controls */}
-        <div className="mb-6">
+
+        {/* Search Controls */}
+        <Suspense fallback={<Skeleton className="h-20 w-full" />}>
           <SearchControls 
             distance={filters.distance} 
             setDistance={setters.setDistance} 
@@ -421,18 +543,21 @@ const Shop = () => {
             sortBy={filters.sortBy} 
             onSortChange={handleSortChange} 
           />
-        </div>
+        </Suspense>
         
-        {/* Results */}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                {/* Results */}
+  
+          {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 9 }, (_, index) => (
+              <BusinessCardSkeleton key={`skeleton-${index}`} />
+            ))}
           </div>
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-destructive">Error loading businesses. Please try again later.</p>
           </div>
-        ) : filteredBusinesses.length === 0 ? (
+        ) : finalBusinesses.length === 0 ? (
           <div className="text-center py-12">
             <h3 className="text-lg font-medium mb-2">No businesses found</h3>
             <p className="text-muted-foreground">
@@ -441,16 +566,16 @@ const Shop = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Results summary */}
-            {isLocationEnabled && userLocation && (
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredBusinesses.length} businesses sorted by distance from your location
+            {isCalculatingDistances && userLocation && (
+              <div className="text-center py-2">
+                <p className="text-sm text-muted-foreground">Calculating distances...</p>
               </div>
             )}
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredBusinesses.map(business => (
-                <BusinessCardPublic key={business.id} business={business as any} />
+              {finalBusinesses.map(business => (
+                <Suspense key={business.id} fallback={<BusinessCardSkeleton />}>
+                  <BusinessCardPublic business={business as any} />
+                </Suspense>
               ))}
             </div>
           </div>

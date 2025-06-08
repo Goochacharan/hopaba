@@ -115,6 +115,7 @@ const ProviderRequests: React.FC = () => {
                     providerId={provider.id}
                     category={provider.category}
                     subcategory={provider.subcategory || []}
+                    providerCity={provider.city}
                   />
                 </div>
               ))}

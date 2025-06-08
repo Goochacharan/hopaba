@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,9 +25,9 @@ export const useMainLayoutData = () => {
     gcTime: 20 * 60 * 1000,   // Keep in cache for 20 minutes
   });
 
-  // Optimized unread count query
+  // Updated unread count query to match real-time subscription keys
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['layout-unread-count', user?.id],
+    queryKey: ['unread-count', user?.id],
     queryFn: async () => {
       if (!user) return 0;
       
@@ -40,13 +39,13 @@ export const useMainLayoutData = () => {
       return error ? 0 : (data || 0);
     },
     enabled: !!user,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes instead of 1
+    staleTime: 15 * 1000, // Reduced to 15 seconds for better responsiveness
+    refetchInterval: 30 * 1000, // Reduced to 30 seconds for faster updates
   });
 
-  // Service provider unread count - only fetch if user is a service provider
+  // Service provider unread count - updated query key to match real-time subscriptions
   const { data: serviceProviderUnreadCount = 0 } = useQuery({
-    queryKey: ['service-provider-unread', user?.id],
+    queryKey: ['serviceProviderUnreadCount', user?.id],
     queryFn: async () => {
       if (!user || !isServiceProvider) return 0;
       
@@ -80,8 +79,8 @@ export const useMainLayoutData = () => {
       return error ? 0 : (count || 0);
     },
     enabled: !!user && isServiceProvider,
-    staleTime: 30 * 1000,
-    refetchInterval: 2 * 60 * 1000,
+    staleTime: 15 * 1000, // Reduced to 15 seconds
+    refetchInterval: 30 * 1000, // Reduced to 30 seconds
   });
 
   // Memoize the return object to prevent unnecessary re-renders

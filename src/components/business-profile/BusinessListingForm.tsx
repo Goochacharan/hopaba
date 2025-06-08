@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { extractCoordinatesFromMapLink } from '@/lib/locationUtils';
+import LanguageSelector from '../business/LanguageSelector';
 
 export interface BusinessData {
   id?: string;
@@ -80,6 +81,7 @@ const businessSchema = z.object({
   price_range_max: z.number().optional(),
   availability: z.string().optional(),
   languages: z.array(z.string()).optional(),
+  language_ids: z.array(z.string()).optional(),
   experience: z.string().optional(),
   tags: z.array(z.string()).min(3, { message: "Please add at least 3 tags describing your services or items." }).optional(),
   images: z.array(z.string()).optional(),
@@ -125,6 +127,7 @@ const BusinessListingForm: React.FC<BusinessListingFormProps> = ({ business, onS
       map_link: business?.map_link || "",
       tags: business?.tags || [],
       languages: business?.languages || [],
+      language_ids: [],
       experience: business?.experience || "",
       availability: business?.availability || "",
       price_unit: business?.price_unit || "per hour",
@@ -217,6 +220,7 @@ const BusinessListingForm: React.FC<BusinessListingFormProps> = ({ business, onS
       console.log("Formatted business data for Supabase:", businessData);
 
       let result;
+      let businessId = business?.id;
       
       if (business?.id) {
         console.log("Updating business with ID:", business.id);
@@ -231,22 +235,97 @@ const BusinessListingForm: React.FC<BusinessListingFormProps> = ({ business, onS
         }
 
         console.log("Business updated successfully");
-        toast({
-          title: "Business Updated",
-          description: "Your business listing has been updated and will be reviewed by an admin.",
-        });
       } else {
         console.log("Creating new business");
         result = await supabase
           .from('service_providers')
-          .insert([businessData]);
+          .insert([businessData])
+          .select();
 
         if (result.error) {
           console.error("Supabase insert error:", result.error);
           throw new Error(result.error.message);
         }
 
+        businessId = result.data[0]?.id;
         console.log("Business created successfully", result);
+      }
+
+      // Handle language selections if any languages were selected
+      if (data.language_ids && data.language_ids.length > 0 && businessId) {
+        console.log("Processing language selections for business:", businessId);
+        console.log("Selected language IDs:", data.language_ids);
+        
+        // First, get the language names for the text array
+        const { data: selectedLanguages, error: languagesFetchError } = await supabase
+          .from('languages')
+          .select('id, name')
+          .in('id', data.language_ids);
+
+        if (languagesFetchError) {
+          console.error("Error fetching language names:", languagesFetchError);
+        } else {
+          // Update the service_providers table with language names array for backward compatibility
+          const languageNames = selectedLanguages?.map(lang => lang.name) || [];
+          console.log("Updating service_providers with language names:", languageNames);
+          
+          const { error: updateLanguagesError } = await supabase
+            .from('service_providers')
+            .update({ languages: languageNames })
+            .eq('id', businessId);
+
+          if (updateLanguagesError) {
+            console.error("Error updating languages in service_providers:", updateLanguagesError);
+          } else {
+            console.log("Successfully updated languages in service_providers table");
+          }
+        }
+        
+        // First, delete existing language associations for this business
+        const { error: deleteError } = await supabase
+          .from('business_languages')
+          .delete()
+          .eq('business_id', businessId);
+
+        if (deleteError) {
+          console.error("Error deleting existing languages:", deleteError);
+        } else {
+          console.log("Successfully deleted existing language associations");
+        }
+
+        // Then insert new language associations
+        const languageInserts = data.language_ids.map(languageId => ({
+          business_id: businessId,
+          language_id: languageId
+        }));
+
+        console.log("Inserting language associations:", languageInserts);
+
+        const { error: languageError } = await supabase
+          .from('business_languages')
+          .insert(languageInserts);
+
+        if (languageError) {
+          console.error("Error inserting languages:", languageError);
+          // Don't throw error for language insert failure - business creation should still succeed
+          toast({
+            title: "Warning",
+            description: "Business saved but there was an issue saving language selections.",
+            variant: "destructive",
+          });
+        } else {
+          console.log("Successfully saved language selections");
+        }
+      } else {
+        console.log("No languages selected or business ID missing");
+      }
+
+      if (business?.id) {
+        toast({
+          title: "Business Updated",
+          description: "Your business listing has been updated and will be reviewed by an admin.",
+        });
+      } else {
         toast({
           title: "Business Added",
           description: "Your business has been listed and will be reviewed by an admin.",
@@ -590,23 +669,7 @@ const BusinessListingForm: React.FC<BusinessListingFormProps> = ({ business, onS
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="languages"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Languages</FormLabel>
-                    <FormControl>
-                      <TagsInput
-                        placeholder="Add languages you speak"
-                        tags={field.value || []}
-                        setTags={(newTags) => form.setValue('languages', newTags)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <LanguageSelector form={form} />
             </div>
           </div>
           

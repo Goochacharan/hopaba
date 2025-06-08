@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useMainLayoutData } from '@/hooks/useMainLayoutData';
 import { useNotificationsOptimized } from '@/hooks/useNotificationsOptimized';
+import GlobalLocationToggle from './GlobalLocationToggle';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -77,6 +78,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           </Link>
           
           <div className="flex items-center gap-4">
+            {user && <GlobalLocationToggle />}
             {!user && <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
                   Login

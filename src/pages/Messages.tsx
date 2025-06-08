@@ -64,7 +64,7 @@ const Messages: React.FC = () => {
       if (!user) return null;
       const { data } = await supabase
         .from('service_providers')
-        .select('id, category, subcategory')
+        .select('id, category, subcategory, city')
         .eq('user_id', user.id)
         .maybeSingle();
       
@@ -89,10 +89,10 @@ const Messages: React.FC = () => {
     queryKey: ['conversation', id],
     queryFn: () => getConversationWithMessages(id!),
     enabled: !!id && !!user,
-    staleTime: 60 * 1000, // 1 minute for conversation data
-    refetchOnWindowFocus: false,
-    refetchInterval: undefined,
-    gcTime: 10 * 60 * 1000, // Cache for 10 minutes
+    staleTime: 30 * 1000, // 30 seconds for faster updates
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchInterval: undefined, // Real-time subscription handles updates
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
   
   // Determine if current user is the service provider or the requester
@@ -103,14 +103,14 @@ const Messages: React.FC = () => {
     ? "Requester" // If we're the provider, the other party is the requester
     : conversationData?.conversation?.service_providers?.name || "Provider"; // Otherwise it's the provider
   
-  // Optimized: Mark messages as read with longer debouncing
+  // Mark messages as read quickly for better UX
   useEffect(() => {
     if (!id || !user || !conversationData) return;
     
     const timeoutId = setTimeout(() => {
-      console.log('Marking messages as read (optimized):', { id, isProvider });
+      console.log('Marking messages as read:', { id, isProvider });
       markMessagesAsRead(id, isProvider ? 'provider' : 'user');
-    }, 3000); // Increased to 3 seconds
+    }, 1000); // Reduced to 1 second for faster response
     
     return () => clearTimeout(timeoutId);
   }, [id, user, conversationData, markMessagesAsRead, isProvider]);
@@ -248,6 +248,7 @@ const Messages: React.FC = () => {
                       providerId={providerData.id}
                       category={providerData.category}
                       subcategory={providerData.subcategory}
+                      providerCity={providerData.city}
                     />
                   )}
                 </TabsContent>

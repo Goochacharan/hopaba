@@ -1,14 +1,35 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import LocationCard from '@/components/LocationCard';
 import { Recommendation } from '@/lib/mockData';
 import { Loader2 } from 'lucide-react';
 import { useLocationReviews } from '@/hooks/useLocationReviews';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Skeleton component for loading state
+const LocationCardSkeleton = memo(() => (
+  <div className="bg-white rounded-lg shadow-sm border p-4 space-y-4">
+    <div className="flex space-x-4">
+      <Skeleton className="w-16 h-16 rounded-lg" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+    <div className="flex justify-between items-center">
+      <Skeleton className="h-4 w-20" />
+      <Skeleton className="h-8 w-24" />
+    </div>
+  </div>
+));
+
+LocationCardSkeleton.displayName = 'LocationCardSkeleton';
 
 // Component to handle individual location with reviews
-const LocationWithReviews: React.FC<{ 
+const LocationWithReviews = memo<{ 
   recommendation: Recommendation; 
   index: number;
-}> = ({ recommendation, index }) => {
+}>(({ recommendation, index }) => {
   // Get reviews from Supabase for this location
   const { averageRating, totalReviews, averageCriteriaRatings } = useLocationReviews(recommendation.id);
   
@@ -30,18 +51,27 @@ const LocationWithReviews: React.FC<{
     ? averageCriteriaRatings 
     : (recommendation.criteriaRatings || {});
   
+  // Memoize display values
+  const displayValues = useMemo(() => {
+    const totalReviewCount = recommendation.reviewCount || Math.floor(Math.random() * 50) + 10;
+    
+    return {
+      displayRating,
+      totalReviewCount
+    };
+  }, [recommendation.rating, recommendation.reviewCount]);
+
   return (
     <div 
-      key={recommendation.id} 
       className="animate-fade-in" 
-      style={{ animationDelay: `${index * 50}ms` }}
+      style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }} // Cap animation delay
     >
       <LocationCard
         recommendation={{
           ...recommendation,
-          rating: displayRating,
+          rating: displayValues.displayRating,
           address: recommendation.address || (recommendation.area && recommendation.city ? `${recommendation.area}, ${recommendation.city}` : recommendation.address || ''),
-          availability_days: availabilityDaysString,
+          availability_days: recommendation.availability_days || [],
           hours: recommendation.hours || '',
           availability: recommendation.availability || '',
           availability_start_time: recommendation.availability_start_time || undefined,
@@ -51,11 +81,13 @@ const LocationWithReviews: React.FC<{
         }}
         showDistanceUnderAddress={true}
         className="search-result-card h-full"
-        reviewCount={totalReviewCount}
+        reviewCount={displayValues.totalReviewCount}
       />
     </div>
   );
-};
+});
+
+LocationWithReviews.displayName = 'LocationWithReviews';
 
 interface LocationsListProps {
   recommendations: Recommendation[];
@@ -68,10 +100,13 @@ const LocationsList: React.FC<LocationsListProps> = ({
   loading = false,
   error = null
 }) => {
+  // Show skeleton loaders during loading
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="grid grid-cols-1 gap-6">
+        {Array.from({ length: 6 }, (_, index) => (
+          <LocationCardSkeleton key={`skeleton-${index}`} />
+        ))}
       </div>
     );
   }
@@ -95,27 +130,20 @@ const LocationsList: React.FC<LocationsListProps> = ({
     );
   }
   
-  console.log("LocationsList - Rendering recommendations:", recommendations);
+  console.log("LocationsList - Rendering recommendations:", recommendations.length);
   
   return (
     <div className="grid grid-cols-1 gap-6">
-      {recommendations.map((recommendation, index) => {
-        console.log(`LocationsList - Processing recommendation ${index}:`, recommendation.id);
-        console.log(`Availability days:`, recommendation.availability_days);
-        console.log(`Hours:`, recommendation.hours);
-        console.log(`Start time:`, recommendation.availability_start_time);
-        console.log(`End time:`, recommendation.availability_end_time);
-        
-        return (
-          <LocationWithReviews 
-            key={recommendation.id}
-            recommendation={recommendation}
-            index={index}
-          />
-        );
-      })}
+      {recommendations.map((recommendation, index) => (
+        <LocationWithReviews 
+          key={`${recommendation.id}-${index}`} // More stable key
+          recommendation={recommendation}
+          index={index}
+        />
+      ))}
     </div>
   );
 };
 
-export default LocationsList;
+// Memoize the entire component to prevent unnecessary re-renders
+export default memo(LocationsList);

@@ -489,7 +489,7 @@ export const useConversations = () => {
     data: unreadCount = 0,
     refetch: refetchUnreadCount
   } = useQuery({
-    queryKey: ['unreadCount', user?.id],
+    queryKey: ['unread-count', user?.id],
     queryFn: getUnreadCount,
     enabled: !!user,
     retry: 3,
@@ -517,11 +517,11 @@ export const useConversations = () => {
         refetchType: 'none' // Don't trigger refetch
       });
       queryClient.invalidateQueries({ 
-        queryKey: ['unreadCount'],
+        queryKey: ['unread-count'],
         refetchType: 'none' // Don't trigger refetch
       });
       queryClient.invalidateQueries({ 
-        queryKey: ['serviceProviderUnreadCount'],
+        queryKey: ['serviceProviderUnreadCount', user?.id],
         refetchType: 'none' // Don't trigger refetch
       });
       
@@ -563,14 +563,16 @@ export const useConversations = () => {
       markMessagesAsReadFn(params),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
-      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
-      queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount', user?.id] });
     }
   });
 
   // Set up real-time subscriptions for new messages with debouncing
   useEffect(() => {
     if (!user) return;
+
+    console.log('Setting up real-time subscription for user:', user.id);
 
     // Create a debounced version of the refetch to prevent excessive API calls
     let refetchTimeoutId: number | undefined;
@@ -583,18 +585,25 @@ export const useConversations = () => {
       
       // Schedule a new refetch
       refetchTimeoutId = window.setTimeout(() => {
-        console.log('Debounced refetch triggered');
+        console.log('Debounced refetch triggered for conversation:', conversationId);
         
         // Only invalidate the specific conversation that received a message
         if (conversationId) {
           queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
         }
         
-        // Always refetch the conversations list and unread count
+        // Always refetch the conversations list and unread count - using consistent query keys
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
-        queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount'] });
-      }, 1000); // 1 second debounce
+        queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+        queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount', user?.id] });
+      }, 300); // Reduced from 1000ms to 300ms for better responsiveness
+    };
+
+    // Immediate invalidation for critical updates (no debounce)
+    const immediateRefresh = () => {
+      console.log('Immediate refresh triggered for unread counts');
+      queryClient.invalidateQueries({ queryKey: ['unread-count'] });
+      queryClient.invalidateQueries({ queryKey: ['serviceProviderUnreadCount', user?.id] });
     };
 
     const channel = supabase
@@ -609,7 +618,10 @@ export const useConversations = () => {
           const message = payload.new as Message;
           console.log('Real-time message received:', message);
           
-          // Use the debounced refetch
+          // Immediate refresh for unread counts when receiving new messages
+          immediateRefresh();
+          
+          // Use the debounced refetch for other updates
           debouncedRefetch(message.conversation_id);
           
           // Show notification for new message if it's not from the current user
@@ -640,9 +652,26 @@ export const useConversations = () => {
           }
         }
       )
-      .subscribe();
+      .on('postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => {
+          const message = payload.new as Message;
+          console.log('Real-time message updated (read status):', message);
+          
+          // Immediate refresh for read status changes
+          immediateRefresh();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up real-time subscription');
       // Clear any pending timeout when component unmounts
       if (refetchTimeoutId) {
         clearTimeout(refetchTimeoutId);

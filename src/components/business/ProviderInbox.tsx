@@ -20,6 +20,8 @@ import { distanceService, type Location } from '@/services/distanceService';
 import { ServiceRequestWithDistance } from '@/utils/locationFilterUtils';
 import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
+import { useInboxFilters } from '@/hooks/useSearchFilters';
+import InboxFilters from '@/components/InboxFilters';
 
 interface ProviderInboxProps {
   providerId: string;
@@ -28,6 +30,7 @@ interface ProviderInboxProps {
   section?: 'new' | 'responded';
   userLocation?: Location | null;
   isLocationEnabled?: boolean;
+  providerCity?: string;
 }
 
 const ProviderInbox: React.FC<ProviderInboxProps> = ({ 
@@ -36,7 +39,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   subcategory,
   section = 'new',
   userLocation,
-  isLocationEnabled = false
+  isLocationEnabled = false,
+  providerCity
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -57,25 +61,37 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
 
+  // Initialize inbox filters for service provider requests
+  const { filters: inboxFilters, setters: inboxSetters } = useInboxFilters();
+
   // Get matching requests
   const { data: allRequests, isLoading: isLoadingRequests, error: requestsError } = useQuery({
-    queryKey: ['matching-requests', category, subcategory],
+    queryKey: ['matching-requests', category, subcategory, providerCity],
     queryFn: async () => {
-      console.log('Fetching requests for category:', category, 'subcategories:', subcategory);
+      console.log('Fetching requests for category:', category, 'subcategories:', subcategory, 'city:', providerCity);
       
       const requests = await getRequestsByCategoryAndSubcategory(category);
       console.log('Raw requests:', requests);
       
+      let filtered = requests;
+      
+      // Filter by city if provider city is provided
+      if (providerCity) {
+        filtered = filtered.filter(request => 
+          request.city && request.city.toLowerCase() === providerCity.toLowerCase()
+        );
+        console.log('Filtered requests by city:', filtered);
+      }
+      
       // Filter by subcategory if provider has specific subcategories
       if (subcategory && subcategory.length > 0) {
-        const filtered = requests.filter(request => 
+        filtered = filtered.filter(request => 
           !request.subcategory || subcategory.includes(request.subcategory)
         );
         console.log('Filtered requests by subcategory:', filtered);
-        return filtered;
       }
       
-      return requests;
+      return filtered;
     },
     enabled: !!category
   });
@@ -164,19 +180,64 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     }
   }, [filteredRequests, userLocation, isLocationEnabled]);
 
-  // Sort requests by most recent first (no sorting controls)
-  const sortedRequests = useMemo(() => {
-    const requestsToSort: ServiceRequestWithDistance[] = isLocationEnabled && requestsWithDistance.length > 0
+  // Apply filters and sort requests
+  const filteredAndSortedRequests = useMemo(() => {
+    const requestsToFilter: ServiceRequestWithDistance[] = isLocationEnabled && requestsWithDistance.length > 0
       ? requestsWithDistance 
       : filteredRequests.map(req => ({ ...req, calculatedDistance: null, distanceText: null }));
 
-    // Simply sort by most recent first
-    const sorted = [...requestsToSort].sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    // Apply filters
+    let filtered = requestsToFilter.filter(request => {
+      // Apply city filter
+      if (inboxFilters.city.trim() !== '') {
+        const requestCity = request.city || '';
+        if (!requestCity.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      // Apply postal code filter
+      if (inboxFilters.postalCode.trim() !== '') {
+        const requestPostalCode = request.postal_code || '';
+        if (!requestPostalCode.includes(inboxFilters.postalCode)) {
+          return false;
+        }
+      }
+      
+      // Note: Rating and language filters don't apply to service requests
+      // as they are properties of service providers, not requests
+      
+      return true;
+    });
+
+    // Sort the filtered requests
+    const sorted = [...filtered].sort((a, b) => {
+      switch (inboxFilters.sortBy) {
+        case 'distance':
+          // Sort by calculated distance if available
+          const aDistance = a.calculatedDistance ?? null;
+          const bDistance = b.calculatedDistance ?? null;
+          
+          if (aDistance !== null && bDistance !== null) {
+            return aDistance - bDistance;
+          }
+          if (aDistance !== null) return -1;
+          if (bDistance !== null) return 1;
+          // Fall back to latest if no distance data
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'price':
+          // Sort by budget (lowest first)
+          const aBudget = a.budget || 0;
+          const bBudget = b.budget || 0;
+          return aBudget - bBudget;
+        case 'latest':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
     });
 
     return sorted;
-  }, [filteredRequests, requestsWithDistance, isLocationEnabled]);
+  }, [filteredRequests, requestsWithDistance, isLocationEnabled, inboxFilters]);
 
   // Handle conversation creation and navigation
   const handleSendQuotation = (request: ServiceRequest) => {
@@ -225,7 +286,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
     );
   }
 
-  if (!sortedRequests || sortedRequests.length === 0) {
+  if (!filteredAndSortedRequests || filteredAndSortedRequests.length === 0) {
     return (
       <div className="text-center py-8">
         <h3 className="text-lg font-medium mb-2">
@@ -243,9 +304,28 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Filter and Sort Controls */}
+      <div className="mb-4">
+        <InboxFilters
+          minRating={inboxFilters.minRating}
+          setMinRating={inboxSetters.setMinRating}
+          languages={inboxFilters.languages}
+          setLanguages={inboxSetters.setLanguages}
+          city={inboxFilters.city}
+          setCity={inboxSetters.setCity}
+          postalCode={inboxFilters.postalCode}
+          setPostalCode={inboxSetters.setPostalCode}
+          priceType={inboxFilters.priceType}
+          setPriceType={inboxSetters.setPriceType}
+          sortBy={inboxFilters.sortBy}
+          setSortBy={inboxSetters.setSortBy}
+          isLocationEnabled={isLocationEnabled}
+        />
+      </div>
+      
       {/* Request Cards */}
       <div className="grid gap-4">
-        {sortedRequests.map((request) => {
+        {filteredAndSortedRequests.map((request) => {
           // For service requests, we need to get the requester's user_id to check online status
           // Since we don't have direct access to user_id in the request, we'll need to query it
           const isRequesterOnline = request.user_id ? isUserOnline(request.user_id) : false;

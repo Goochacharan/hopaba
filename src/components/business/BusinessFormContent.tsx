@@ -14,7 +14,7 @@ import { Building, Clock, Phone, MessageSquare, Globe, Instagram, Tag, Star, Plu
 import { Button } from '@/components/ui/button';
 import SubcategorySelector from './SubcategorySelector';
 import LanguageSelector from './LanguageSelector';
-import LocationSection from '@/components/business-form/LocationSection';
+import LocationSectionSimple from './LocationSectionSimple';
 
 interface BusinessFormContentProps {
   form?: UseFormReturn<BusinessFormValues>;
@@ -249,9 +249,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
       <Separator />
 
       {/* Enhanced Location Section with Interactive Map */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <LocationSection />
-      </div>
+      <LocationSectionSimple form={form} />
 
       <Separator />
 

@@ -39,7 +39,7 @@ const FilterTabs: React.FC<FilterTabsProps> = ({
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   // Helper to check if distance filter is active (user has changed from default)
-  const isDistanceActive = distance[0] < 10;
+  const isDistanceActive = distance[0] < 50;
 
   // Helper to check if rating filter is active
   const isRatingActive = minRating[0] > 0;
@@ -73,16 +73,15 @@ const FilterTabs: React.FC<FilterTabsProps> = ({
               <h4 className="font-medium">Minimum Rating</h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Show results rated</span>
+                  <span className="text-sm text-muted-foreground">Show results with overall score</span>
                   <div className="flex items-center">
-                    <Star className="h-3 w-3 fill-amber-500 text-amber-500 mr-1" />
-                    <span className="text-sm font-medium">{minRating[0]}+</span>
+                    <span className="text-sm font-medium">{minRating[0] === 0 ? 'Any' : `${minRating[0]}+`}</span>
                   </div>
                 </div>
-                <Slider id="rating" value={minRating} min={0} max={5} step={0.5} onValueChange={setMinRating} />
+                <Slider id="rating" value={minRating} min={0} max={100} step={5} onValueChange={setMinRating} />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Any</span>
-                  <span>5.0</span>
+                  <span>Any (0)</span>
+                  <span>Excellent (100)</span>
                 </div>
               </div>
             </div>
@@ -158,10 +157,10 @@ const FilterTabs: React.FC<FilterTabsProps> = ({
                   <span className="text-sm text-muted-foreground">Within</span>
                   <span className="text-sm font-medium">{distance[0]} km</span>
                 </div>
-                <Slider id="distance" value={distance} min={0.5} max={10} step={0.5} onValueChange={setDistance} />
+                <Slider id="distance" value={distance} min={0.5} max={100} step={0.5} onValueChange={setDistance} />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>0.5 km</span>
-                  <span>10 km</span>
+                  <span>100 km</span>
                 </div>
               </div>
             </div>

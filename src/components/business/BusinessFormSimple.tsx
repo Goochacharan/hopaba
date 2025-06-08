@@ -37,10 +37,9 @@ export interface Business {
   price_unit?: string;
   experience?: string;
   availability_days?: string[];
-  hours_from?: string;
-  hours_to?: string;
+  availability_start_time?: string;  // Changed from hours_from
+  availability_end_time?: string;    // Changed from hours_to
   languages?: string[];
-  map_link?: string;
   latitude?: number;
   longitude?: number;
   created_at?: string;
@@ -76,7 +75,6 @@ const businessFormSchema = z.object({
   hours_from: z.string().optional(),
   hours_to: z.string().optional(),
   languages: z.array(z.string()).optional(),
-  map_link: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
@@ -127,10 +125,9 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     price_unit: business?.price_unit || '',
     experience: business?.experience || '',
     availability_days: business?.availability_days || [],
-    hours_from: business?.hours_from || '9:00 AM',
-    hours_to: business?.hours_to || '5:00 PM',
+    hours_from: business?.availability_start_time || '9:00 AM',
+    hours_to: business?.availability_end_time || '5:00 PM',
     languages: business?.languages || [],
-    map_link: business?.map_link || '',
     latitude: business?.latitude,
     longitude: business?.longitude,
   };
@@ -207,10 +204,9 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
         price_unit: data.price_unit || null,
         experience: data.experience || null,
         availability_days: selectedDays,
-        hours_from: data.hours_from || null,
-        hours_to: data.hours_to || null,
+        availability_start_time: data.hours_from || null,
+        availability_end_time: data.hours_to || null,
         languages: data.languages || [],
-        map_link: data.map_link || null,
         latitude: data.latitude,
         longitude: data.longitude,
         user_id: user.id,
@@ -235,7 +231,6 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
 
       onSaved();
     } catch (error) {
-      console.error('Error saving business:', error);
       toast({
         title: "Error",
         description: "Failed to save business. Please try again.",

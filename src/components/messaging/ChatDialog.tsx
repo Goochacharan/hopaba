@@ -8,7 +8,7 @@ import {
 import ConversationHeader from '@/components/messaging/ConversationHeader';
 import MessagesList from '@/components/messaging/MessagesList';
 import MessageInput from '@/components/messaging/MessageInput';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,7 +28,7 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
   onOpenChange,
 }) => {
   const { user } = useAuth();
-  const { conversations, isLoadingConversations } = useConversations();
+  const { conversations, isLoading: isLoadingConversations, markMessagesAsRead } = useConversationsOptimized();
   const queryClient = useQueryClient();
 
   // Message input state
@@ -50,7 +50,8 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100); // Limit messages for better performance
 
       if (error) {
         console.error('Error fetching messages:', error);
@@ -60,7 +61,9 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
       return data || [];
     },
     enabled: !!conversationId && open,
-    staleTime: 30000, // 30 seconds
+    staleTime: 15000, // 15 seconds for faster updates
+    refetchOnWindowFocus: true, // Refetch when dialog regains focus
+    gcTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   // Type cast messages to ensure proper typing
@@ -82,6 +85,22 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
       onOpenChange(false);
     }
   }, [conversation, conversationId, isLoadingConversations, onOpenChange]);
+
+  // Mark messages as read when dialog is opened and conversation is loaded
+  useEffect(() => {
+    if (open && conversationId && conversation && user) {
+      const isProvider = conversation.service_providers?.user_id === user.id;
+      const senderType = isProvider ? 'provider' : 'user';
+      
+      // Mark messages as read immediately when dialog opens
+      const timeoutId = setTimeout(() => {
+        console.log('ChatDialog: Marking messages as read', { conversationId, senderType });
+        markMessagesAsRead(conversationId, senderType);
+      }, 500); // Very quick response for dialog
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [open, conversationId, conversation, user, markMessagesAsRead]);
 
   // Handle sending messages
   const handleSendMessage = async () => {
@@ -121,10 +140,13 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
       setQuotationPrice('');
       setQuotationMode(false);
 
-      // Refresh messages
-      queryClient.invalidateQueries({ queryKey: ['conversation-messages', conversationId] });
+      // Refresh messages with optimized invalidation
+      queryClient.invalidateQueries({ 
+        queryKey: ['conversation-messages', conversationId],
+        refetchType: 'none' // Let real-time subscription handle the update
+      });
 
-      // Update conversation timestamp
+      // Update conversation timestamp (this is also done in the optimized hook)
       await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
