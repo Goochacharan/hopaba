@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
-import { useBusinessesOptimized } from '@/hooks/useBusinessesOptimized';
+import { useBusinessesOptimized, useBusinessesCount } from '@/hooks/useBusinessesOptimized';
 import { useBusinessReviewsAggregated } from '@/hooks/useBusinessReviewsAggregated';
 import { calculateOverallRating } from '@/utils/ratingUtils';
-import { Loader2, Search, FilterX, X } from 'lucide-react';
+import { Loader2, Search, FilterX, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -17,6 +17,7 @@ import { useLocation } from '@/contexts/LocationContext';
 import { filterBusinessesByLocation } from '@/utils/locationFilterUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDistanceCache } from '@/hooks/useDistanceCache';
+import PerformanceMonitor from '@/components/PerformanceMonitor';
 
 // Lazy load heavy components
 const BusinessCardPublic = lazy(() => import('@/components/business/BusinessCardPublic'));
@@ -44,6 +45,81 @@ const BusinessCardSkeleton = () => (
   </div>
 );
 
+// Pagination component
+const Pagination = ({ currentPage, totalPages, onPageChange, isLoading }: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  isLoading: boolean;
+}) => {
+  const getVisiblePages = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, '...');
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push('...', totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-center space-x-2 mt-8">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage <= 1 || isLoading}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </Button>
+      
+      <div className="flex space-x-1">
+        {getVisiblePages().map((page, index) => (
+          <Button
+            key={index}
+            variant={page === currentPage ? "default" : "outline"}
+            size="sm"
+            onClick={() => typeof page === 'number' && onPageChange(page)}
+            disabled={typeof page !== 'number' || isLoading}
+            className="min-w-[40px]"
+          >
+            {page}
+          </Button>
+        ))}
+      </div>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage >= totalPages || isLoading}
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
 const Shop = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,6 +131,7 @@ const Shop = () => {
   const searchQuery = searchParams.get('q') || '';
   const cityParam = searchParams.get('city') || 'All Cities';
   const postalCodeParam = searchParams.get('postalCode') || '';
+  const pageParam = parseInt(searchParams.get('page') || '1');
 
   // Local state
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
@@ -63,6 +140,10 @@ const Shop = () => {
   const [inputValue, setInputValue] = useState<string>(searchQuery);
   const [selectedCity, setSelectedCity] = useState<string>(cityParam);
   const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
+  const [currentPage, setCurrentPage] = useState<number>(pageParam);
+
+  // Pagination settings
+  const ITEMS_PER_PAGE = 24; // Optimized for 3-column grid
 
   // Debounce search inputs for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -78,8 +159,22 @@ const Shop = () => {
   // Filters
   const { filters, setters } = useSearchFilters();
 
-  // Fetch businesses using optimized hook with combined search
+  // Calculate offset for pagination
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  // Fetch businesses using optimized hook with pagination
   const { data: businesses, isLoading, error } = useBusinessesOptimized(
+    selectedCategory === 'All' ? null : selectedCategory,
+    selectedSubcategories.length > 0 ? selectedSubcategories[0] : null,
+    debouncedCity !== 'All Cities' ? debouncedCity : undefined,
+    debouncedPostalCode || undefined,
+    debouncedSearchTerm || undefined,
+    ITEMS_PER_PAGE,
+    offset
+  );
+
+  // Fetch total count for pagination
+  const { data: totalCount = 0 } = useBusinessesCount(
     selectedCategory === 'All' ? null : selectedCategory,
     selectedSubcategories.length > 0 ? selectedSubcategories[0] : null,
     debouncedCity !== 'All Cities' ? debouncedCity : undefined,
@@ -87,18 +182,15 @@ const Shop = () => {
     debouncedSearchTerm || undefined
   );
 
-  // Fetch aggregated review data for all businesses
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  // Fetch aggregated review data for current page businesses only
   const businessIds = useMemo(() => businesses?.map(b => b.id) || [], [businesses]);
   const { data: reviewAggregations = {} } = useBusinessReviewsAggregated(businessIds);
-  
-
 
   // Memoize filtered businesses to avoid recalculation
   const filteredBusinesses = useMemo(() => {
     if (!businesses) return [];
-    
-    // Only log when filters actually change, not on every render
-    const filterKey = `${filters.minRating[0]}-${filters.priceRange}-${filters.openNowOnly}-${filters.hiddenGemOnly}-${filters.mustVisitOnly}`;
     
     const filtered = businesses.filter(business => {
       // Apply rating filter using overall score from aggregated review data
@@ -136,31 +228,20 @@ const Shop = () => {
         }
       }
       
-      // Apply open now filter (if we had this data)
-      // if (filters.openNowOnly && !business.isOpenNow) return false;
-      
-      // Apply hidden gem filter (if we had this data)
-      // if (filters.hiddenGemOnly && !business.isHiddenGem) return false;
-      
-      // Apply must visit filter (if we had this data)  
-      // if (filters.mustVisitOnly && !business.isMustVisit) return false;
-      
       return true;
     });
     
     return filtered;
-  }, [businesses, reviewAggregations, filters.minRating[0], filters.priceRange, filters.openNowOnly, filters.hiddenGemOnly, filters.mustVisitOnly]);
+  }, [businesses, reviewAggregations, filters.minRating[0], filters.priceRange]);
 
   // State for businesses with distance calculations
   const [businessesWithDistance, setBusinessesWithDistance] = useState<any[]>([]);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
 
   // Calculate distances for businesses when location is enabled
-  // Use a ref to store the latest businesses to avoid dependency issues
   const businessesRef = useRef(businesses);
   businessesRef.current = businesses;
 
-  // Use a ref to track the last location to prevent unnecessary recalculations
   const lastLocationRef = useRef<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
@@ -224,14 +305,14 @@ const Shop = () => {
 
     // Debounce distance calculations to prevent rapid successive calls
     timeoutId = setTimeout(() => {
-    calculateDistances();
+      calculateDistances();
     }, 500); // 500ms debounce
 
     return () => {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [businesses?.length, userLocation?.lat, userLocation?.lng]); // Only depend on business count and location
+  }, [businesses?.length, userLocation?.lat, userLocation?.lng]);
 
   // Apply all filters (including distance) to businesses with calculated distances
   const finalFilteredBusinesses = useMemo(() => {
@@ -315,8 +396,6 @@ const Shop = () => {
             ? calculateOverallRating(reviewDataB.average_criteria_ratings)
             : 0;
           
-
-          
           // If overall scores are equal, sort by review count as tiebreaker
           if (overallScoreA === overallScoreB) {
             const reviewA = reviewAggregations[a.id];
@@ -390,66 +469,79 @@ const Shop = () => {
   const finalBusinesses = useMemo(() => {
     return sortBusinesses(finalFilteredBusinesses);
   }, [finalFilteredBusinesses, sortBusinesses]);
-  
-  // Debug logging for final businesses (reduced frequency)
-  // Only log when the count changes significantly or sort changes
-  const businessCount = finalBusinesses.length;
-  const sortBy = filters.sortBy;
 
   // Handle category change
   const handleCategoryChange = useCallback((category: string) => {
     setSelectedCategory(category);
     setSelectedSubcategories([]);
+    setCurrentPage(1); // Reset to first page
     const newParams = new URLSearchParams(searchParams);
     newParams.set('category', category);
     newParams.delete('subcategory');
+    newParams.delete('page');
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
-
-
 
   // Handle search
   const handleSearch = useCallback(() => {
     setSearchTerm(inputValue);
+    setCurrentPage(1); // Reset to first page
     const newParams = new URLSearchParams(searchParams);
     if (inputValue.trim()) {
       newParams.set('q', inputValue.trim());
     } else {
       newParams.delete('q');
     }
+    newParams.delete('page');
     setSearchParams(newParams);
   }, [inputValue, searchParams, setSearchParams]);
 
   // Handle city change
   const handleCityChange = useCallback((city: string) => {
     setSelectedCity(city);
+    setCurrentPage(1); // Reset to first page
     const newParams = new URLSearchParams(searchParams);
     if (city !== 'All Cities') {
       newParams.set('city', city);
     } else {
       newParams.delete('city');
     }
+    newParams.delete('page');
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
   // Handle postal code change
   const handlePostalCodeChange = useCallback((code: string) => {
     setPostalCode(code);
+    setCurrentPage(1); // Reset to first page
     const newParams = new URLSearchParams(searchParams);
     if (code.trim()) {
       newParams.set('postalCode', code.trim());
     } else {
       newParams.delete('postalCode');
     }
+    newParams.delete('page');
     setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
+  // Handle page change
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    const newParams = new URLSearchParams(searchParams);
+    if (page > 1) {
+      newParams.set('page', page.toString());
+    } else {
+      newParams.delete('page');
+    }
+    setSearchParams(newParams);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [searchParams, setSearchParams]);
 
   // Handle sort change
   const handleSortChange = useCallback((sortBy: 'rating' | 'distance' | 'reviewCount' | 'newest') => {
     setters.setSortBy(sortBy);
   }, [setters]);
-
-  // Categories are now loaded by CategoryScrollBar component from database
 
   const cities = useMemo(() => [
     'All Cities', 'Bengaluru', 'Mumbai', 'Delhi', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'
@@ -493,12 +585,14 @@ const Shop = () => {
             selectedSubcategory={selectedSubcategories}
             onSubcategorySelect={(subcategories) => {
               setSelectedSubcategories(subcategories);
+              setCurrentPage(1); // Reset to first page
               const newParams = new URLSearchParams(searchParams);
               if (subcategories.length > 0) {
                 newParams.set('subcategory', subcategories[0]);
               } else {
                 newParams.delete('subcategory');
               }
+              newParams.delete('page');
               setSearchParams(newParams);
             }}
           />
@@ -545,11 +639,23 @@ const Shop = () => {
           />
         </Suspense>
         
-                {/* Results */}
-  
-          {isLoading ? (
+        {/* Results Summary */}
+        {!isLoading && (
+          <div className="flex justify-between items-center text-sm text-muted-foreground">
+            <span>
+              Showing {finalBusinesses.length} of {totalCount} businesses
+              {currentPage > 1 && ` (Page ${currentPage} of ${totalPages})`}
+            </span>
+            {isCalculatingDistances && userLocation && (
+              <span className="text-primary">Calculating distances...</span>
+            )}
+          </div>
+        )}
+        
+        {/* Results */}
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {Array.from({ length: 9 }, (_, index) => (
+            {Array.from({ length: ITEMS_PER_PAGE }, (_, index) => (
               <BusinessCardSkeleton key={`skeleton-${index}`} />
             ))}
           </div>
@@ -566,11 +672,6 @@ const Shop = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {isCalculatingDistances && userLocation && (
-              <div className="text-center py-2">
-                <p className="text-sm text-muted-foreground">Calculating distances...</p>
-              </div>
-            )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {finalBusinesses.map(business => (
                 <Suspense key={business.id} fallback={<BusinessCardSkeleton />}>
@@ -578,8 +679,23 @@ const Shop = () => {
                 </Suspense>
               ))}
             </div>
+            
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isLoading={isLoading}
+            />
           </div>
         )}
+        
+        {/* Performance Monitor (only in development) */}
+        <PerformanceMonitor 
+          label="Shop Page"
+          isLoading={isLoading}
+          dataCount={finalBusinesses.length}
+        />
       </div>
     </MainLayout>
   );

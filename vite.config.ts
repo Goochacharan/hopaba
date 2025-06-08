@@ -19,4 +19,36 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Enable code splitting for better performance
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          supabase: ['@supabase/supabase-js'],
+          query: ['@tanstack/react-query'],
+          router: ['react-router-dom'],
+        },
+      },
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000,
+    // Use esbuild for minification (faster than terser)
+    minify: 'esbuild',
+    // Target modern browsers for better performance
+    target: 'esnext',
+  },
+  // Enable compression and optimization
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+    // Enable tree shaking
+    treeShaking: true,
+  },
+  // Optimize dependencies
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@tanstack/react-query'],
+    exclude: ['@vite/client', '@vite/env'],
+  },
 }));

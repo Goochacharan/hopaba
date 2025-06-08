@@ -11,7 +11,7 @@ import { UserCheck, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const HCAPTCHA_SITE_KEY = 'fda043e0-8372-4d8a-b190-84a8fdee1528';
-const REQUIRE_CAPTCHA = false;
+const REQUIRE_CAPTCHA = true;
 const MAX_RETRIES = 3;
 
 export default function Login() {

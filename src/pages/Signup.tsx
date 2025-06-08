@@ -8,7 +8,7 @@ import { SignupFormValues } from '@/components/auth/SignupForm';
 import { useAuth } from '@/hooks/useAuth';
 
 const HCAPTCHA_SITE_KEY = 'fda043e0-8372-4d8a-b190-84a8fdee1528';
-const REQUIRE_CAPTCHA = false; // Temporarily disabled captcha verification
+const REQUIRE_CAPTCHA = true; // Temporarily disabled captcha verification
 
 export default function Signup() {
   const navigate = useNavigate();

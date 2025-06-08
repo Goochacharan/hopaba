@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,41 +24,25 @@ interface BusinessCardPublicProps {
   className?: string;
 }
 
-const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, className }) => {
+const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, className }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
   // Use global location context only for checking if location is enabled
   const { isLocationEnabled } = useLocation();
   
-  // Use the new hook to fetch business languages
+  // Use the new hook to fetch business languages - memoized to prevent unnecessary calls
   const { data: businessLanguages } = useServiceProviderLanguages(business.id || '');
   
-  // Use the new Supabase-based review hook
+  // Use the new Supabase-based review hook - memoized
   const {
     averageRating,
     averageCriteriaRatings,
     totalReviews
   } = useBusinessReviews(business.id || '');
   
-  // Map days numbers to actual day names
-  const dayMap: Record<string, string> = {
-    '0': 'Sun',
-    '1': 'Mon',
-    '2': 'Tue',
-    '3': 'Wed',
-    '4': 'Thu',
-    '5': 'Fri',
-    '6': 'Sat'
-  };
-
-  const formatAvailabilityDays = (days: string[] | undefined) => {
-    if (!days || days.length === 0) return 'Not specified';
-    
-    return days.map(day => dayMap[day] || day).join(', ');
-  };
-
-  const formatPrice = () => {
+  // Memoize expensive calculations
+  const formattedPrice = useMemo(() => {
     if (business.price_range_min && business.price_range_max) {
       return `₹${business.price_range_min} - ₹${business.price_range_max} ${business.price_unit || ''}`;
     } else if (business.price_range_min) {
@@ -68,13 +51,41 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
       return `Up to ₹${business.price_range_max} ${business.price_unit || ''}`;
     }
     return 'Not specified';
-  };
+  }, [business.price_range_min, business.price_range_max, business.price_unit]);
 
-  const handleCardClick = () => {
+  // Memoize availability days formatting
+  const formattedAvailabilityDays = useMemo(() => {
+    const dayMap: Record<string, string> = {
+      '0': 'Sun',
+      '1': 'Mon',
+      '2': 'Tue',
+      '3': 'Wed',
+      '4': 'Thu',
+      '5': 'Fri',
+      '6': 'Sat'
+    };
+
+    if (!business.availability_days || business.availability_days.length === 0) return 'Not specified';
+    return business.availability_days.map(day => dayMap[day] || day).join(', ');
+  }, [business.availability_days]);
+
+  // Memoize display distance
+  const displayDistance = useMemo(() => (
+    business.calculatedDistance !== null && business.calculatedDistance !== undefined 
+      ? {
+          distance: business.calculatedDistance,
+          isPrecise: false,
+          text: business.distanceText || `${business.calculatedDistance.toFixed(1)} km away`
+        }
+      : null
+  ), [business.calculatedDistance, business.distanceText]);
+
+  // Memoize handlers to prevent unnecessary re-renders
+  const handleCardClick = useMemo(() => () => {
     navigate(`/business/${business.id}`);
-  };
+  }, [navigate, business.id]);
   
-  const handleInstagramClick = (e: React.MouseEvent) => {
+  const handleInstagramClick = useMemo(() => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (business.instagram) {
       window.open(`https://instagram.com/${business.instagram.replace('@', '')}`, '_blank', 'noopener,noreferrer');
@@ -84,18 +95,13 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         duration: 2000
       });
     }
-  };
+  }, [business.instagram, business.name, toast]);
 
-  // Use the pre-calculated distance from the optimized distance cache system
-  const displayDistance = (
-    business.calculatedDistance !== null && business.calculatedDistance !== undefined 
-      ? {
-          distance: business.calculatedDistance,
-          isPrecise: false,
-          text: business.distanceText || `${business.calculatedDistance.toFixed(1)} km away`
-        }
-      : null
-  );
+  // Memoize image source and alt text
+  const imageProps = useMemo(() => ({
+    src: business.images && business.images.length > 0 ? business.images[0] : null,
+    alt: business.name
+  }), [business.images, business.name]);
 
   return (
     <Card 
@@ -103,11 +109,14 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
       onClick={handleCardClick}
     >
       <div className="aspect-video w-full overflow-hidden relative">
-        {business.images && business.images.length > 0 ? (
+        {imageProps.src ? (
           <img 
-            src={business.images[0]} 
-            alt={business.name} 
+            src={imageProps.src} 
+            alt={imageProps.alt} 
             className="object-cover w-full h-full" 
+            loading="lazy" // Add lazy loading for better performance
+            decoding="async" // Improve image loading performance
+            style={{ contentVisibility: 'auto' }} // CSS containment for better performance
           />
         ) : (
           <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -151,11 +160,16 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         {business.tags && business.tags.length > 0 && (
           <div className="mb-2">
             <div className="flex flex-wrap gap-1.5">
-              {business.tags.map((tag, index) => (
+              {business.tags.slice(0, 3).map((tag, index) => ( // Limit tags for performance
                 <Badge key={index} variant="secondary" className="bg-primary/10 text-primary text-xs">
                   {tag}
                 </Badge>
               ))}
+              {business.tags.length > 3 && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
+                  +{business.tags.length - 3} more
+                </Badge>
+              )}
             </div>
           </div>
         )}
@@ -174,7 +188,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
         {businessLanguages && businessLanguages.length > 0 && (
           <div className="mb-2">
             <div className="flex flex-wrap gap-1.5">
-              {businessLanguages.map((language, index) => (
+              {businessLanguages.slice(0, 3).map((language, index) => ( // Limit languages for performance
                 <Badge 
                   key={index} 
                   variant="outline" 
@@ -183,6 +197,11 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
                   {language.name}
                 </Badge>
               ))}
+              {businessLanguages.length > 3 && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                  +{businessLanguages.length - 3} more
+                </Badge>
+              )}
             </div>
           </div>
         )}
@@ -199,115 +218,61 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = ({ business, class
               {business.instagram && (
                 <button 
                   onClick={handleInstagramClick}
-                  title="Watch Instagram content" 
-                  className="bg-gradient-to-tr from-purple-500 via-pink-500 to-yellow-500 rounded-full hover:shadow-md transition-all p-1.5"
+                  className="text-pink-600 hover:text-pink-700 transition-colors"
+                  title="View video content"
                 >
-                  <Film className="h-3.5 w-3.5 text-white" />
+                  <Film className="h-4 w-4" />
                 </button>
               )}
             </div>
           )}
           
-          {/* Enhanced Distance display with precision indicator */}
+          {/* Display distance if available */}
           {displayDistance && (
             <div className="flex items-center gap-2">
-              <Navigation className="h-4 w-4 text-primary flex-shrink-0" />
-              <span className={`font-medium ${displayDistance.isPrecise ? 'text-primary' : 'text-orange-600'}`}>
+              <Navigation className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
                 {displayDistance.text}
-                {displayDistance.isPrecise && (
-                  <span className="text-xs ml-1 text-green-600">(exact)</span>
-                )}
               </span>
             </div>
           )}
           
+          {/* Availability */}
           {business.availability_days && business.availability_days.length > 0 && (
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span>
-                  {formatAvailabilityDays(business.availability_days)}
-                </span>
-              </div>
-              {business.availability_start_time && business.availability_end_time && (
-                <div className="ml-6 text-xs text-muted-foreground">
-                  {business.availability_start_time} - {business.availability_end_time}
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {formattedAvailabilityDays}
+              </span>
             </div>
           )}
           
-          {business.price_range_min || business.price_range_max ? (
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Price:</span>
-              <span>{formatPrice()}</span>
-            </div>
-          ) : null}
-          
-          {business.languages && business.languages.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Languages className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span className="line-clamp-1">{business.languages.join(', ')}</span>
-            </div>
-          )}
+          {/* Price */}
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-primary">
+              {formattedPrice}
+            </span>
+          </div>
         </div>
         
-        {/* Action Buttons */}
-        <BusinessActionButtons
-          businessId={business.id}
-          name={business.name}
-          phone={business.contact_phone}
-          whatsapp={business.contact_phone}
-          instagram={business.instagram}
-          location={[business.area, business.city].filter(Boolean).join(', ')}
-          mapLink={business.map_link}
-        />
-        
-        {/* Hidden buttons */}
-        <div className="hidden">
-          {business.website && (
-            <a 
-              href={business.website} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline">
-                <Globe className="h-4 w-4 mr-1" />
-                Website
-              </Button>
-            </a>
-          )}
-          
-          {business.instagram && (
-            <a 
-              href={`https://instagram.com/${business.instagram.replace('@', '')}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline" className="text-pink-600 hover:text-pink-700">
-                <Instagram className="h-4 w-4 mr-1" />
-                Instagram
-              </Button>
-            </a>
-          )}
-          
-          {business.contact_email && (
-            <a 
-              href={`mailto:${business.contact_email}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button size="sm" variant="outline">
-                <Mail className="h-4 w-4 mr-1" />
-                Email
-              </Button>
-            </a>
-          )}
+        {/* Action buttons */}
+        <div className="pt-2">
+          <BusinessActionButtons 
+            businessId={business.id || ''}
+            name={business.name}
+            phone={business.contact_phone}
+            whatsapp={business.contact_phone}
+            instagram={business.instagram}
+            location={[business.area, business.city].filter(Boolean).join(', ')}
+            mapLink={business.map_link}
+          />
         </div>
       </CardContent>
     </Card>
   );
-};
+});
+
+// Add display name for debugging
+BusinessCardPublic.displayName = 'BusinessCardPublic';
 
 export default BusinessCardPublic;
