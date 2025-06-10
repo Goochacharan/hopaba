@@ -21,48 +21,6 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MultiSelect } from './MultiSelect';
 
-// Create a simple MultiSelect component inline since it's missing
-const MultiSelect: React.FC<{
-  options: string[];
-  value?: string[];
-  onChange: (values: string[]) => void;
-}> = ({ options, value = [], onChange }) => {
-  const [selectedItems, setSelectedItems] = useState<string[]>(value);
-
-  const handleToggle = (item: string) => {
-    const newSelection = selectedItems.includes(item)
-      ? selectedItems.filter(i => i !== item)
-      : [...selectedItems, item];
-    setSelectedItems(newSelection);
-    onChange(newSelection);
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {selectedItems.map(item => (
-          <Badge key={item} variant="secondary" className="flex items-center gap-1">
-            {item}
-            <X className="w-3 h-3 cursor-pointer" onClick={() => handleToggle(item)} />
-          </Badge>
-        ))}
-      </div>
-      <Select onValueChange={handleToggle}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select options..." />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map(option => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-};
-
 const businessSchema = z.object({
   name: z.string().min(2, {
     message: 'Business name must be at least 2 characters.',
