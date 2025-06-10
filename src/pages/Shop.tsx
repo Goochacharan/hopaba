@@ -560,24 +560,25 @@ const Shop = () => {
 
         {/* Search and Filters */}
         <div className="space-y-4">
-          {/* Location Filters - Moved to top */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select
-              value={selectedCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {cities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
+          {/* Location Filters - Made compact and side by side */}
+          <div className="flex gap-2">
+            <Select value={selectedCity} onValueChange={handleCityChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select city" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map(city => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
-            <input
+            <Input
               type="text"
               placeholder="Postal Code"
               value={postalCode}
               onChange={(e) => handlePostalCodeChange(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-[140px]"
             />
           </div>
 
