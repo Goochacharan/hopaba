@@ -18,7 +18,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MultiSelect } from './MultiSelect';
 
 // Create a simple MultiSelect component inline since it's missing
 const MultiSelect: React.FC<{
@@ -110,6 +111,8 @@ const businessSchema = z.object({
   availability_days: z.array(z.string()).optional(),
   availability_start_time: z.string().optional(),
   availability_end_time: z.string().optional(),
+  hours_from: z.string().optional(),
+  hours_to: z.string().optional(),
   tags: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
@@ -148,6 +151,8 @@ export interface Business {
   availability_days?: string[];
   availability_start_time?: string;
   availability_end_time?: string;
+  hours_from?: string;
+  hours_to?: string;
   tags?: string[];
   images?: string[];
   languages?: string[];
@@ -201,6 +206,8 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ onSubmit, businessDat
       availability_days: businessData?.availability_days || [],
       availability_start_time: businessData?.availability_start_time || '',
       availability_end_time: businessData?.availability_end_time || '',
+      hours_from: businessData?.hours_from || '9:00 AM',
+      hours_to: businessData?.hours_to || '5:00 PM',
       tags: businessData?.tags || [],
       images: businessData?.images || [],
       languages: businessData?.languages || [],
