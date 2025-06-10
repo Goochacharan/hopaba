@@ -33,6 +33,10 @@ export interface Business {
   postal_code?: string;
   latitude?: number;
   longitude?: number;
+  whatsapp?: string;
+  hours?: string;
+  approval_status?: string;
+  user_id?: string;
 }
 
 export const useBusinesses = () => {
