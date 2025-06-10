@@ -13,13 +13,54 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { MultiSelect } from './MultiSelect';
 import { Slider } from '@/components/ui/slider';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from '@radix-ui/react-icons';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+// Create a simple MultiSelect component inline since it's missing
+const MultiSelect: React.FC<{
+  options: string[];
+  value?: string[];
+  onChange: (values: string[]) => void;
+}> = ({ options, value = [], onChange }) => {
+  const [selectedItems, setSelectedItems] = useState<string[]>(value);
+
+  const handleToggle = (item: string) => {
+    const newSelection = selectedItems.includes(item)
+      ? selectedItems.filter(i => i !== item)
+      : [...selectedItems, item];
+    setSelectedItems(newSelection);
+    onChange(newSelection);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {selectedItems.map(item => (
+          <Badge key={item} variant="secondary" className="flex items-center gap-1">
+            {item}
+            <X className="w-3 h-3 cursor-pointer" onClick={() => handleToggle(item)} />
+          </Badge>
+        ))}
+      </div>
+      <Select onValueChange={handleToggle}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select options..." />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(option => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
 
 const businessSchema = z.object({
   name: z.string().min(2, {
@@ -81,6 +122,8 @@ const businessSchema = z.object({
   hours: z.string().optional(),
   user_id: z.string().optional(),
 });
+
+export type BusinessFormValues = z.infer<typeof businessSchema>;
 
 export interface Business {
   id?: string;
@@ -217,7 +260,7 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ onSubmit, businessDat
     });
   };
 
-  const onSubmitHandler = (values: z.infer<typeof businessSchema>) => {
+  const onSubmitHandler = (values: BusinessFormValues) => {
     if (isSliderEnabled) {
       values.price_range_min = values.price_range_min || 100;
       values.price_range_max = values.price_range_max || 1000;
@@ -225,7 +268,22 @@ const BusinessFormSimple: React.FC<BusinessFormProps> = ({ onSubmit, businessDat
       values.price_range_min = undefined;
       values.price_range_max = undefined;
     }
-    onSubmit(values);
+    
+    // Convert to Business type with required fields
+    const businessData: Business = {
+      name: values.name || '',
+      category: values.category || '',
+      description: values.description || '',
+      address: values.address || '',
+      area: values.area || '',
+      city: values.city || '',
+      postal_code: values.postal_code || '',
+      contact_phone: values.contact_phone || '',
+      whatsapp: values.whatsapp || '',
+      ...values
+    };
+    
+    onSubmit(businessData);
   };
 
   const categorySubcategories = selectedCategory ? subcategories[selectedCategory] : [];

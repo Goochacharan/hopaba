@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -166,7 +165,13 @@ const Profile = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <BusinessFormSimple business={editingBusiness} onSaved={handleBusinessSaved} onCancel={handleCancelBusinessForm} />
+                  <BusinessFormSimple 
+                    businessData={editingBusiness} 
+                    onSubmit={handleBusinessSaved} 
+                    onCancel={handleCancelBusinessForm}
+                    categories={[]}
+                    subcategories={{}}
+                  />
                 </CardContent>
               </Card>
             ) : (
