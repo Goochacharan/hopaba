@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
@@ -25,13 +26,13 @@ import { CalendarIcon, Trash2, ListCheck, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import MatchingProvidersDialog from './MatchingProvidersDialog';
+import { MatchingProvidersDialog } from './MatchingProvidersDialog';
 
 const UserRequestsList: React.FC = () => {
   const { userRequests, isLoadingUserRequests, deleteRequest, isDeleting, refetchUserRequests } = useServiceRequests();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
-  const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [showProvidersDialog, setShowProvidersDialog] = useState(false);
   
   const handleDeleteClick = (requestId: string) => {
@@ -46,8 +47,8 @@ const UserRequestsList: React.FC = () => {
     }
   };
 
-  const handleViewProviders = (request: ServiceRequest) => {
-    setSelectedRequest(request);
+  const handleViewProviders = (requestId: string) => {
+    setSelectedRequestId(requestId);
     setShowProvidersDialog(true);
   };
 
@@ -89,7 +90,7 @@ const UserRequestsList: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => handleViewProviders(request)}
+              onClick={() => handleViewProviders(request.id)}
               className="flex items-center gap-1"
             >
               <Users className="h-4 w-4 mr-1" /> View Providers
@@ -187,13 +188,11 @@ const UserRequestsList: React.FC = () => {
       </Tabs>
       
       {/* Matching Providers Dialog */}
-      {selectedRequest && (
-        <MatchingProvidersDialog
-          request={selectedRequest}
-          open={showProvidersDialog} 
-          onOpenChange={setShowProvidersDialog}
-        />
-      )}
+      <MatchingProvidersDialog
+        requestId={selectedRequestId}
+        open={showProvidersDialog} 
+        onOpenChange={setShowProvidersDialog}
+      />
       
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

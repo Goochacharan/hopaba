@@ -10,7 +10,7 @@ import {
   useSidebar
 } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MatchingProvidersContent from '@/components/request/MatchingProvidersContent';
+import { MatchingProvidersContent } from '@/components/request/MatchingProvidersDialog';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { ServiceRequest } from '@/types/serviceRequestTypes';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
