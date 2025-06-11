@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,11 +6,9 @@ import ProviderInbox from '@/components/business/ProviderInbox';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, MapPin, Navigation } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { distanceService, type Location } from '@/services/distanceService';
-import { toast } from '@/components/ui/use-toast';
 import { useLocation } from '@/contexts/LocationContext';
 
 const ServiceRequests: React.FC = () => {
@@ -19,14 +16,8 @@ const ServiceRequests: React.FC = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<'new' | 'responded'>('new');
   
-  // Use global location context
-  const { 
-    userLocation, 
-    isLocationEnabled, 
-    isCalculatingLocation,
-    enableLocation, 
-    disableLocation 
-  } = useLocation();
+  // Use global location context for distance functionality
+  const { userLocation, isLocationEnabled } = useLocation();
   
   // If not authenticated, redirect to login
   if (!user) {
@@ -88,32 +79,6 @@ const ServiceRequests: React.FC = () => {
   const providersWithRequests = providerData?.filter(provider => {
     return conversations?.some(conv => conv.provider_id === provider.id);
   }) || [];
-
-  // Handle location toggle
-  const handleLocationToggle = async () => {
-    if (isLocationEnabled) {
-      disableLocation();
-      toast({
-        title: "Location disabled",
-        description: "Distance sorting is now disabled",
-      });
-    } else {
-      try {
-        await enableLocation();
-        toast({
-          title: "Location enabled",
-          description: "Distance calculation enabled for request sorting",
-        });
-      } catch (error) {
-        console.error('❌ Failed to get user location:', error);
-        toast({
-          title: "Location access denied",
-          description: "Please allow location access to enable distance sorting",
-          variant: "destructive"
-        });
-      }
-    }
-  };
   
   if (isLoadingProvider || isLoadingConversations) {
     return (
@@ -172,29 +137,6 @@ const ServiceRequests: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6 px-4">
         <div className="max-w-3xl mx-auto">
-          {/* Location Toggle */}
-          <div className="bg-white rounded-xl border border-border p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                <span className="font-medium">Enable Location</span>
-              </div>
-              <Button
-                variant={isLocationEnabled ? "default" : "outline"}
-                onClick={handleLocationToggle}
-                disabled={isCalculatingLocation}
-                className="flex items-center gap-2"
-              >
-                {isCalculatingLocation ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Navigation className="h-4 w-4" />
-                )}
-                {isLocationEnabled ? "Disable Location" : "Enable Location"}
-              </Button>
-            </div>
-          </div>
-
           {/* Toggle Section */}
           <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as 'new' | 'responded')} className="mb-6">
             <TabsList className="grid w-full grid-cols-2">
@@ -213,6 +155,7 @@ const ServiceRequests: React.FC = () => {
                     userLocation={userLocation}
                     isLocationEnabled={isLocationEnabled}
                     providerCity={provider.city}
+                    showFilters={false}
                   />
                 </div>
               ))}
@@ -229,6 +172,7 @@ const ServiceRequests: React.FC = () => {
                     userLocation={userLocation}
                     isLocationEnabled={isLocationEnabled}
                     providerCity={provider.city}
+                    showFilters={false}
                   />
                 </div>
               ))}

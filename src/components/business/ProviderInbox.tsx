@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, Calendar, DollarSign, MessageSquare, User, Phone, Mail, Clock, Navigation } from 'lucide-react';
+import { Loader2, MapPin, Calendar, DollarSign, MessageSquare, User, Clock, Navigation } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
@@ -31,6 +30,7 @@ interface ProviderInboxProps {
   userLocation?: Location | null;
   isLocationEnabled?: boolean;
   providerCity?: string;
+  showFilters?: boolean;
 }
 
 const ProviderInbox: React.FC<ProviderInboxProps> = ({ 
@@ -40,7 +40,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   section = 'new',
   userLocation,
   isLocationEnabled = false,
-  providerCity
+  providerCity,
+  showFilters = true
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -186,58 +187,64 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       ? requestsWithDistance 
       : filteredRequests.map(req => ({ ...req, calculatedDistance: null, distanceText: null }));
 
-    // Apply filters
-    let filtered = requestsToFilter.filter(request => {
-      // Apply city filter
-      if (inboxFilters.city.trim() !== '') {
-        const requestCity = request.city || '';
-        if (!requestCity.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
-          return false;
-        }
-      }
-      
-      // Apply postal code filter
-      if (inboxFilters.postalCode.trim() !== '') {
-        const requestPostalCode = request.postal_code || '';
-        if (!requestPostalCode.includes(inboxFilters.postalCode)) {
-          return false;
-        }
-      }
-      
-      // Note: Rating and language filters don't apply to service requests
-      // as they are properties of service providers, not requests
-      
-      return true;
-    });
-
-    // Sort the filtered requests
-    const sorted = [...filtered].sort((a, b) => {
-      switch (inboxFilters.sortBy) {
-        case 'distance':
-          // Sort by calculated distance if available
-          const aDistance = a.calculatedDistance ?? null;
-          const bDistance = b.calculatedDistance ?? null;
-          
-          if (aDistance !== null && bDistance !== null) {
-            return aDistance - bDistance;
+    // Apply filters only if showFilters is true
+    let filtered = requestsToFilter;
+    
+    if (showFilters) {
+      filtered = requestsToFilter.filter(request => {
+        // Apply city filter
+        if (inboxFilters.city.trim() !== '') {
+          const requestCity = request.city || '';
+          if (!requestCity.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
+            return false;
           }
-          if (aDistance !== null) return -1;
-          if (bDistance !== null) return 1;
-          // Fall back to latest if no distance data
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'price':
-          // Sort by budget (lowest first)
-          const aBudget = a.budget || 0;
-          const bBudget = b.budget || 0;
-          return aBudget - bBudget;
-        case 'latest':
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        
+        // Apply postal code filter
+        if (inboxFilters.postalCode.trim() !== '') {
+          const requestPostalCode = request.postal_code || '';
+          if (!requestPostalCode.includes(inboxFilters.postalCode)) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
+
+    // Sort the filtered requests only if showFilters is true
+    const sorted = [...filtered].sort((a, b) => {
+      if (showFilters) {
+        switch (inboxFilters.sortBy) {
+          case 'distance':
+            // Sort by calculated distance if available
+            const aDistance = a.calculatedDistance ?? null;
+            const bDistance = b.calculatedDistance ?? null;
+            
+            if (aDistance !== null && bDistance !== null) {
+              return aDistance - bDistance;
+            }
+            if (aDistance !== null) return -1;
+            if (bDistance !== null) return 1;
+            // Fall back to latest if no distance data
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          case 'price':
+            // Sort by budget (lowest first)
+            const aBudget = a.budget || 0;
+            const bBudget = b.budget || 0;
+            return aBudget - bBudget;
+          case 'latest':
+          default:
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+      } else {
+        // Default sort by latest when filters are hidden
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
 
     return sorted;
-  }, [filteredRequests, requestsWithDistance, isLocationEnabled, inboxFilters]);
+  }, [filteredRequests, requestsWithDistance, isLocationEnabled, inboxFilters, showFilters]);
 
   // Handle conversation creation and navigation
   const handleSendQuotation = (request: ServiceRequest) => {
@@ -304,24 +311,26 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Filter and Sort Controls */}
-      <div className="mb-4">
-        <InboxFilters
-          minRating={inboxFilters.minRating}
-          setMinRating={inboxSetters.setMinRating}
-          languages={inboxFilters.languages}
-          setLanguages={inboxSetters.setLanguages}
-          city={inboxFilters.city}
-          setCity={inboxSetters.setCity}
-          postalCode={inboxFilters.postalCode}
-          setPostalCode={inboxSetters.setPostalCode}
-          priceType={inboxFilters.priceType}
-          setPriceType={inboxSetters.setPriceType}
-          sortBy={inboxFilters.sortBy}
-          setSortBy={inboxSetters.setSortBy}
-          isLocationEnabled={isLocationEnabled}
-        />
-      </div>
+      {/* Filter and Sort Controls - only show if showFilters is true */}
+      {showFilters && (
+        <div className="mb-4">
+          <InboxFilters
+            minRating={inboxFilters.minRating}
+            setMinRating={inboxSetters.setMinRating}
+            languages={inboxFilters.languages}
+            setLanguages={inboxSetters.setLanguages}
+            city={inboxFilters.city}
+            setCity={inboxSetters.setCity}
+            postalCode={inboxFilters.postalCode}
+            setPostalCode={inboxSetters.setPostalCode}
+            priceType={inboxFilters.priceType}
+            setPriceType={inboxSetters.setPriceType}
+            sortBy={inboxFilters.sortBy}
+            setSortBy={inboxSetters.setSortBy}
+            isLocationEnabled={isLocationEnabled}
+          />
+        </div>
+      )}
       
       {/* Request Cards */}
       <div className="grid gap-4">
@@ -392,11 +401,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                           'Flexible dates'
                         )}
                       </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{request.contact_phone}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
