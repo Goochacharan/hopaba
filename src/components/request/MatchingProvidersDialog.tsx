@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -959,7 +958,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
-                      className="flex-1 text-xs px-2 max-w-[120px] truncate"
+                      className="text-xs px-2 max-w-[100px] truncate"
                       variant={hasConversation ? "outline" : "default"}
                     >
                       {isProcessing ? (
@@ -983,7 +982,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <Button
                       onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
                       variant="outline"
-                      size="sm"
                       className="text-xs px-2 max-w-[100px] truncate"
                     >
                       <span className="hidden sm:inline">View Profile</span>
