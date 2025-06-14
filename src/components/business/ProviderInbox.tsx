@@ -412,26 +412,26 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                 </div>
                 
                 <div className="flex justify-between items-center pt-4 border-t">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     size="sm"
                     onClick={() => handleViewDetails(request)}
-                    className={section === "responded" ? "text-xs" : ""}
                   >
                     View Details
                   </Button>
+                  
                   <div className="flex gap-2">
                     {section === 'responded' && hasConversation(request.id) ? (
-                      <Button
+                      <Button 
                         size="sm"
                         onClick={() => handleViewConversation(request)}
-                        className="flex items-center gap-1 text-xs"
+                        className="flex items-center gap-1"
                       >
                         <MessageSquare className="h-4 w-4" />
                         View Conversation
                       </Button>
                     ) : (
-                      <Button
+                      <Button 
                         size="sm"
                         onClick={() => handleSendQuotation(request)}
                       >
