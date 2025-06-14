@@ -6,17 +6,17 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 shadow-[0_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[0_2px_0px_0px_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[3px] transition-all",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-[2px] active:shadow-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_4px_0px_0px_hsl(var(--primary)/0.2)] hover:shadow-[0_2px_0px_0px_hsl(var(--primary)/0.2)]",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-[0_4px_0px_0px_rgba(220,38,38,0.25)]",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-[0_4px_0px_0px_hsl(var(--destructive)/0.2)] hover:shadow-[0_2px_0px_0px_hsl(var(--destructive)/0.2)]",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-[0_4px_0px_0px_rgba(0,0,0,0.05)]",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-[0_4px_0px_0px_hsl(var(--border))] hover:shadow-[0_2px_0px_0px_hsl(var(--border))]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-[0_4px_0px_0px_rgba(0,0,0,0.08)]",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-[0_4px_0px_0px_rgba(0,0,0,0.05)] hover:shadow-[0_2px_0px_0px_rgba(0,0,0,0.05)]",
         ghost: "hover:bg-accent hover:text-accent-foreground shadow-none hover:shadow-none active:translate-y-0",
         link: "text-primary underline-offset-4 hover:underline shadow-none hover:shadow-none active:translate-y-0",
       },
