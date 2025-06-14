@@ -561,7 +561,7 @@ const Shop = () => {
         {/* Search and Filters */}
         <div className="space-y-4">
           {/* Location Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <select
               value={selectedCity}
               onChange={(e) => handleCityChange(e.target.value)}
