@@ -561,11 +561,11 @@ const Shop = () => {
         {/* Search and Filters */}
         <div className="space-y-4">
           {/* Location Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <select
               value={selectedCity}
               onChange={(e) => handleCityChange(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {cities.map(city => (
                 <option key={city} value={city}>{city}</option>
@@ -577,7 +577,7 @@ const Shop = () => {
               placeholder="Postal Code"
               value={postalCode}
               onChange={(e) => handlePostalCodeChange(e.target.value)}
-              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
