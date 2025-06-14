@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -176,18 +177,15 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
             {showAllConversations ? 'All Conversations' : 'Service Requests'}
           </h2>
           {totalUnreadCount && totalUnreadCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="rounded-full text-xs px-2 py-1 sm:text-xs text-[11px] min-w-0 max-w-[90px] truncate"
-            >
+            <Badge variant="destructive" className="rounded-full">
               {totalUnreadCount}
             </Badge>
           )}
         </div>
         {showCreateRequestButton && (
-          <Button
+          <Button 
             onClick={handleCreateRequest}
-            className="w-full text-xs sm:text-xs text-[12px] px-3 py-1.5"
+            className="w-full"
             size="sm"
           >
             + Post New Request
@@ -212,13 +210,13 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                 <Card 
                   key={conversation.id}
                   className={cn(
-                    "cursor-pointer transition-all hover:shadow-md !w-full max-w-full overflow-x-hidden",
+                    "cursor-pointer transition-all hover:shadow-md",
                     conversation.unread_count > 0 && "ring-2 ring-primary/20 bg-primary/5"
                   )}
                   onClick={() => handleConversationClick(conversation.id)}
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between flex-wrap sm:flex-nowrap gap-x-2">
+                    <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-3 flex-1 min-w-0">
                         <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarFallback className="bg-primary/10 text-primary">
@@ -250,27 +248,20 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                           )}
                         </div>
                       </div>
-                      {/* Right section/buttons - mobile wrap & font fix */}
-                      <div className="flex flex-col items-end space-y-2 flex-shrink-0 max-w-[110px] w-full">
+                      
+                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
                         {conversation.unread_count > 0 && (
-                          <Badge 
-                            variant="destructive"
-                            className="rounded-full text-[11px] px-2 py-1 min-w-0 max-w-full truncate"
-                          >
-                            {/* Shorten "View New Messages" to "New Msg" */}
-                            New Msg
+                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1">
+                            {conversation.unread_count}
                           </Badge>
                         )}
                         {conversation.request_budget && (
-                          <Badge
-                            variant="outline"
-                            className="text-[11px] px-2 py-1 whitespace-nowrap max-w-full truncate"
-                          >
+                          <Badge variant="outline" className="text-xs">
                             ₹{conversation.request_budget.toLocaleString()}
                           </Badge>
                         )}
                         {conversation.last_message_created_at && (
-                          <div className="flex items-center text-[11px] text-muted-foreground max-w-full truncate">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <Clock className="h-3 w-3 mr-1" />
                             {format(new Date(conversation.last_message_created_at), 'MMM d, h:mm a')}
                           </div>

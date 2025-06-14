@@ -163,44 +163,6 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;  /* Chrome, Safari and Opera */
   }
-
-  /* Add truncation and mobile/no-horizontal-scroll helpers for cards/buttons */
-  .truncate {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .max-w-card-mobile {
-    max-width: 98vw !important;
-    width: 100%;
-  }
-
-  /* Prevent card overflow on mobile screens */
-  @media (max-width: 640px) {
-    .card, .Card, .bg-card, .search-result-card, .LocationCard, .compact-card, .ProviderCard {
-      max-width: 99vw !important;
-      width: 100vw !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-    }
-    .truncate {
-      max-width: 98vw !important;
-    }
-    .btn, button, [role="button"] {
-      font-size: 12px !important;
-      padding-left: 6px !important;
-      padding-right: 6px !important;
-      line-height: 1.1 !important;
-      min-width: 0 !important;
-      max-width: 90vw !important;
-    }
-    .Badge, .badge, .rounded-full {
-      font-size: 11px !important;
-      min-width: 0 !important;
-      max-width: 60vw !important;
-    }
-  }
 }
 
 .transition-all-200 {
