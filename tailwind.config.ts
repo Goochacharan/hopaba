@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -19,11 +20,7 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				display: ['Poppins', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-				body: ['Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
 				sans: [
-					'Inter', // for default text
-					'Poppins', // for display & buttons
 					'-apple-system',
 					'BlinkMacSystemFont',
 					'San Francisco',
@@ -40,55 +37,32 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: '#d32323', // Yelp Red
-					foreground: '#ffffff'
+					DEFAULT: 'hsl(var(--primary))',
+					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
-					DEFAULT: '#ff6600', // Yelp Orange accent
-					foreground: '#fff'
+					DEFAULT: 'hsl(var(--secondary))',
+					foreground: 'hsl(var(--secondary-foreground))'
 				},
-				gray: {
-					50: '#fafafa',
-					100: '#f5f5f5',
-					200: '#eeeeee',
-					300: '#e0e0e0',
-					400: '#bdbdbd',
-					500: '#9e9e9e',
-					600: '#757575',
-					700: '#616161',
-					800: '#424242',
-					900: '#212121'
-				},
-				success: {
-					DEFAULT: '#00a562',
-					foreground: '#fff'
-				},
-				warning: {
-					DEFAULT: '#ffb400',
-					foreground: '#fff'
-				},
-				card: {
-					DEFAULT: '#fff',
-					foreground: '#222'
-				},
-				// override base
-				background: '#faf8f6',
-				foreground: '#222222',
 				destructive: {
-					DEFAULT: '#ea384c',
-					foreground: '#fff'
+					DEFAULT: 'hsl(var(--destructive))',
+					foreground: 'hsl(var(--destructive-foreground))'
 				},
 				muted: {
-					DEFAULT: '#f7f6f8',
-					foreground: '#888'
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))'
 				},
 				accent: {
-					DEFAULT: '#ffe7e2',
-					foreground: '#d32323'
+					DEFAULT: 'hsl(var(--accent))',
+					foreground: 'hsl(var(--accent-foreground))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))'
+				},
+				card: {
+					DEFAULT: 'hsl(var(--card))',
+					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -102,9 +76,9 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: '14px', // more rounded
-				md: '10px',
-				sm: '6px'
+				lg: 'var(--radius)',
+				md: 'calc(var(--radius) - 2px)',
+				sm: 'calc(var(--radius) - 4px)'
 			},
 			keyframes: {
 				'accordion-down': {
