@@ -15,11 +15,18 @@ interface BusinessListProps {
   refresh?: boolean;
 }
 
+interface BusinessWithDetails extends Business {
+  approval_status?: string;
+  whatsapp?: string;
+  map_link?: string;
+  hours?: string;
+}
+
 const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [businesses, setBusinesses] = useState<BusinessWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteBusinessId, setDeleteBusinessId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -45,7 +52,7 @@ const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) =>
       console.log("Fetched businesses:", data);
       
       // Type cast the data to ensure it matches the Business interface
-      const typedData: Business[] = (data || []).map(item => ({
+      const typedData: BusinessWithDetails[] = (data || []).map(item => ({
         ...item,
         // Add required properties that might be missing from the database
         address: `${item.area}, ${item.city}` || "",
