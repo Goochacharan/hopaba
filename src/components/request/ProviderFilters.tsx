@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +106,7 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
   
   return (
     <div className="flex flex-col gap-2 mb-4">
-      {/* Filter Controls */}
+      {/* Filter and Sort Controls */}
       <div className="flex items-center gap-2 pb-2 pt-1 px-1 overflow-x-auto min-w-max">
         {/* Rating Filter */}
         <Popover open={activeFilter === 'rating'} onOpenChange={open => setActiveFilter(open ? 'rating' : null)}>
@@ -285,6 +284,22 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
             </div>
           </PopoverContent>
         </Popover>
+        
+        {/* Sort Controls */}
+        <div className="flex items-center gap-2">
+          <Label className="text-sm font-medium whitespace-nowrap">Sort by:</Label>
+          <Select value={currentSort} onValueChange={onSortChange}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rating">Highest Rating</SelectItem>
+              <SelectItem value="reviewCount">Most Reviews</SelectItem>
+              <SelectItem value="distance">Nearest Distance</SelectItem>
+              <SelectItem value="newest">Latest</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Clear All Filters */}
         {activeFilterCount > 0 && (
@@ -300,49 +315,31 @@ const ProviderFilters: React.FC<ProviderFiltersProps> = ({
         )}
       </div>
 
-      {/* Sort Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Label className="text-sm font-medium">Sort by:</Label>
-          <Select value={currentSort} onValueChange={onSortChange}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="rating">Highest Rating</SelectItem>
-              <SelectItem value="reviewCount">Most Reviews</SelectItem>
-              <SelectItem value="distance">Nearest Distance</SelectItem>
-              <SelectItem value="newest">Latest</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Active Filter Badges */}
+      {activeFilterCount > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {isRatingActive && (
+            <Badge variant="secondary" className="text-xs">
+              Rating: {filters.minRating[0]}+
+            </Badge>
+          )}
+          {isLanguageActive && (
+            <Badge variant="secondary" className="text-xs">
+              Languages: {filters.languages.length}
+            </Badge>
+          )}
+          {isLocationActive && (
+            <Badge variant="secondary" className="text-xs">
+              Location
+            </Badge>
+          )}
+          {isPriceTypeActive && (
+            <Badge variant="secondary" className="text-xs">
+              {filters.priceType}
+            </Badge>
+          )}
         </div>
-
-        {/* Active Filter Badges */}
-        {activeFilterCount > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {isRatingActive && (
-              <Badge variant="secondary" className="text-xs">
-                Rating: {filters.minRating[0]}+
-              </Badge>
-            )}
-            {isLanguageActive && (
-              <Badge variant="secondary" className="text-xs">
-                Languages: {filters.languages.length}
-              </Badge>
-            )}
-            {isLocationActive && (
-              <Badge variant="secondary" className="text-xs">
-                Location
-              </Badge>
-            )}
-            {isPriceTypeActive && (
-              <Badge variant="secondary" className="text-xs">
-                {filters.priceType}
-              </Badge>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
