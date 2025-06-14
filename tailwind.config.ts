@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -20,13 +19,17 @@ export default {
 		},
 		extend: {
 			fontFamily: {
+				// Modern readable body font
 				sans: [
-					'-apple-system',
-					'BlinkMacSystemFont',
-					'San Francisco',
-					'Segoe UI',
-					'Roboto',
-					'Helvetica Neue',
+					'Inter', 
+					'system-ui',
+					'sans-serif',
+				],
+				// For display / headings
+				display: [
+					'Poppins',
+					'Inter',
+					'system-ui',
 					'sans-serif',
 				],
 			},
