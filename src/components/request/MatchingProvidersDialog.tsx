@@ -958,7 +958,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
-                      className="text-xs px-2 max-w-[100px] truncate"
+                      className="w-28 text-xs px-2 truncate"
                       variant={hasConversation ? "outline" : "default"}
                     >
                       {isProcessing ? (
@@ -982,7 +982,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <Button
                       onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
                       variant="outline"
-                      className="text-xs px-2 max-w-[100px] truncate"
+                      className="w-28 text-xs px-2 truncate"
                     >
                       <span className="hidden sm:inline">View Profile</span>
                       <span className="sm:hidden">Profile</span>
