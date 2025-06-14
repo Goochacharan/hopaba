@@ -3,352 +3,131 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Yelp-style font classes for headings and major UI elements */
 @layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 210 100% 50%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214 32% 90%;
-    --input: 214 32% 90%;
-    --ring: 222 47% 11%;
-
-    /* Add sidebar CSS variables */
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 90%;
-    --sidebar-ring: 222 47% 11%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-background: 0 0% 100%; /* Pearl white, opaque */
-
-    --radius: 1rem;
+  h1, h2, h3, h4, h5, h6, .font-display, .button, .yelp-heading {
+    font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  body, .font-body {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 16px;
   }
 
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 100% 50%;
-    --primary-foreground: 222 47% 11%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    /* Add dark mode sidebar CSS variables */
-    --sidebar: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-background: 222 47% 11%; /* Dark mode sidebar background */
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  /* Yelp card shadow + soft background */
+  .card, .yelp-card {
+    box-shadow: 0 2px 8px 0 rgba(40,33,33,0.07), 0 4px 32px 0 rgba(211,35,35,0.10);
+    border-radius: 14px;
+    border: 1px solid #ede8e7;
+    background: #fff;
   }
 
-  body {
-    @apply bg-background text-foreground antialiased;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    padding-bottom: 30px;
+  /* Yelp button look */
+  button, .button, .yelp-btn {
+    @apply rounded-lg font-display uppercase font-bold tracking-tight px-5 py-2.5 transition-all duration-150;
+    box-shadow: 0 3px 10px 0 rgba(211,35,35,0.08);
+  }
+  button:active {
+    transform: translateY(2px) scale(0.98);
+    box-shadow: 0 1px 4px rgba(211,35,35,0.07);
   }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  .btn-default, .bg-primary {
+    background: #d32323 !important;
+    color: #fff !important;
+    border: none !important;
+  }
+  .btn-outline, .border-primary {
+    border: 2px solid #d32323 !important;
+    color: #d32323 !important;
+    background: #fff !important;
+  }
+  .btn-secondary, .bg-secondary {
+    background: #ff6600 !important;
+    color: #fff !important;
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+  .btn[disabled], button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/20 rounded-full;
+  /* Yelp input fields */
+  input, select, textarea, .yelp-input {
+    border-radius: 9px;
+    border: 1.5px solid #e8e5e2;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    padding: 0.7rem 1rem;
+    background: #fff;
+    color: #222;
+    box-shadow: 0 1px 4px 0 rgba(211,35,35,0.04);
+    transition: border 0.15s, box-shadow 0.2s;
+  }
+  input:focus, select:focus, textarea:focus, .yelp-input:focus {
+    outline: none;
+    border: 1.5px solid #d32323;
+    box-shadow: 0 2px 8px 0 rgba(211,35,35,0.11);
+  }
+  input::placeholder, select::placeholder, textarea::placeholder {
+    color: #bdbdbd;
+    opacity: 1;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/30;
+  /* Card Title style */
+  .card-title, .yelp-title {
+    font-size: 1.1rem;
+    font-family: 'Poppins', 'Inter', sans-serif;
+    color: #222;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  /* Card subtle highlight on hover */
+  .card:hover, .yelp-card:hover {
+    box-shadow: 0 6px 16px 0 rgba(40,33,33,0.09), 0 10px 40px 0 rgba(211,35,35,0.12);
+    border-color: #ff6600;
+    transition: all 0.22s cubic-bezier(.4,0,.2,1);
+    transform: translateY(-2px) scale(1.02);
   }
 }
 
-@layer utilities {
-  .glass {
-    @apply bg-white/80 backdrop-blur-md border border-white/20;
-  }
-  
-  .glass-dark {
-    @apply bg-black/20 backdrop-blur-md border border-white/10;
-  }
-  
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
-  }
+/* Yelp-style icon size consistency */
+svg, .icon, .yelp-icon {
+  vertical-align: middle !important;
+  width: 1.15em !important;
+  height: 1.15em !important;
 }
 
-.transition-all-200 {
-  @apply transition-all duration-200 ease-in-out;
+/* Yelp badge style */
+.badge, .yelp-badge {
+  border-radius: 999px;
+  padding: 2px 12px;
+  background: #ffe7e2;
+  color: #d32323;
+  font-size: 0.9em;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-weight: 500;
 }
 
-.transition-all-300 {
-  @apply transition-all duration-300 ease-in-out;
-}
-
-.transition-all-500 {
-  @apply transition-all duration-500 ease-in-out;
-}
-
-.image-loading {
-  position: relative;
-  overflow: hidden;
-}
-
-.image-loading::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-.search-bar-container {
-  position: relative;
-  z-index: 50;
-  margin-bottom: 4px;
-}
-
-.search-bar-wrapper {
-  background: white;
-  border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  transition: all 0.2s ease;
-}
-
-.fixed-bottom-padding {
-  padding-bottom: 30px;
-}
-
-main {
-  padding-bottom: 40px !important;
-}
-
-.search-result-card h3 {
-  font-size: 1.5rem;
-  line-height: 1.75rem;
-  font-weight: 700;
-  min-height: 1.75rem;
-  margin-bottom: 0;
-}
-
-.search-result-card p {
-  line-height: 1.5;
-  min-height: 3em;
-  margin-top: 1px;
-  margin-bottom: 0;
-  font-size: 1rem;
-  font-weight: normal;
-}
-
-.search-result-card .truncate {
-  min-height: 1rem;
-}
-
-.LocationCard [data-radix-collapsible-content] {
-  padding: 1px !important;
-  margin-top: 0 !important;
-  background-color: transparent;
-  border-radius: 2px;
-}
-
-.LocationCard [data-radix-collapsible-content] .text-sm {
-  margin: 0;
-  padding: 0;
-  line-height: 1;
-  font-size: 0.7rem;
-}
-
-.LocationCard [data-radix-collapsible-content] p {
-  margin: 0;
-  padding: 0;
-  line-height: 1;
-  min-height: auto;
-}
-
-.LocationCard [data-radix-collapsible-content] p + p {
-  margin-top: 0;
-}
-
-.LocationCard [data-radix-collapsible-trigger] {
-  font-size: 0.7rem;
-  padding: 0px 2px;
-  line-height: 1;
-  background-color: transparent;
-  font-weight: 400;
-  color: var(--muted-foreground);
-  border-color: transparent;
-}
-
-.search-tabs-container {
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.TabsList {
-  margin-bottom: 1px !important;
-  height: auto !important;
-  min-height: 38px !important;
-}
-
-.filter-tabs-container {
-  margin-bottom: 2px !important;
-}
-
-.location-selector {
-  margin-bottom: 2px !important;
-}
-
-.search-results-container {
-  padding: 0 2px !important;
-}
-
-.search-results-grid {
-  gap: 1px !important;
-}
-
-.search-header {
-  margin-bottom: 1px !important;
-}
-
-.compact-card {
-  margin-bottom: 1px !important;
+/* Section container like Yelp's search card blocks */
+.yelp-section {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(40,33,33,0.03), 0 5px 40px rgba(40,33,33,0.1);
+  padding: 22px 28px;
+  margin-bottom: 26px;
 }
 
 @media (max-width: 640px) {
-  [data-radix-collapsible-trigger] {
-    padding: 0px 2px;
-    font-size: 0.65rem;
-    display: inline-flex;
-    align-items: center;
-    border-radius: 2px;
-    background-color: transparent;
-    font-weight: 400;
+  h1, h2, h3, .font-display, .card-title {
+    font-size: 1rem;
+    letter-spacing: -0.24px;
   }
-  
-  [data-radix-collapsible-content] {
-    padding: 1px !important;
+  .yelp-section {
+    padding: 18px 8px;
+    margin-bottom: 13px;
   }
-  
-  [data-radix-collapsible-content] .text-sm {
-    font-size: 0.65rem;
-    line-height: 1;
-  }
-  
-  [data-radix-collapsible-content] p {
-    margin: 0;
-    padding: 0;
-  }
-  
-  [data-radix-collapsible-content] p + p {
-    margin-top: 0;
-  }
-}
-
-.image-viewer-open {
-  overflow: hidden !important;
-  position: relative;
-}
-
-[role="dialog"] {
-  z-index: 9999 !important;
-}
-
-[data-state="open"] > [role="dialog"] {
-  z-index: 9999 !important;
-}
-
-.image-viewer-open .fixed-bottom,
-.image-viewer-open .search-bar-container {
-  visibility: hidden;
-}
-
-.DialogContent {
-  z-index: 9999 !important;
-}
-
-.DialogClose {
-  z-index: 10000 !important;
-  position: fixed !important;
-  top: 16px !important;
-  right: 16px !important;
-  background-color: rgba(0,0,0,0.6) !important;
-  color: white !important;
-}
-
-.fixed.left-4.bottom-24 button {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.fixed.left-4.bottom-24 button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
