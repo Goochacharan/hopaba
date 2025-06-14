@@ -252,12 +252,16 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                       
                       <div className="flex flex-row sm:flex-col items-center sm:items-end space-y-0 sm:space-y-2 gap-2 sm:gap-0 mt-3 sm:mt-0">
                         {conversation.unread_count > 0 && (
-                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1 whitespace-nowrap">
+                          <Badge
+                            variant="destructive"
+                            className="rounded-full px-2.5 py-0.5 whitespace-nowrap text-xs sm:text-xs text-[10px] sm:text-xs min-w-0 max-w-[90vw] mobile-tight-badge"
+                            style={{ fontSize: '11px' }}
+                          >
                             New Message
                           </Badge>
                         )}
                         {conversation.request_budget && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs sm:text-xs text-[10px] sm:text-xs min-w-0 max-w-[90vw]">
                             ₹{conversation.request_budget.toLocaleString()}
                           </Badge>
                         )}

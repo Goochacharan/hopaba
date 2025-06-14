@@ -410,29 +410,28 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                 </div>
                 
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center pt-4 border-t gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                     onClick={() => handleViewDetails(request)}
                   >
                     Details
                   </Button>
-                  
                   <div className="flex gap-2 w-full sm:w-auto">
                     {section === 'responded' && hasConversation(request.id) ? (
-                      <Button 
+                      <Button
                         size="sm"
-                        className="flex items-center gap-1 w-full sm:w-auto"
+                        className="flex items-center gap-1 w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                         onClick={() => handleViewConversation(request)}
                       >
                         <MessageSquare className="h-4 w-4" />
                         View Chat
                       </Button>
                     ) : (
-                      <Button 
+                      <Button
                         size="sm"
-                        className="w-full sm:w-auto"
+                        className="w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                         onClick={() => handleSendQuotation(request)}
                       >
                         Quote
