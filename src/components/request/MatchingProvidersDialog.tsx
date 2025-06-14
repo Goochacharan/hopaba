@@ -832,14 +832,22 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             <p className="text-lg">No providers match your current filters.</p>
           </div>
         ) : (
-          <div className="grid gap-6 pb-6 lg:grid-cols-2 xl:grid-cols-3">
+          <div 
+            className="
+              grid gap-4 pb-6
+              grid-cols-1
+              sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3
+              w-full max-w-full
+            "
+            style={{ overflowX: 'hidden' }}
+          >
             {filteredAndSortedProviders.map((provider) => {
               const hasConversation = hasExistingConversation(provider.provider_id);
               const isProcessing = isCreatingConversation && contactedProviders.has(provider.provider_id);
               const isProviderOnline = isUserOnline(provider.user_id);
 
               return (
-                <Card key={provider.provider_id} className="flex flex-col h-full">
+                <Card key={provider.provider_id} className="flex flex-col h-full w-full max-w-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-start justify-between gap-2">
                       <div className="flex flex-col gap-1">
@@ -954,27 +962,48 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <ProviderLanguagesDisplay providerId={provider.provider_id} />
                   </CardContent>
                   
-                  <CardFooter className="flex gap-2 pt-3 mt-auto">
+                  {/* Make both buttons short label, equal width, small font, max-w and NOT overflow horizontally */}
+                  <CardFooter className="flex gap-2 pt-3 mt-auto w-full max-w-full px-2">
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
-                      className="flex-1"
+                      className={`
+                        flex-1 sm:flex-none
+                        max-w-[100px]
+                        min-w-0
+                        px-2 py-1
+                        text-xs
+                        whitespace-nowrap
+                        truncate
+                        btn-mobile-small
+                      `}
                       variant={hasConversation ? "outline" : "default"}
+                      size="sm"
                     >
                       {isProcessing ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2" />
                       ) : (
-                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <MessageSquare className="h-4 w-4 mr-1" />
                       )}
-                      {hasConversation ? "Open Chat" : "Chat"}
+                      Chat
                     </Button>
                     
                     <Button
                       onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
                       variant="outline"
                       size="sm"
+                      className={`
+                        flex-1 sm:flex-none
+                        max-w-[100px]
+                        min-w-0
+                        px-2 py-1
+                        text-xs
+                        whitespace-nowrap
+                        truncate
+                        btn-mobile-small
+                      `}
                     >
-                      View Profile
+                      Profile
                     </Button>
                   </CardFooter>
                 </Card>
