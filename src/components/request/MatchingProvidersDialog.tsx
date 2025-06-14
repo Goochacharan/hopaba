@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -939,10 +940,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                           onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
                           title="Call Business"
                           aria-label="Call business"
-                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
+                          className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-white transition-all rounded shadow-[0_2px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_1px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[1px] bg-blue-600 hover:bg-blue-500"
                         >
-                          <Phone className="h-4 w-4" />
-                          Call
+                          <Phone className="h-3 w-3" />
+                          <span className="hidden sm:inline">Call</span>
                         </button>
                       )}
                     </div>
@@ -954,27 +955,39 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <ProviderLanguagesDisplay providerId={provider.provider_id} />
                   </CardContent>
                   
-                  <CardFooter className="flex gap-2 pt-3 mt-auto">
+                  <CardFooter className="flex gap-1 pt-3 mt-auto">
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
-                      className="flex-1"
+                      className="flex-1 text-xs px-2 max-w-[120px] truncate"
                       variant={hasConversation ? "outline" : "default"}
                     >
                       {isProcessing ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                       ) : (
-                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <MessageSquare className="h-3 w-3 mr-1" />
                       )}
-                      {hasConversation ? "Open Chat" : "Chat"}
+                      {hasConversation ? (
+                        <>
+                          <span className="hidden sm:inline">Open Chat</span>
+                          <span className="sm:hidden">Chat</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline">Chat</span>
+                          <span className="sm:hidden">Chat</span>
+                        </>
+                      )}
                     </Button>
                     
                     <Button
                       onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
                       variant="outline"
                       size="sm"
+                      className="text-xs px-2 max-w-[100px] truncate"
                     >
-                      View Profile
+                      <span className="hidden sm:inline">View Profile</span>
+                      <span className="sm:hidden">Profile</span>
                     </Button>
                   </CardFooter>
                 </Card>
