@@ -188,7 +188,6 @@ const Inbox: React.FC = () => {
   }, [userRequests, conversations, allConversationUnreadCounts]);
   
 
-
   // Fetch enhanced provider details for conversations
   const { data: enhancedProviderDetails = {} } = useQuery({
     queryKey: ['enhancedProviderDetails', requestConversations.map(c => c.provider_id)],
@@ -755,7 +754,7 @@ const Inbox: React.FC = () => {
                               )}>
                                 {unreadCount > 0 && (
                                   <div className="absolute top-2 right-2 z-10">
-                                    <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                                    <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
                                       {unreadCount} new
                                     </Badge>
                                   </div>
@@ -858,10 +857,10 @@ const Inbox: React.FC = () => {
                                             onClick={() => handleCall(providerDetails.contact_phone, conversation.service_providers.name || "Service Provider")}
                                             title="Call Business"
                                             aria-label="Call business"
-                                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
+                                            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-white transition-all rounded shadow-[0_2px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_1px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[1px] bg-blue-600 hover:bg-blue-500"
                                           >
-                                            <Phone className="h-4 w-4" />
-                                            Call
+                                            <Phone className="h-3 w-3" />
+                                            <span className="hidden sm:inline">Call</span>
                                           </button>
                                         )}
                                       </div>
@@ -881,22 +880,33 @@ const Inbox: React.FC = () => {
                                     <Button 
                                       variant="outline"
                                       size="sm"
-                                      className="flex-1"
+                                      className="flex-1 text-xs px-2 max-w-[120px] truncate"
                                       onClick={() => navigate(`/business/${conversation.provider_id}`)}
                                     >
-                                      <Building className="h-4 w-4 mr-1" />
-                                      View Profile
+                                      <Building className="h-3 w-3 mr-1" />
+                                      <span className="hidden sm:inline">View Profile</span>
+                                      <span className="sm:hidden">Profile</span>
                                     </Button>
                                     <Button 
                                       size="sm" 
                                       className={cn(
-                                        "flex-1",
+                                        "flex-1 text-xs px-2 max-w-[140px] truncate",
                                         unreadCount > 0 && "bg-blue-600 hover:bg-blue-700"
                                       )}
                                       onClick={() => handleChatOpen(conversation.id)}
                                     >
-                                      <MessageSquare className="h-4 w-4 mr-1" />
-                                      {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
+                                      <MessageSquare className="h-3 w-3 mr-1" />
+                                      {unreadCount > 0 ? (
+                                        <>
+                                          <span className="hidden sm:inline">View New Messages</span>
+                                          <span className="sm:hidden">New</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="hidden sm:inline">View Chat</span>
+                                          <span className="sm:hidden">Chat</span>
+                                        </>
+                                      )}
                                     </Button>
                                   </div>
                                 </CardFooter>
