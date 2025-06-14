@@ -1,5 +1,4 @@
-
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 // These secrets should be configured in your Supabase project settings
