@@ -193,8 +193,8 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     return conversation?.id || null;
   };
 
-  // Get user location for distance calculations when sorting by distance
-  const getUserLocationForSorting = async () => {
+  // Get user location for distance calculations
+  const getUserLocation = async () => {
     if (userLocation) return userLocation;
     
     try {
@@ -203,7 +203,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       setUserLocation(location);
       return location;
     } catch (error) {
-      console.warn('Could not get user location for distance sorting:', error);
+      console.warn('Could not get user location for distance calculation:', error);
       return null;
     } finally {
       setIsCalculatingDistances(false);
@@ -578,15 +578,15 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     staleTime: 60000, // 1 minute cache
   });
 
-  // Calculate distances when sorting by distance
+  // Calculate distances when providers are loaded
   React.useEffect(() => {
     const calculateDistances = async () => {
-      if (currentSort !== 'distance' || !matchingProviders || matchingProviders.length === 0) {
+      if (!matchingProviders || matchingProviders.length === 0) {
         setProvidersWithDistances([]);
         return;
       }
 
-      const location = await getUserLocationForSorting();
+      const location = await getUserLocation();
       if (!location) {
         setProvidersWithDistances([]);
         return;
@@ -617,7 +617,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     };
 
     calculateDistances();
-  }, [currentSort, matchingProviders, userLocation]);
+  }, [matchingProviders]);
 
   const handleChatWithProvider = async (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
@@ -687,10 +687,18 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     
     console.log('Applying filters and sorting with currentSort:', currentSort);
     
-    // Use providers with distances if sorting by distance and distances are calculated
-    const providersToUse = currentSort === 'distance' && providersWithDistances.length > 0 
-      ? providersWithDistances 
-      : matchingProviders;
+    // Always start with matchingProviders and enhance with distance info if available.
+    const providersToUse = matchingProviders.map(p => {
+        const distanceInfo = providersWithDistances.find(pwd => pwd.provider_id === p.provider_id);
+        if (distanceInfo && distanceInfo.calculatedDistance !== null) {
+            return {
+                ...p,
+                calculatedDistance: distanceInfo.calculatedDistance,
+                distanceText: distanceInfo.distanceText,
+            };
+        }
+        return p;
+    });
     
     let filtered = providersToUse.filter(provider => {
       // Apply rating filter using overall score (0-100 scale)
@@ -815,7 +823,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       </div>
 
       {/* Loading indicator for distance calculations */}
-      {isCalculatingDistances && currentSort === 'distance' && (
+      {isCalculatingDistances && (
         <div className="flex items-center justify-center py-2 flex-shrink-0 bg-blue-50 rounded-lg">
           <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
           <span className="text-sm text-muted-foreground">Calculating distances...</span>

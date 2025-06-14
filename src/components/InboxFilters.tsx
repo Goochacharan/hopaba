@@ -291,7 +291,7 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
       </Popover>
 
       {/* Sort By */}
-      <div className="flex items-center gap-2 ml-4">
+      <div className="flex items-center gap-2">
         <Label className="text-sm font-medium whitespace-nowrap">Sort by:</Label>
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-32">
@@ -350,4 +350,4 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
   );
 };
 
-export default InboxFilters; 
+export default InboxFilters;
