@@ -416,6 +416,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     variant="outline" 
                     size="sm"
                     onClick={() => handleViewDetails(request)}
+                    className={section === 'responded' ? 'text-xs' : undefined}
                   >
                     View Details
                   </Button>
@@ -425,7 +426,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       <Button 
                         size="sm"
                         onClick={() => handleViewConversation(request)}
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-xs"
                       >
                         <MessageSquare className="h-4 w-4" />
                         View Conversation
