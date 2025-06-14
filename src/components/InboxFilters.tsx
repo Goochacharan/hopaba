@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Star, Languages, MapPin, Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -291,13 +292,14 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
       </Popover>
 
       {/* Sort By */}
-      <div className="flex items-center gap-2 ml-4">
-        <Label className="text-sm font-medium whitespace-nowrap">Sort by:</Label>
+      <div className="flex items-center gap-1 md:gap-2 ml-2 md:ml-4">
+        <Label className="text-sm font-medium whitespace-nowrap hidden xs:inline">Sort by:</Label>
+        <Label className="text-sm font-medium whitespace-nowrap xs:hidden">Sort:</Label>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-20 sm:w-24 md:w-32">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent align="end">
             <SelectItem value="latest">Latest</SelectItem>
             <SelectItem value="rating">Rating</SelectItem>
             <SelectItem value="price">Price</SelectItem>
@@ -350,4 +352,4 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
   );
 };
 
-export default InboxFilters; 
+export default InboxFilters;
