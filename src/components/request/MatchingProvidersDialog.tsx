@@ -11,8 +11,8 @@ import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import InboxFilters from '@/components/InboxFilters';
-import { useInboxFilters } from '@/hooks/useSearchFilters';
+import { SortOption } from '@/components/SortButton'; 
+import ProviderFilters, { ProviderFilters as ProviderFiltersType } from './ProviderFilters';
 import { 
   calculateItemDistance,
   getDistanceDisplayText,
@@ -144,19 +144,17 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const { toast } = useToast();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
-  const [userLocation, setUserLocation] = useState<any>(null);
-  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
-  const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
-
-  // Use InboxFilters hook for state management
-  const { filters, setters } = useInboxFilters({
+  const [filters, setFilters] = useState<ProviderFiltersType>({
     minRating: [0],
     languages: [],
     city: '',
     postalCode: '',
-    priceType: 'all',
-    sortBy: 'rating'
+    priceType: 'all'
   });
+  const [currentSort, setCurrentSort] = useState<SortOption>('rating');
+  const [userLocation, setUserLocation] = useState<any>(null);
+  const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+  const [providersWithDistances, setProvidersWithDistances] = useState<MatchingProviderResult[]>([]);
 
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
@@ -583,7 +581,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   // Calculate distances when sorting by distance
   React.useEffect(() => {
     const calculateDistances = async () => {
-      if (filters.sortBy !== 'distance' || !matchingProviders || matchingProviders.length === 0) {
+      if (currentSort !== 'distance' || !matchingProviders || matchingProviders.length === 0) {
         setProvidersWithDistances([]);
         return;
       }
@@ -619,7 +617,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     };
 
     calculateDistances();
-  }, [filters.sortBy, matchingProviders, userLocation]);
+  }, [currentSort, matchingProviders, userLocation]);
 
   const handleChatWithProvider = async (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
@@ -687,10 +685,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const filteredAndSortedProviders = useMemo(() => {
     if (!matchingProviders) return [];
     
-    console.log('Applying filters and sorting with sortBy:', filters.sortBy);
+    console.log('Applying filters and sorting with currentSort:', currentSort);
     
     // Use providers with distances if sorting by distance and distances are calculated
-    const providersToUse = filters.sortBy === 'distance' && providersWithDistances.length > 0 
+    const providersToUse = currentSort === 'distance' && providersWithDistances.length > 0 
       ? providersWithDistances 
       : matchingProviders;
     
@@ -737,7 +735,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
     // Apply sorting
     filtered.sort((a, b) => {
-      switch (filters.sortBy) {
+      switch (currentSort) {
         case 'distance':
           // Sort by calculated distance if available
           const aDistance = a.calculatedDistance ?? null;
@@ -752,11 +750,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
           return (b.overallScore || 0) - (a.overallScore || 0);
         case 'rating':
           return (b.overallScore || 0) - (a.overallScore || 0);
+        case 'reviewCount':
+          return (b.review_count || 0) - (a.review_count || 0);
         case 'price':
           const aPrice = a.latest_pricing?.quotation_price || 0;
           const bPrice = b.latest_pricing?.quotation_price || 0;
           return aPrice - bPrice; // Lowest price first
-        case 'latest':
+        case 'newest':
           // We don't have creation date, so fall back to overall score
           return (b.overallScore || 0) - (a.overallScore || 0);
         default:
@@ -766,7 +766,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
     console.log('Filtered and sorted providers:', filtered.length);
     return filtered;
-  }, [matchingProviders, providersWithDistances, filters]);
+  }, [matchingProviders, providersWithDistances, filters, currentSort]);
+
+  // Handle sort change with proper state update
+  const handleSortChange = (sortOption: SortOption) => {
+    console.log('Sort option changed to:', sortOption);
+    setCurrentSort(sortOption);
+  };
 
   if (isLoading) {
     return (
@@ -798,34 +804,25 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
   return (
     <div className="h-full flex flex-col space-y-2">
-      {/* Filters and sort controls using InboxFilters */}
+      {/* Filters and sort controls - simplified styling */}
       <div className="flex-shrink-0 pb-2">
-        <InboxFilters 
-          minRating={filters.minRating}
-          setMinRating={setters.setMinRating}
-          languages={filters.languages}
-          setLanguages={setters.setLanguages}
-          city={filters.city}
-          setCity={setters.setCity}
-          postalCode={filters.postalCode}
-          setPostalCode={setters.setPostalCode}
-          priceType={filters.priceType}
-          setPriceType={setters.setPriceType}
-          sortBy={filters.sortBy}
-          setSortBy={setters.setSortBy}
-          isLocationEnabled={true}
+        <ProviderFilters 
+          cities={cities}
+          onFilterChange={setFilters}
+          onSortChange={handleSortChange}
+          currentSort={currentSort}
         />
       </div>
 
       {/* Loading indicator for distance calculations */}
-      {isCalculatingDistances && filters.sortBy === 'distance' && (
+      {isCalculatingDistances && currentSort === 'distance' && (
         <div className="flex items-center justify-center py-2 flex-shrink-0 bg-blue-50 rounded-lg">
           <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
           <span className="text-sm text-muted-foreground">Calculating distances...</span>
         </div>
       )}
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area - removed background styling */}
       <div className="flex-1 overflow-y-auto">
         {filteredAndSortedProviders.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
@@ -851,11 +848,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         />
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Distance badge - show for all providers when distance is calculated */}
+                        {/* Distance badge - only show if distance was calculated */}
                         {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
-                          <Badge variant="outline" className="text-xs flex items-center gap-1">
-                            <Navigation className="h-3 w-3" />
-                            {getDistanceDisplayText(provider)}
+                          <Badge variant="outline" className="text-xs">
+                            📍 {getDistanceDisplayText(provider)}
                           </Badge>
                         )}
                         {/* Overall Score Badge (like Shop page) */}
