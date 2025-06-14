@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -185,10 +184,10 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
         {showCreateRequestButton && (
           <Button 
             onClick={handleCreateRequest}
-            className="w-full"
+            className="w-full sm:w-auto"
             size="sm"
           >
-            + Post New Request
+            + New Request
           </Button>
         )}
       </div>
@@ -210,13 +209,15 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                 <Card 
                   key={conversation.id}
                   className={cn(
-                    "cursor-pointer transition-all hover:shadow-md",
+                    "cursor-pointer transition-all hover:shadow-md w-full max-w-full",
+                    "sm:max-w-2xl mx-auto",
+                    "overflow-hidden",
                     conversation.unread_count > 0 && "ring-2 ring-primary/20 bg-primary/5"
                   )}
                   onClick={() => handleConversationClick(conversation.id)}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
+                  <CardHeader className="pb-3 px-3 py-2 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                       <div className="flex items-start space-x-3 flex-1 min-w-0">
                         <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarFallback className="bg-primary/10 text-primary">
@@ -235,24 +236,24 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                             showText={false}
                             className="mb-1"
                           />
-                          <p className="text-xs text-muted-foreground mb-1">
+                          <p className="text-xs text-muted-foreground mb-1 truncate">
                             {conversation.provider_category}
                           </p>
-                          <p className="text-sm font-medium text-foreground mb-1 line-clamp-1">
+                          <p className="text-sm font-medium text-foreground mb-1 line-clamp-1 truncate">
                             {conversation.request_title}
                           </p>
                           {conversation.last_message_preview && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
+                            <p className="text-xs text-muted-foreground line-clamp-2 truncate">
                               {conversation.last_message_preview}
                             </p>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
+                      <div className="flex flex-row sm:flex-col items-center sm:items-end space-y-0 sm:space-y-2 gap-2 sm:gap-0 mt-3 sm:mt-0">
                         {conversation.unread_count > 0 && (
-                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1">
-                            {conversation.unread_count}
+                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1 whitespace-nowrap">
+                            New Message
                           </Badge>
                         )}
                         {conversation.request_budget && (
