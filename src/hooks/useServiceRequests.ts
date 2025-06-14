@@ -152,7 +152,7 @@ export const useServiceRequests = () => {
 
   const createRequestMutation = useMutation({
     mutationFn: createRequest,
-    onSuccess: () => {
+    onSuccess: (newRequest) => {
       // Invalidate user's service requests
       queryClient.invalidateQueries({ queryKey: ['serviceRequests'] });
       
@@ -164,6 +164,22 @@ export const useServiceRequests = () => {
         title: 'Request Created',
         description: 'Your service request has been created successfully!',
       });
+
+      // --- NEW: Trigger WhatsApp notifications in the background ---
+      if (newRequest?.id) {
+        console.log(`Triggering provider notifications for request: ${newRequest.id}`);
+        supabase.functions.invoke('notify-providers', {
+          body: { requestId: newRequest.id },
+        }).then(({ error }) => {
+          if (error) {
+            console.error('Failed to trigger WhatsApp notifications:', error.message);
+            // This is a background task, so we don't show a blocking error to the user.
+          } else {
+            console.log('Provider notification process triggered successfully.');
+          }
+        });
+      }
+      // --- END NEW ---
     },
     onError: (error) => {
       toast({
