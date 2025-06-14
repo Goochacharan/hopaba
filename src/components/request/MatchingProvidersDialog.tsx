@@ -856,12 +856,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         />
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Distance badge - only show if distance was calculated */}
-                        {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
-                          <Badge variant="outline" className="text-xs">
-                            📍 {getDistanceDisplayText(provider)}
-                          </Badge>
-                        )}
                         {/* Overall Score Badge (like Shop page) */}
                         {provider.overallScore && (
                           <div 
@@ -915,6 +909,16 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                         )}
                       </span>
                     </div>
+
+                    {/* Distance from user */}
+                    {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
+                      <div className="flex items-center gap-2 text-sm text-primary py-2">
+                        <Navigation className="h-4 w-4" />
+                        <span className="font-medium">
+                          {provider.calculatedDistance.toFixed(1)} km away
+                        </span>
+                      </div>
+                    )}
                     
                     {/* Five Star Rating with Review Count + Call Button */}
                     <div className="flex items-center justify-between">
