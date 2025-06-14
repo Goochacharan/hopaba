@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import ProviderInbox from '../business/ProviderInbox';
 import RatingBadge from '../business/RatingBadge';
@@ -56,10 +57,10 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
 
   return (
     <div>
-      <div className="mb-4 p-4 bg-muted rounded-lg w-full max-w-full sm:max-w-2xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-          <div className="w-full min-w-0">
-            <h3 className="font-medium text-base sm:text-lg">Your Business Profile</h3>
+      <div className="mb-4 p-4 bg-muted rounded-lg">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-medium">Your Business Profile</h3>
             <p className="text-sm mt-1">Category: <strong>{category}</strong></p>
             {subcategory && subcategory.length > 0 && (
               <p className="text-sm mt-1">
@@ -69,7 +70,7 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
           </div>
           
           {overallRating > 0 && (
-            <div className="flex flex-col items-center mt-2 sm:mt-0">
+            <div className="flex flex-col items-center">
               <RatingBadge rating={overallRating} size="md" />
               <span className="text-xs text-muted-foreground mt-1">Overall Rating</span>
             </div>

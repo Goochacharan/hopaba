@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -333,17 +334,18 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
       )}
       
       {/* Request Cards */}
-      <div className="grid gap-4 sm:grid-cols-1">
+      <div className="grid gap-4">
         {filteredAndSortedRequests.map((request) => {
           // For service requests, we need to get the requester's user_id to check online status
+          // Since we don't have direct access to user_id in the request, we'll need to query it
           const isRequesterOnline = request.user_id ? isUserOnline(request.user_id) : false;
 
           return (
-            <Card key={request.id} className="relative w-full max-w-full sm:max-w-2xl mx-auto overflow-hidden">
-              <CardHeader className="px-4 py-3 sm:px-7 sm:py-5">
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
+            <Card key={request.id} className="relative">
+              <CardHeader>
+                <div className="flex justify-between items-start">
                   <div className="flex flex-col gap-2">
-                    <CardTitle className="text-base sm:text-lg">{request.title}</CardTitle>
+                    <CardTitle className="text-lg">{request.title}</CardTitle>
                     <OnlineIndicator 
                       isOnline={isRequesterOnline} 
                       size="sm" 
@@ -355,14 +357,14 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 px-4 py-3 sm:px-7 sm:py-5">
-                <p className="text-muted-foreground text-sm sm:text-base">{request.description}</p>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground">{request.description}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4" />
-                      <span className="truncate">{request.area}, {request.city}</span>
+                      <span>{request.area}, {request.city}</span>
                       {request.postal_code && (
                         <span className="text-xs text-muted-foreground">({request.postal_code})</span>
                       )}
@@ -409,32 +411,31 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center pt-4 border-t gap-2">
-                  <Button
-                    variant="outline"
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <Button 
+                    variant="outline" 
                     size="sm"
-                    className="w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                     onClick={() => handleViewDetails(request)}
                   >
-                    Details
+                    View Details
                   </Button>
-                  <div className="flex gap-2 w-full sm:w-auto">
+                  
+                  <div className="flex gap-2">
                     {section === 'responded' && hasConversation(request.id) ? (
-                      <Button
+                      <Button 
                         size="sm"
-                        className="flex items-center gap-1 w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                         onClick={() => handleViewConversation(request)}
+                        className="flex items-center gap-1"
                       >
                         <MessageSquare className="h-4 w-4" />
-                        View Chat
+                        View Conversation
                       </Button>
                     ) : (
-                      <Button
+                      <Button 
                         size="sm"
-                        className="w-full sm:w-auto text-xs px-2 py-1 min-w-0 mobile-tight-btn"
                         onClick={() => handleSendQuotation(request)}
                       >
-                        Quote
+                        Send Quotation
                       </Button>
                     )}
                   </div>
