@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,7 @@ import { useServiceRequests } from '@/hooks/useServiceRequests';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, MapPin, Calendar, DollarSign, MessageSquare, User, Phone, Mail, Clock, Navigation } from 'lucide-react';
+import { Loader2, MapPin, Calendar, IndianRupee, MessageSquare, User, Phone, Mail, Clock, Navigation } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { EnhancedQuotationDialog } from '@/components/request/EnhancedQuotationDialog';
@@ -31,6 +30,7 @@ interface ProviderInboxProps {
   userLocation?: Location | null;
   isLocationEnabled?: boolean;
   providerCity?: string;
+  hideControls?: boolean;
 }
 
 const ProviderInbox: React.FC<ProviderInboxProps> = ({ 
@@ -40,7 +40,8 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   section = 'new',
   userLocation,
   isLocationEnabled = false,
-  providerCity
+  providerCity,
+  hideControls = false
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -305,23 +306,25 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
   return (
     <div className="space-y-4">
       {/* Filter and Sort Controls */}
-      <div className="mb-4">
-        <InboxFilters
-          minRating={inboxFilters.minRating}
-          setMinRating={inboxSetters.setMinRating}
-          languages={inboxFilters.languages}
-          setLanguages={inboxSetters.setLanguages}
-          city={inboxFilters.city}
-          setCity={inboxSetters.setCity}
-          postalCode={inboxFilters.postalCode}
-          setPostalCode={inboxSetters.setPostalCode}
-          priceType={inboxFilters.priceType}
-          setPriceType={inboxSetters.setPriceType}
-          sortBy={inboxFilters.sortBy}
-          setSortBy={inboxSetters.setSortBy}
-          isLocationEnabled={isLocationEnabled}
-        />
-      </div>
+      {!hideControls && (
+        <div className="mb-4">
+          <InboxFilters
+            minRating={inboxFilters.minRating}
+            setMinRating={inboxSetters.setMinRating}
+            languages={inboxFilters.languages}
+            setLanguages={inboxSetters.setLanguages}
+            city={inboxFilters.city}
+            setCity={inboxSetters.setCity}
+            postalCode={inboxFilters.postalCode}
+            setPostalCode={inboxSetters.setPostalCode}
+            priceType={inboxFilters.priceType}
+            setPriceType={inboxSetters.setPriceType}
+            sortBy={inboxFilters.sortBy}
+            setSortBy={inboxSetters.setSortBy}
+            isLocationEnabled={isLocationEnabled}
+          />
+        </div>
+      )}
       
       {/* Request Cards */}
       <div className="grid gap-4">
@@ -371,7 +374,7 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                     
                     {request.budget && (
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
+                        <IndianRupee className="h-4 w-4" />
                         <span>Budget: ₹{request.budget.toLocaleString()}</span>
                       </div>
                     )}
@@ -394,10 +397,12 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{request.contact_phone}</span>
-                    </div>
+                    {!hideControls && request.contact_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        <span>{request.contact_phone}</span>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4" />
