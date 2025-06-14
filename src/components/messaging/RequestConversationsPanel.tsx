@@ -210,13 +210,13 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                 <Card 
                   key={conversation.id}
                   className={cn(
-                    // Ensures full width, tight fit, and no overflow on mobile
-                    "cursor-pointer transition-all hover:shadow-md w-full max-w-full sm:max-w-none p-0 overflow-hidden"
+                    "cursor-pointer transition-all hover:shadow-md",
+                    conversation.unread_count > 0 && "ring-2 ring-primary/20 bg-primary/5"
                   )}
                   onClick={() => handleConversationClick(conversation.id)}
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                    <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-3 flex-1 min-w-0">
                         <Avatar className="h-10 w-10 flex-shrink-0">
                           <AvatarFallback className="bg-primary/10 text-primary">
@@ -238,23 +238,21 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                           <p className="text-xs text-muted-foreground mb-1">
                             {conversation.provider_category}
                           </p>
-                          <p className="text-sm font-medium text-foreground mb-1 truncate">
+                          <p className="text-sm font-medium text-foreground mb-1 line-clamp-1">
                             {conversation.request_title}
                           </p>
                           {conversation.last_message_preview && (
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-xs text-muted-foreground line-clamp-2">
                               {conversation.last_message_preview}
                             </p>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex flex-row sm:flex-col items-end sm:items-end space-x-2 sm:space-x-0 sm:space-y-2 flex-shrink-0 mt-2 sm:mt-0">
+                      <div className="flex flex-col items-end space-y-2 flex-shrink-0">
                         {conversation.unread_count > 0 && (
-                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1 whitespace-nowrap">
-                            {/* Use "New Message" instead of "View New Messages" */}
-                            New Message
-                            {conversation.unread_count > 1 ? `s (${conversation.unread_count})` : ""}
+                          <Badge variant="destructive" className="rounded-full text-xs px-2 py-1">
+                            {conversation.unread_count}
                           </Badge>
                         )}
                         {conversation.request_budget && (
@@ -263,7 +261,7 @@ const RequestConversationsPanel: React.FC<RequestConversationsPanelProps> = ({
                           </Badge>
                         )}
                         {conversation.last_message_created_at && (
-                          <div className="flex items-center text-xs text-muted-foreground whitespace-nowrap">
+                          <div className="flex items-center text-xs text-muted-foreground">
                             <Clock className="h-3 w-3 mr-1" />
                             {format(new Date(conversation.last_message_created_at), 'MMM d, h:mm a')}
                           </div>

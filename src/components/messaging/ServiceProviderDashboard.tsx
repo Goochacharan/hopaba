@@ -56,7 +56,7 @@ const ServiceProviderDashboard: React.FC<ServiceProviderDashboardProps> = ({
   const overallRating = calculateOverallRating(criteriaRatings || {});
 
   return (
-    <div className="w-full max-w-full">
+    <div>
       <div className="mb-4 p-4 bg-muted rounded-lg">
         <div className="flex justify-between items-center">
           <div>
