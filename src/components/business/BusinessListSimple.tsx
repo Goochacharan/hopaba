@@ -17,7 +17,6 @@ interface BusinessListProps {
 
 interface BusinessWithDetails extends Business {
   approval_status?: string;
-  whatsapp?: string;
   map_link?: string;
   hours?: string;
 }
