@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +21,7 @@ const depthShadow = "shadow-[0_2px_14px_0_rgba(22,25,34,0.13)]";
 
 // Rectangular shape & spacing - increased height for better text spacing
 const buttonShapeStyles =
-  "flex-shrink-0 px-3 py-2 rounded-[11px] text-xs font-medium select-none cursor-pointer w-32 h-16 transition-all duration-150 flex items-center justify-center";
+  "flex-shrink-0 px-3 py-2 rounded-[11px] text-sm font-medium select-none cursor-pointer w-32 h-16 transition-all duration-150 flex items-center justify-center";
 
 // Selected and idle states
 const selectedStyles = "ring-2 ring-amber-700 border-amber-700 scale-105";

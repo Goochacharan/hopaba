@@ -1,5 +1,4 @@
 
-// Add debugging logs to detect if the root app is mounting
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -8,8 +7,6 @@ import { LocationProvider } from '@/contexts/LocationContext';
 import { queryClient } from '@/lib/queryClient';
 import { lazy, Suspense } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
-
-console.log('[App.tsx] App component loaded');
 
 // Lazy load pages for better performance
 const Shop = lazy(() => import('@/pages/Shop'));
@@ -36,7 +33,6 @@ const DistanceDemo = lazy(() => import('@/pages/DistanceDemo'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
-  console.log('[App.tsx] App function rendered');
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -80,4 +76,3 @@ function App() {
 }
 
 export default App;
-

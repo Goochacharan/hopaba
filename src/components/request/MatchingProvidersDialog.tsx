@@ -939,10 +939,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                           onClick={(e) => handleCall(e, provider.contact_phone, provider.provider_name)}
                           title="Call Business"
                           aria-label="Call business"
-                          className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-white transition-all rounded shadow-[0_2px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_1px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[1px] bg-blue-600 hover:bg-blue-500"
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-all rounded shadow-[0_3px_0px_0px_rgba(30,174,219,0.15)] hover:shadow-[0_2px_0px_0px_rgba(24,128,163,0.8)] active:shadow-none active:translate-y-[2px] bg-blue-600 hover:bg-blue-500"
                         >
-                          <Phone className="h-3 w-3" />
-                          <span className="hidden sm:inline">Call</span>
+                          <Phone className="h-4 w-4" />
+                          Call
                         </button>
                       )}
                     </div>
@@ -954,38 +954,27 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <ProviderLanguagesDisplay providerId={provider.provider_id} />
                   </CardContent>
                   
-                  <CardFooter className="flex gap-1 pt-3 mt-auto">
+                  <CardFooter className="flex gap-2 pt-3 mt-auto">
                     <Button
                       onClick={() => handleChatWithProvider(provider)}
                       disabled={isProcessing}
-                      className="w-28 text-xs px-2 truncate"
+                      className="flex-1"
                       variant={hasConversation ? "outline" : "default"}
                     >
                       {isProcessing ? (
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <MessageSquare className="h-3 w-3 mr-1" />
+                        <MessageSquare className="h-4 w-4 mr-2" />
                       )}
-                      {hasConversation ? (
-                        <>
-                          <span className="hidden sm:inline">Open Chat</span>
-                          <span className="sm:hidden">Chat</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden sm:inline">Chat</span>
-                          <span className="sm:hidden">Chat</span>
-                        </>
-                      )}
+                      {hasConversation ? "Open Chat" : "Chat"}
                     </Button>
                     
                     <Button
                       onClick={() => goToProviderShop(provider.provider_id, provider.user_id)}
                       variant="outline"
-                      className="w-28 text-xs px-2 truncate"
+                      size="sm"
                     >
-                      <span className="hidden sm:inline">View Profile</span>
-                      <span className="sm:hidden">Profile</span>
+                      View Profile
                     </Button>
                   </CardFooter>
                 </Card>
