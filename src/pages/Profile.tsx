@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch, Shield } from 'lucide-react';
+import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch, Shield, Youtube } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
 import BusinessListSimple from '@/components/business/BusinessListSimple';
@@ -149,7 +149,8 @@ const Profile = () => {
               size="sm"
               className="flex items-center gap-2"
             >
-              <Whatsapp className="h-4 w-4 text-[#25D366]" />
+              {/* Substituting Youtube icon for WhatsApp icon due to project restrictions */}
+              <Youtube className="h-4 w-4 text-[#25D366]" />
               Contact Us
             </Button>
           </div>
