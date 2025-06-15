@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,8 +25,7 @@ const HighLimitSellers = () => {
     queryKey: ['highLimitSellers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('high_limit_sellers')
-        .select('*');
+        .rpc('get_high_limit_sellers');
       
       if (error) throw error;
       return data as HighLimitSeller[];

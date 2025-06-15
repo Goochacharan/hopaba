@@ -932,17 +932,7 @@ export type Database = {
       }
     }
     Views: {
-      high_limit_sellers: {
-        Row: {
-          current_listing_count: number | null
-          max_listings: number | null
-          seller_names: string[] | null
-          seller_phones: string[] | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_rate_limit: {

@@ -1,5 +1,3 @@
-
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -610,26 +608,6 @@ CREATE TABLE IF NOT EXISTS "public"."sellers" (
 
 
 ALTER TABLE "public"."sellers" OWNER TO "postgres";
-
-
-CREATE OR REPLACE VIEW "public"."high_limit_sellers" AS
- SELECT "s"."seller_id" AS "user_id",
-    "s"."listing_limit" AS "max_listings",
-    "s"."updated_at",
-    ARRAY["s"."seller_name"] AS "seller_names",
-    ARRAY[
-        CASE
-            WHEN ("s"."seller_phone" IS NOT NULL) THEN "s"."seller_phone"
-            ELSE NULL::"text"
-        END] AS "seller_phones",
-    "count"(DISTINCT "ml"."id") AS "current_listing_count"
-   FROM ("public"."sellers" "s"
-     LEFT JOIN "public"."marketplace_listings" "ml" ON (("s"."seller_id" = "ml"."seller_id")))
-  WHERE ("s"."listing_limit" > 5)
-  GROUP BY "s"."seller_id", "s"."listing_limit", "s"."updated_at", "s"."seller_name", "s"."seller_phone";
-
-
-ALTER TABLE "public"."high_limit_sellers" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."messages" (
@@ -1405,12 +1383,6 @@ GRANT ALL ON TABLE "public"."marketplace_listings" TO "service_role";
 GRANT ALL ON TABLE "public"."sellers" TO "anon";
 GRANT ALL ON TABLE "public"."sellers" TO "authenticated";
 GRANT ALL ON TABLE "public"."sellers" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."high_limit_sellers" TO "anon";
-GRANT ALL ON TABLE "public"."high_limit_sellers" TO "authenticated";
-GRANT ALL ON TABLE "public"."high_limit_sellers" TO "service_role";
 
 
 
