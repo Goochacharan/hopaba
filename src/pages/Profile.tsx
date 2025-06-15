@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -75,6 +74,12 @@ const Profile = () => {
     navigate('/provider-requests');
   };
 
+  // Add function to handle WhatsApp button click
+  const handleContactUs = () => {
+    // WhatsApp URL (use international number format, remove + and spaces)
+    window.open('https://wa.me/919035852926', '_blank', 'noopener,noreferrer');
+  };
+
   if (pageError) {
     return <MainLayout>
         <div className="container mx-auto py-8 px-4">
@@ -121,7 +126,8 @@ const Profile = () => {
           <p className="text-muted-foreground mb-3">
             {user.user_metadata?.full_name || user.email}
           </p>
-          <div className="flex gap-3">
+          {/* Settings and Sign Out row */}
+          <div className="flex gap-3 mb-2">
             <Button variant="outline" onClick={() => navigate('/settings')} className="flex items-center gap-2" size="sm">
               <SettingsIcon className="h-4 w-4" />
               Settings
@@ -130,9 +136,21 @@ const Profile = () => {
               <LogOut className="h-4 w-4" />
               Sign Out
             </Button>
+          </div>
+          {/* Privacy Policy and WhatsApp Contact row */}
+          <div className="flex gap-3">
             <Button variant="outline" onClick={() => navigate('/privacy-policy')} size="sm" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Privacy Policy
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleContactUs}
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Whatsapp className="h-4 w-4 text-[#25D366]" />
+              Contact Us
             </Button>
           </div>
         </div>
