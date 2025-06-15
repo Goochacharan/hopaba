@@ -30,6 +30,7 @@ const Settings = lazy(() => import('@/pages/Settings'));
 const AdminPanel = lazy(() => import('@/pages/AdminPanel'));
 const Map = lazy(() => import('@/pages/Map'));
 const DistanceDemo = lazy(() => import('@/pages/DistanceDemo'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
@@ -63,6 +64,7 @@ function App() {
                   <Route path="/admin" element={<AdminPanel />} />
                   <Route path="/map" element={<Map />} />
                   <Route path="/distance-demo" element={<DistanceDemo />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

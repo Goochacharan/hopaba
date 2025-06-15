@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch } from 'lucide-react';
+import { Plus, Settings as SettingsIcon, LogOut, Loader2, FileSearch, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BusinessFormSimple from '@/components/business/BusinessFormSimple';
 import BusinessListSimple from '@/components/business/BusinessListSimple';
@@ -129,6 +129,10 @@ const Profile = () => {
             <Button variant="outline" onClick={logout} size="sm" className="flex items-center gap-2">
               <LogOut className="h-4 w-4" />
               Sign Out
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/privacy-policy')} size="sm" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Privacy Policy
             </Button>
           </div>
         </div>
