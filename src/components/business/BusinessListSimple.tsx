@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Building, MapPin, Phone, MessageSquare, Globe, Instagram, IndianRupee, Pencil, Trash, Tag, Clock, Star, Image, FileSearch } from 'lucide-react';
+import { Building, MapPin, Phone, MessageSquare, Globe, Instagram, IndianRupee, Pencil, Trash, Tag, Clock, Star, Image } from 'lucide-react';
 import { Business } from './BusinessFormSimple';
 import { useNavigate } from 'react-router-dom';
 
@@ -75,10 +76,6 @@ const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) =>
     }
   };
 
-  const handleViewRequests = () => {
-    navigate('/provider-requests');
-  };
-
   const handleDelete = async (id: string) => {
     try {
       console.log("Deleting business with ID:", id);
@@ -130,18 +127,6 @@ const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) =>
 
   return (
     <div className="space-y-6">
-      {businesses.length > 0 && (
-        <div className="flex justify-end">
-          <Button 
-            onClick={handleViewRequests}
-            className="flex items-center gap-2"
-          >
-            <FileSearch className="h-4 w-4" />
-            View Service Requests
-          </Button>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 gap-6">
         {businesses.map((business) => (
           <Card key={business.id} className="overflow-hidden">
@@ -261,36 +246,25 @@ const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) =>
               )}
             </CardContent>
             
-            <CardFooter className="border-t bg-muted/10 gap-2 justify-between py-3">
+            <CardFooter className="border-t bg-muted/10 gap-2 justify-end py-3">
               <Button 
-                variant="default" 
+                variant="outline" 
                 size="sm" 
-                onClick={handleViewRequests}
+                onClick={() => onEdit(business)}
                 className="flex items-center gap-1"
               >
-                <FileSearch className="h-4 w-4" />
-                Service Requests
+                <Pencil className="h-4 w-4" />
+                Edit
               </Button>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onEdit(business)}
-                  className="flex items-center gap-1"
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={() => confirmDelete(business.id!)}
-                  className="flex items-center gap-1"
-                >
-                  <Trash className="h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => confirmDelete(business.id!)}
+                className="flex items-center gap-1"
+              >
+                <Trash className="h-4 w-4" />
+                Delete
+              </Button>
             </CardFooter>
           </Card>
         ))}
