@@ -78,18 +78,18 @@ const BusinessListSimple: React.FC<BusinessListProps> = ({ onEdit, refresh }) =>
 
   const handleDelete = async (id: string) => {
     try {
-      console.log("Deleting business with ID:", id);
-      const { error } = await supabase
-        .from('service_providers')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id);
-      
+      console.log("Deleting business (with cascade) via RPC. Business ID:", id, "User ID:", user?.id);
+      // Call the new cascade delete function using Supabase RPC
+      const { error } = await supabase.rpc('delete_service_provider_cascade', {
+        provider_id_param: id,
+        user_id_param: user?.id,
+      });
+
       if (error) {
-        console.error('Error deleting business:', error);
+        console.error('Error deleting business through cascade RPC:', error);
         throw error;
       }
-      
+
       setBusinesses(businesses.filter(business => business.id !== id));
       toast({
         title: 'Success',
