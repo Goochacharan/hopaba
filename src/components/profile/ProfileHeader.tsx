@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Settings as SettingsIcon, LogOut, Shield, Youtube } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Shield, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ProfileHeaderProps {
@@ -45,8 +45,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ onLogout, user }) => {
           size="sm"
           className="flex items-center gap-2"
         >
-          {/* Substituting Youtube icon for WhatsApp icon due to project restrictions */}
-          <Youtube className="h-4 w-4 text-[#25D366]" />
+          {/* MessageCircle icon used as a WhatsApp/message indicator */}
+          <MessageCircle className="h-4 w-4 text-[#25D366]" />
           Contact Us
         </Button>
       </div>
