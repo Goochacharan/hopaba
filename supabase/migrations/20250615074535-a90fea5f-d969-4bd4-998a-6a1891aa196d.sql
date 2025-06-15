@@ -1,4 +1,3 @@
-
 -- This migration updates several functions to set a secure search_path,
 -- resolving the "Function Search Path Mutable" warnings in Supabase.
 
@@ -46,14 +45,15 @@ AS $$
 DECLARE
   count_unread INTEGER;
 BEGIN
-  -- Only count unread messages from providers for conversations where the user is the requester
-  -- This excludes messages from users when the current user is acting as a service provider
   SELECT COUNT(m.id) INTO count_unread
   FROM public.messages m
   JOIN public.conversations c ON m.conversation_id = c.id
   WHERE 
-    c.user_id = user_uuid AND 
-    m.sender_type = 'provider' AND
+    ((c.user_id = user_uuid AND m.sender_type = 'provider') OR
+     (EXISTS (
+       SELECT 1 FROM public.service_providers sp
+       WHERE sp.id = c.provider_id AND sp.user_id = user_uuid AND m.sender_type = 'user'
+     ))) AND
     m.read = FALSE;
   
   RETURN count_unread;
@@ -70,14 +70,15 @@ AS $$
 DECLARE
   count_unread INTEGER;
 BEGIN
-  -- Only count unread messages from providers for conversations where the user is the requester
-  -- This excludes messages from users when the current user is acting as a service provider
   SELECT COUNT(m.id) INTO count_unread
   FROM public.messages m
   JOIN public.conversations c ON m.conversation_id = c.id
   WHERE 
-    c.user_id = user_uuid AND 
-    m.sender_type = 'provider' AND
+    ((c.user_id = user_uuid AND m.sender_type = 'provider') OR
+     (EXISTS (
+       SELECT 1 FROM public.service_providers sp
+       WHERE sp.id = c.provider_id AND sp.user_id = user_uuid AND m.sender_type = 'user'
+     ))) AND
     m.read = FALSE;
   
   RETURN count_unread;
@@ -175,4 +176,3 @@ EXCEPTION
     RETURN true;
 END;
 $function$;
-
