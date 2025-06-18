@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin } from 'lucide-react';
 
@@ -7,55 +7,18 @@ interface MapInterfaceProps {
   sellerName: string;
   location?: string;
   mapLink?: string | null;
-  latitude?: number;
-  longitude?: number;
 }
 
 const MapInterface: React.FC<MapInterfaceProps> = ({
   sellerName,
   location,
-  mapLink,
-  latitude,
-  longitude
+  mapLink
 }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-
-  useEffect(() => {
-    if (!mapContainer.current || !window.google) return;
-
-    const coordinates = latitude && longitude ? 
-      { lat: latitude, lng: longitude } : 
-      { lat: 12.9716, lng: 77.5946 }; // Default to Bangalore
-
-    const map = new window.google.maps.Map(mapContainer.current, {
-      center: coordinates,
-      zoom: 15,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
-
-    new window.google.maps.Marker({
-      position: coordinates,
-      map: map,
-      title: sellerName,
-    });
-
-    mapInstance.current = map;
-
-    return () => {
-      if (mapInstance.current) {
-        // Cleanup if needed
-      }
-    };
-  }, [latitude, longitude, sellerName]);
-
   const handleDirections = () => {
     if (mapLink) {
       window.open(mapLink, '_blank');
-    } else if (latitude && longitude) {
-      const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+    } else if (location) {
+      const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
       window.open(directionsUrl, '_blank');
     }
   };
@@ -69,23 +32,20 @@ const MapInterface: React.FC<MapInterfaceProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div 
-          ref={mapContainer} 
-          className="w-full h-64 rounded-lg bg-muted flex items-center justify-center"
-        >
-          {!window.google && (
-            <div className="text-center text-muted-foreground">
-              <MapPin className="h-8 w-8 mx-auto mb-2" />
-              <p>Map loading...</p>
-            </div>
-          )}
+        <div className="w-full h-64 rounded-lg bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/20">
+          <div className="text-center text-muted-foreground">
+            <MapPin className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-lg font-medium mb-1">{sellerName}</p>
+            {location && <p className="text-sm">{location}</p>}
+            <p className="text-xs mt-2 opacity-75">Click "Get Directions" to view on map</p>
+          </div>
         </div>
         {location && (
           <div className="mt-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{location}</p>
             <button
               onClick={handleDirections}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-primary hover:underline font-medium px-3 py-1 rounded-md hover:bg-primary/10 transition-colors"
             >
               Get Directions
             </button>
