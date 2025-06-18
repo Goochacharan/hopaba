@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReviewForm from './ReviewForm';
 import ReviewsList from './ReviewsList';
+import MapInterface from './MapInterface';
 
 interface SellerReviewsProps {
   sellerId: string;
@@ -29,6 +30,10 @@ interface SellerReviewsProps {
   onEditReview?: (reviewId: string, review: { rating: number; comment: string }) => Promise<void>;
   onDeleteReview?: (reviewId: string) => Promise<void>;
   isSubmitting?: boolean;
+  location?: string;
+  mapLink?: string | null;
+  latitude?: number;
+  longitude?: number;
 }
 
 const SellerReviews: React.FC<SellerReviewsProps> = ({
@@ -38,7 +43,11 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
   onAddReview,
   onEditReview,
   onDeleteReview,
-  isSubmitting = false
+  isSubmitting = false,
+  location,
+  mapLink,
+  latitude,
+  longitude
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -114,7 +123,6 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
       return;
     }
     
-    // If user already has a review, open it in edit mode
     if (userReview) {
       setEditMode(true);
       setInitialRating(userReview.rating);
@@ -141,43 +149,56 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
     <Card className="shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-xl font-semibold">Reviews & Ratings</CardTitle>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <Button size="sm" onClick={handleReviewButtonClick}>
-            {!user ? (
-              <>
-                <LogIn className="h-4 w-4 mr-2" />
-                Login to Review
-              </>
-            ) : userReview ? (
-              <>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Your Review
-              </>
-            ) : (
-              "Write a Review"
-            )}
-          </Button>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{editMode ? "Edit your review" : `Review ${sellerName}`}</DialogTitle>
-              <DialogDescription>
-                {editMode 
-                  ? "Update your review to better reflect your experience"
-                  : "Share your experience with this seller to help others"}
-              </DialogDescription>
-            </DialogHeader>
-            <ReviewForm
-              initialRating={initialRating}
-              initialComment={initialComment}
-              isSubmitting={isSubmitting}
-              isEditMode={editMode}
-              onCancel={() => setDialogOpen(false)}
-              onSubmit={handleSubmit}
-            />
-          </DialogContent>
-        </Dialog>
       </CardHeader>
       <CardContent>
+        {/* Map Interface */}
+        <MapInterface
+          sellerName={sellerName}
+          location={location}
+          mapLink={mapLink}
+          latitude={latitude}
+          longitude={longitude}
+        />
+        
+        {/* Write Review Button */}
+        <div className="mb-4 flex justify-end">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Button size="sm" onClick={handleReviewButtonClick}>
+              {!user ? (
+                <>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Login to Review
+                </>
+              ) : userReview ? (
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Your Review
+                </>
+              ) : (
+                "Write a Review"
+              )}
+            </Button>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>{editMode ? "Edit your review" : `Review ${sellerName}`}</DialogTitle>
+                <DialogDescription>
+                  {editMode 
+                    ? "Update your review to better reflect your experience"
+                    : "Share your experience with this seller to help others"}
+                </DialogDescription>
+              </DialogHeader>
+              <ReviewForm
+                initialRating={initialRating}
+                initialComment={initialComment}
+                isSubmitting={isSubmitting}
+                isEditMode={editMode}
+                onCancel={() => setDialogOpen(false)}
+                onSubmit={handleSubmit}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+        
         <ReviewsList
           reviews={reviews}
           userReviewId={user?.id}

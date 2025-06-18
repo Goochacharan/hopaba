@@ -2,10 +2,12 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import StarRating from './StarRating';
-import { UserCircle, Phone, MessageSquare, MapPin, Share2 } from 'lucide-react';
+import { UserCircle, Phone, MessageSquare, MapPin, Share2, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
+import { getRatingColor } from '@/utils/ratingUtils';
+
 interface SellerProfileCardProps {
   sellerName: string;
   sellerRating: number;
@@ -18,7 +20,10 @@ interface SellerProfileCardProps {
   listingId?: string;
   avatarUrl?: string | null;
   businessName?: string;
+  latitude?: number;
+  longitude?: number;
 }
+
 const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
   sellerName,
   sellerRating,
@@ -30,19 +35,29 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
   mapLink,
   listingId,
   avatarUrl,
-  businessName
+  businessName,
+  latitude,
+  longitude
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+  
   const formattedJoinedDate = joinedDate ? new Date(joinedDate).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric'
   }) : 'Unknown';
+  
+  // Convert 5-star rating to 100-point scale
+  const overallRating = Math.round((sellerRating / 5) * 100);
+  const ratingColor = getRatingColor(overallRating);
+  
+  // Mock distance for now - in a real app, this would be calculated based on user location
+  const distance = "2.3 km";
+  
   const getInitials = (name: string) => {
     return name.split(' ').map(part => part[0]).join('').toUpperCase().substring(0, 2);
   };
+
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(window.location.href).then(() => {
@@ -61,6 +76,7 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       });
     });
   };
+
   const handleCall = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (sellerPhone) {
@@ -85,6 +101,7 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       });
     }
   };
+
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (sellerWhatsapp) {
@@ -111,6 +128,7 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       });
     }
   };
+
   const handleLocation = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!location) {
@@ -123,48 +141,34 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       return;
     }
 
-    // Normalize and clean the location data
     const cleanLocation = location.trim();
     const cleanMapLink = mapLink?.trim() || '';
 
     let mapsUrl;
 
-    // Priority order for location handling:
-    // 1. Use explicit map link if provided
-    // 2. Use location if it's a maps URL
-    // 3. Use geocoding search as fallback
-    
     if (cleanMapLink !== '') {
-      // If map link is provided, ensure it's a proper Google Maps URL
       if (cleanMapLink.includes('goo.gl') || cleanMapLink.includes('maps.app.goo.gl')) {
-        // For short links, convert to search URL
         const searchQuery = encodeURIComponent(cleanLocation || businessName || '');
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
       } else {
         mapsUrl = cleanMapLink;
       }
     } else if (cleanLocation.includes('google.com/maps') || cleanLocation.includes('goo.gl/maps')) {
-      // If location is a maps URL
       if (cleanLocation.includes('goo.gl')) {
-        // Convert short link to search
         const searchQuery = encodeURIComponent(businessName || cleanLocation);
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
       } else {
         mapsUrl = cleanLocation;
       }
     } else {
-      // Fallback to search URL
       const searchQuery = encodeURIComponent(cleanLocation || businessName || '');
       if (isMobile && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        // Use Apple Maps on iOS devices
         mapsUrl = `maps://maps.apple.com/?q=${searchQuery}`;
       } else {
-        // Use Google Maps search
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
       }
     }
 
-    // Open the maps URL in a new tab
     const link = document.createElement('a');
     link.href = mapsUrl;
     link.target = '_blank';
@@ -179,16 +183,22 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
       duration: 2000
     });
   };
-  return <Card className="shadow-md w-full overflow-hidden">
+
+  return (
+    <Card className="shadow-md w-full overflow-hidden">
       <CardHeader className="pb-4 px-8 md:px-8 bg-muted/30">
         <CardTitle className="text-2xl font-bold">Seller Profile</CardTitle>
       </CardHeader>
       <CardContent className="px-6 md:px-8 py-5">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           <Avatar className="h-32 w-32 border-4 border-background">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={sellerName} /> : <AvatarFallback className="bg-primary/10 text-primary text-4xl">
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={sellerName} />
+            ) : (
+              <AvatarFallback className="bg-primary/10 text-primary text-4xl">
                 {getInitials(sellerName)}
-              </AvatarFallback>}
+              </AvatarFallback>
+            )}
           </Avatar>
           
           <div className="space-y-4 text-center md:text-left w-full">
@@ -196,6 +206,21 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
             
             <div className="flex items-center gap-1">
               <StarRating rating={sellerRating} size="medium" showCount={true} count={reviewCount} />
+            </div>
+
+            {/* New: Overall Rating and Distance */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: ratingColor }}
+                />
+                <span className="font-semibold">Overall Rating: {overallRating}/100</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Navigation className="h-4 w-4 text-muted-foreground" />
+                <span>{distance} away</span>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 gap-y-3 pt-1">
@@ -225,6 +250,8 @@ const SellerProfileCard: React.FC<SellerProfileCardProps> = ({
           </div>
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default SellerProfileCard;

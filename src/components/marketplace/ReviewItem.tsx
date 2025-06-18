@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
 import { Edit, Trash2 } from 'lucide-react';
 import StarRating from './StarRating';
 import { SellerReview } from '@/hooks/useSellerDetails';
@@ -19,20 +18,23 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   onEdit, 
   onDelete 
 }) => {
+  // Extract first name from reviewer name
+  const getFirstName = (name: string) => {
+    if (!name) return 'Anonymous';
+    return name.split(' ')[0] || 'Anonymous';
+  };
+
   return (
     <div className="border-b pb-4 last:border-b-0">
       <div className="flex justify-between items-start mb-2">
         <div>
           <div className="flex items-center gap-2">
             <StarRating rating={review.rating} showCount={false} />
-            <span className="font-medium">{review.reviewer_name}</span>
+            <span className="font-medium">{getFirstName(review.reviewer_name)}</span>
             {isUsersReview && (
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Your Review</span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {format(new Date(review.created_at), 'PPP')}
-          </p>
         </div>
       </div>
       

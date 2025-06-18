@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -206,6 +205,8 @@ const SellerDetails = () => {
                   location={sellerDetails.listings[0]?.location}
                   mapLink={sellerDetails.listings[0]?.map_link}
                   listingId={id}
+                  latitude={sellerDetails.listings[0]?.latitude}
+                  longitude={sellerDetails.listings[0]?.longitude}
                 />
               </div>
 
@@ -218,6 +219,10 @@ const SellerDetails = () => {
                 onEditReview={handleEditReview}
                 onDeleteReview={handleDeleteReview}
                 isSubmittingReview={submittingReview}
+                location={sellerDetails.listings[0]?.location}
+                mapLink={sellerDetails.listings[0]?.map_link}
+                latitude={sellerDetails.listings[0]?.latitude}
+                longitude={sellerDetails.listings[0]?.longitude}
               />
             </>
           ) : (
