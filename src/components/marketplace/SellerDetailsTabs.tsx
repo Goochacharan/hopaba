@@ -1,24 +1,21 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import MarketplaceListingCard from '@/components/MarketplaceListingCard';
-import SellerReviews from './SellerReviews';
 import { MarketplaceListing } from '@/hooks/useMarketplaceListings';
 import { SellerReview } from '@/hooks/useSellerDetails';
-import { Package, Star } from 'lucide-react';
+import MarketplaceListingCard from '@/components/MarketplaceListingCard';
+import SellerReviews from './SellerReviews';
+import SellerShopImages from './SellerShopImages';
 
 interface SellerDetailsTabsProps {
   sellerId: string;
   sellerName: string;
   listings: MarketplaceListing[];
   reviews: SellerReview[];
-  onAddReview?: (review: { rating: number; comment: string }) => Promise<void>;
-  onEditReview?: (reviewId: string, review: { rating: number; comment: string }) => Promise<void>;
-  onDeleteReview?: (reviewId: string) => Promise<void>;
-  isSubmittingReview?: boolean;
-  location?: string;
-  mapLink?: string | null;
+  onAddReview: (review: { rating: number; comment: string }) => Promise<void>;
+  onEditReview: (reviewId: string, review: { rating: number; comment: string }) => Promise<void>;
+  onDeleteReview: (reviewId: string) => Promise<void>;
+  isSubmittingReview: boolean;
 }
 
 const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
@@ -29,60 +26,70 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
   onAddReview,
   onEditReview,
   onDeleteReview,
-  isSubmittingReview,
-  location,
-  mapLink
+  isSubmittingReview
 }) => {
+  const allShopImages = listings.reduce((images: string[], listing) => {
+    if (listing.shop_images && Array.isArray(listing.shop_images) && listing.shop_images.length > 0) {
+      return [...images, ...listing.shop_images];
+    }
+    return images;
+  }, []);
+
   return (
     <Tabs defaultValue="listings" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="listings" className="flex items-center gap-2">
-          <Package className="h-4 w-4" />
+      <TabsList className="w-full bg-background border-b mb-6 flex h-9 overflow-x-auto no-scrollbar">
+        <TabsTrigger 
+          value="listings" 
+          className="flex-1 text-sm px-3 py-1.5 h-9 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap"
+        >
           Listings ({listings.length})
         </TabsTrigger>
-        <TabsTrigger value="reviews" className="flex items-center gap-2">
-          <Star className="h-4 w-4" />
+        <TabsTrigger 
+          value="reviews" 
+          className="flex-1 text-sm px-3 py-1.5 h-9 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap"
+        >
           Reviews ({reviews.length})
         </TabsTrigger>
+        <TabsTrigger 
+          value="shop" 
+          className="flex-1 text-sm px-3 py-1.5 h-9 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none whitespace-nowrap"
+        >
+          Shop ({allShopImages.length})
+        </TabsTrigger>
       </TabsList>
-
-      <TabsContent value="listings">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Active Listings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {listings.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {listings.map((listing) => (
-                  <MarketplaceListingCard key={listing.id} listing={listing} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No active listings from this seller</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      
+      <TabsContent value="listings" className="w-full">
+        {listings.length > 0 ? (
+          <div className="w-full space-y-6">
+            {listings.map(listing => (
+              <MarketplaceListingCard key={listing.id} listing={listing} className="w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-lg text-muted-foreground">This seller has no active listings.</p>
+          </div>
+        )}
       </TabsContent>
-
-      <TabsContent value="reviews">
-        <SellerReviews
-          sellerId={sellerId}
-          sellerName={sellerName}
-          reviews={reviews}
+      
+      <TabsContent value="reviews" className="w-full">
+        <SellerReviews 
+          sellerId={sellerId} 
+          sellerName={sellerName} 
+          reviews={reviews} 
           onAddReview={onAddReview}
           onEditReview={onEditReview}
           onDeleteReview={onDeleteReview}
           isSubmitting={isSubmittingReview}
-          location={location}
-          mapLink={mapLink}
         />
+      </TabsContent>
+      
+      <TabsContent value="shop" className="w-full">
+        <SellerShopImages images={allShopImages} />
       </TabsContent>
     </Tabs>
   );
 };
 
 export default SellerDetailsTabs;
+
