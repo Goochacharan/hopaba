@@ -19,7 +19,7 @@ const MapInterface: React.FC<MapInterfaceProps> = ({
   longitude
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<google.maps.Map | null>(null);
+  const mapInstance = useRef<any>(null);
 
   useEffect(() => {
     if (!mapContainer.current || !window.google) return;

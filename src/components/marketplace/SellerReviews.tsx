@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,8 +31,6 @@ interface SellerReviewsProps {
   isSubmitting?: boolean;
   location?: string;
   mapLink?: string | null;
-  latitude?: number;
-  longitude?: number;
 }
 
 const SellerReviews: React.FC<SellerReviewsProps> = ({
@@ -45,9 +42,7 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
   onDeleteReview,
   isSubmitting = false,
   location,
-  mapLink,
-  latitude,
-  longitude
+  mapLink
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -156,8 +151,6 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
           sellerName={sellerName}
           location={location}
           mapLink={mapLink}
-          latitude={latitude}
-          longitude={longitude}
         />
         
         {/* Write Review Button */}

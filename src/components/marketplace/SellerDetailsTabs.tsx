@@ -2,7 +2,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import MarketplaceListingCard from './MarketplaceListingCard';
+import MarketplaceListingCard from '@/components/MarketplaceListingCard';
 import SellerReviews from './SellerReviews';
 import { MarketplaceListing } from '@/hooks/useMarketplaceListings';
 import { SellerReview } from '@/hooks/useSellerDetails';
@@ -19,8 +19,6 @@ interface SellerDetailsTabsProps {
   isSubmittingReview?: boolean;
   location?: string;
   mapLink?: string | null;
-  latitude?: number;
-  longitude?: number;
 }
 
 const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
@@ -33,9 +31,7 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
   onDeleteReview,
   isSubmittingReview,
   location,
-  mapLink,
-  latitude,
-  longitude
+  mapLink
 }) => {
   return (
     <Tabs defaultValue="listings" className="w-full">
@@ -83,8 +79,6 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
           isSubmitting={isSubmittingReview}
           location={location}
           mapLink={mapLink}
-          latitude={latitude}
-          longitude={longitude}
         />
       </TabsContent>
     </Tabs>
