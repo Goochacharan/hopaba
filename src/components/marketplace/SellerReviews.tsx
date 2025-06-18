@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReviewForm from './ReviewForm';
 import ReviewsList from './ReviewsList';
+import MapInterface from './MapInterface';
 
 interface SellerReviewsProps {
   sellerId: string;
@@ -29,6 +29,8 @@ interface SellerReviewsProps {
   onEditReview?: (reviewId: string, review: { rating: number; comment: string }) => Promise<void>;
   onDeleteReview?: (reviewId: string) => Promise<void>;
   isSubmitting?: boolean;
+  location?: string;
+  mapLink?: string | null;
 }
 
 const SellerReviews: React.FC<SellerReviewsProps> = ({
@@ -38,7 +40,9 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
   onAddReview,
   onEditReview,
   onDeleteReview,
-  isSubmitting = false
+  isSubmitting = false,
+  location,
+  mapLink
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -50,10 +54,8 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
   const [initialRating, setInitialRating] = useState(5);
   const [initialComment, setInitialComment] = useState('');
   
-  // Find the user's existing review
   const userReview = user ? reviews.find(review => review.reviewer_id === user.id) : null;
 
-  // Reset form when dialog opens/closes
   useEffect(() => {
     if (dialogOpen && userReview && editMode) {
       setInitialRating(userReview.rating);
@@ -114,7 +116,6 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
       return;
     }
     
-    // If user already has a review, open it in edit mode
     if (userReview) {
       setEditMode(true);
       setInitialRating(userReview.rating);
@@ -178,6 +179,13 @@ const SellerReviews: React.FC<SellerReviewsProps> = ({
         </Dialog>
       </CardHeader>
       <CardContent>
+        {/* Map Interface above the reviews */}
+        <MapInterface 
+          location={location} 
+          mapLink={mapLink} 
+          businessName={sellerName}
+        />
+        
         <ReviewsList
           reviews={reviews}
           userReviewId={user?.id}
