@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, Globe, Clock, Loader2 } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Loader2, Navigation } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
 import { useBusinessDetail } from '@/hooks/useBusinessDetail';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,8 @@ import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { calculateAndLogDistance } from '@/utils/distanceUtils';
+import RatingBadge from '@/components/business/RatingBadge';
+import StarRating from '@/components/marketplace/StarRating';
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string; }>();
@@ -190,25 +192,33 @@ const BusinessDetails: React.FC = () => {
                       {business.category}
                     </Badge>
                     
-                    {/* Distance and Rating Display */}
-                    <div className="flex items-center gap-4 mb-2">
-                      {distance && (
+                    {/* Distance Display */}
+                    {distance && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <Navigation className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
-                          📍 {distance} away
+                          {distance} away
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
+
+                    {/* Star Rating Display */}
+                    {totalReviews > 0 && (
+                      <div className="mb-2">
+                        <StarRating 
+                          rating={averageRating} 
+                          showCount={true} 
+                          count={totalReviews} 
+                          size="medium"
+                        />
+                      </div>
+                    )}
                   </div>
                   
-                  {/* Circular Rating Badge */}
+                  {/* Circular 100-point Rating Badge */}
                   {totalReviews > 0 && (
                     <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                        {ratingOutOf100}
-                      </div>
-                      <span className="text-xs text-muted-foreground mt-1">
-                        ({totalReviews} reviews)
-                      </span>
+                      <RatingBadge rating={ratingOutOf100} size="lg" />
                     </div>
                   )}
                 </div>

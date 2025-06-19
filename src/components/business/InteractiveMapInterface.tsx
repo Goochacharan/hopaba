@@ -19,17 +19,17 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   longitude 
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
 
   // Get coordinates from props or geocode address
   useEffect(() => {
     if (latitude && longitude) {
       setCoordinates({ lat: latitude, lng: longitude });
-    } else if (address && window.google?.maps) {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: `${businessName}, ${address}` }, (results, status) => {
+    } else if (address && (window as any).google?.maps) {
+      const geocoder = new (window as any).google.maps.Geocoder();
+      geocoder.geocode({ address: `${businessName}, ${address}` }, (results: any, status: string) => {
         if (status === 'OK' && results && results[0]) {
           const location = results[0].geometry.location;
           setCoordinates({ lat: location.lat(), lng: location.lng() });
@@ -40,9 +40,9 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
 
   // Initialize map when coordinates are available
   useEffect(() => {
-    if (!mapRef.current || !coordinates || !window.google?.maps) return;
+    if (!mapRef.current || !coordinates || !(window as any).google?.maps) return;
 
-    const newMap = new window.google.maps.Map(mapRef.current, {
+    const newMap = new (window as any).google.maps.Map(mapRef.current, {
       center: coordinates,
       zoom: 15,
       mapTypeControl: false,
@@ -50,7 +50,7 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
       fullscreenControl: false,
     });
 
-    const newMarker = new window.google.maps.Marker({
+    const newMarker = new (window as any).google.maps.Marker({
       position: coordinates,
       map: newMap,
       title: businessName,
