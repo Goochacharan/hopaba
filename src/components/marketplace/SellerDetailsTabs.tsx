@@ -35,11 +35,6 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
     return images;
   }, []);
 
-  // Get location and map link from first listing for map interface
-  const firstListing = listings[0];
-  const location = firstListing?.location;
-  const mapLink = firstListing?.map_link;
-
   return (
     <Tabs defaultValue="listings" className="w-full">
       <TabsList className="w-full bg-background border-b mb-6 flex h-9 overflow-x-auto no-scrollbar">
@@ -86,8 +81,6 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
           onEditReview={onEditReview}
           onDeleteReview={onDeleteReview}
           isSubmitting={isSubmittingReview}
-          location={location}
-          mapLink={mapLink}
         />
       </TabsContent>
       
@@ -99,3 +92,4 @@ const SellerDetailsTabs: React.FC<SellerDetailsTabsProps> = ({
 };
 
 export default SellerDetailsTabs;
+
