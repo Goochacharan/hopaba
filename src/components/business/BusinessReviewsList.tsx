@@ -79,8 +79,17 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
     ).join(' ');
   };
 
-  // Helper function to extract first name
+  // Helper function to extract first name from email or full name
   const getFirstName = (fullName: string): string => {
+    // If it's an email, extract the part before @
+    if (fullName.includes('@')) {
+      const emailPart = fullName.split('@')[0];
+      // If the email part has dots or underscores, take the first part
+      const firstPart = emailPart.split(/[._]/)[0];
+      return firstPart.charAt(0).toUpperCase() + firstPart.slice(1);
+    }
+    
+    // If it's a full name, take the first word
     return fullName.split(' ')[0] || fullName;
   };
   
@@ -100,7 +109,7 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
             <div>
               <h4 className="font-semibold">{getFirstName(review.name)}</h4>
               <div className="flex items-center mt-1">
-                <StarRating rating={review.rating} showCount={false} className="mr-2" />
+                <StarRating rating={review.rating} showCount={true} className="mr-2" />
               </div>
               
               {/* Badges */}

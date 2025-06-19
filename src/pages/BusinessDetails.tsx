@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Phone, Globe, Clock, Loader2, Star } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Loader2 } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
 import { useBusinessDetail } from '@/hooks/useBusinessDetail';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,7 +43,6 @@ const BusinessDetails: React.FC = () => {
     const fetchDistance = async () => {
       if (business?.address) {
         try {
-          // Extract postal code from address or use a default approach
           const result = await calculateAndLogDistance(business.address);
           if (result) {
             setDistance(result.distance);
@@ -78,7 +77,6 @@ const BusinessDetails: React.FC = () => {
     
     try {
       if (userReview) {
-        // Update existing review
         await new Promise<void>(resolve => {
           updateReview({
             reviewId: userReview.id,
@@ -93,7 +91,6 @@ const BusinessDetails: React.FC = () => {
           resolve();
         });
       } else {
-        // Create new review
         await new Promise<void>(resolve => {
           createReview({
             business_id: id,
@@ -187,26 +184,14 @@ const BusinessDetails: React.FC = () => {
               
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
+                  <div className="flex-1">
                     <h1 className="text-3xl font-bold mb-2">{business.name}</h1>
                     <Badge variant="secondary" className="mb-2">
                       {business.category}
                     </Badge>
                     
-                    {/* Enhanced Rating and Distance Display */}
+                    {/* Distance and Rating Display */}
                     <div className="flex items-center gap-4 mb-2">
-                      {totalReviews > 0 && (
-                        <div className="flex items-center gap-2">
-                          <div className="flex">
-                            {[1, 2, 3, 4, 5].map(star => (
-                              <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-amber-500 stroke-amber-500' : 'stroke-amber-500'}`} />
-                            ))}
-                          </div>
-                          <span className="text-sm font-medium">
-                            {ratingOutOf100}/100 ({totalReviews})
-                          </span>
-                        </div>
-                      )}
                       {distance && (
                         <span className="text-sm text-muted-foreground">
                           📍 {distance} away
@@ -214,6 +199,18 @@ const BusinessDetails: React.FC = () => {
                       )}
                     </div>
                   </div>
+                  
+                  {/* Circular Rating Badge */}
+                  {totalReviews > 0 && (
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {ratingOutOf100}
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        ({totalReviews} reviews)
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <p className="text-muted-foreground mb-4">{business.description}</p>

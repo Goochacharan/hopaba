@@ -8,7 +8,7 @@ import { Toggle } from '@/components/ui/toggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import MapInterface from './MapInterface';
+import InteractiveMapInterface from './InteractiveMapInterface';
 
 interface ReviewFormProps {
   businessId: string;
@@ -150,8 +150,8 @@ const BusinessReviewForm: React.FC<ReviewFormProps> = ({
 
   return (
     <>
-      {/* Map Interface */}
-      <MapInterface 
+      {/* Interactive Map Interface */}
+      <InteractiveMapInterface 
         businessName={businessName}
         address={businessAddress}
       />
