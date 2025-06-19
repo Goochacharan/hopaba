@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,21 +13,13 @@ import BusinessReviewsList from '@/components/business/BusinessReviewsList';
 import BusinessActionButtons from '@/components/business/BusinessActionButtons';
 import ImageViewer from '@/components/ImageViewer';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { calculateAndLogDistance } from '@/utils/distanceUtils';
 
 const BusinessDetails: React.FC = () => {
-  const {
-    id
-  } = useParams<{
-    id: string;
-  }>();
-  const {
-    user
-  } = useAuth();
-  const {
-    data: business,
-    isLoading,
-    error
-  } = useBusinessDetail(id);
+  const { id } = useParams<{ id: string; }>();
+  const { user } = useAuth();
+  const { data: business, isLoading, error } = useBusinessDetail(id);
+  const [distance, setDistance] = useState<string>('');
 
   // State for image viewer
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -45,11 +38,34 @@ const BusinessDetails: React.FC = () => {
     isUpdating
   } = useBusinessReviews(id || '');
 
+  // Calculate distance when business data is available
+  useEffect(() => {
+    const fetchDistance = async () => {
+      if (business?.address) {
+        try {
+          // Extract postal code from address or use a default approach
+          const result = await calculateAndLogDistance(business.address);
+          if (result) {
+            setDistance(result.distance);
+          }
+        } catch (error) {
+          console.error('Failed to calculate distance:', error);
+        }
+      }
+    };
+
+    fetchDistance();
+  }, [business]);
+
+  // Convert 5-star rating to 100-point scale
+  const ratingOutOf100 = Math.round(averageRating * 20);
+
   // Handle image click to open the image viewer
   const handleImageClick = (index: number) => {
     setCurrentImageIndex(index);
     setIsImageViewerOpen(true);
   };
+
   const handleSubmitReview = async (review: {
     rating: number;
     text: string;
@@ -59,6 +75,7 @@ const BusinessDetails: React.FC = () => {
   }) => {
     if (!user) return Promise.reject(new Error("User not authenticated"));
     if (!id) return Promise.reject(new Error("Business ID is missing"));
+    
     try {
       if (userReview) {
         // Update existing review
@@ -106,50 +123,67 @@ const BusinessDetails: React.FC = () => {
     userId: review.user_id,
     criteriaRatings: review.criteria_ratings || {}
   }));
+
   if (isLoading) {
-    return <MainLayout>
+    return (
+      <MainLayout>
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-6 w-6 animate-spin" />
         </div>
-      </MainLayout>;
+      </MainLayout>
+    );
   }
+
   if (error) {
-    return <MainLayout>
+    return (
+      <MainLayout>
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Error</h2>
           <p className="text-gray-500">Failed to load business details.</p>
         </div>
-      </MainLayout>;
+      </MainLayout>
+    );
   }
+
   if (!business) {
-    return <MainLayout>
+    return (
+      <MainLayout>
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Business Not Found</h2>
           <p className="text-gray-500">The requested business could not be found.</p>
         </div>
-      </MainLayout>;
+      </MainLayout>
+    );
   }
-  return <MainLayout>
+
+  return (
+    <MainLayout>
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Business Header */}
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
-              {business.images && business.images.length > 0 && <div className="md:w-1/3">
+              {business.images && business.images.length > 0 && (
+                <div className="md:w-1/3">
                   <Carousel className="w-full">
                     <CarouselContent>
-                      {business.images.map((image, index) => <CarouselItem key={index}>
+                      {business.images.map((image, index) => (
+                        <CarouselItem key={index}>
                           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
                             <img src={image} alt={`${business.name} image ${index + 1}`} className="object-cover w-full h-full" />
                           </div>
-                        </CarouselItem>)}
+                        </CarouselItem>
+                      ))}
                     </CarouselContent>
-                    {business.images.length > 1 && <>
+                    {business.images.length > 1 && (
+                      <>
                         <CarouselPrevious className="left-2" />
                         <CarouselNext className="right-2" />
-                      </>}
+                      </>
+                    )}
                   </Carousel>
-                </div>}
+                </div>
+              )}
               
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-4">
@@ -159,50 +193,83 @@ const BusinessDetails: React.FC = () => {
                       {business.category}
                     </Badge>
                     
-                    {/* Star Rating Display */}
-                    {totalReviews > 0 && <div className="flex items-center gap-2 mb-2">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map(star => <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-amber-500 stroke-amber-500' : 'stroke-amber-500'}`} />)}
+                    {/* Enhanced Rating and Distance Display */}
+                    <div className="flex items-center gap-4 mb-2">
+                      {totalReviews > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star key={star} className={`w-5 h-5 ${star <= Math.round(averageRating) ? 'fill-amber-500 stroke-amber-500' : 'stroke-amber-500'}`} />
+                            ))}
+                          </div>
+                          <span className="text-sm font-medium">
+                            {ratingOutOf100}/100 ({totalReviews})
+                          </span>
                         </div>
+                      )}
+                      {distance && (
                         <span className="text-sm text-muted-foreground">
-                          ({totalReviews})
+                          📍 {distance} away
                         </span>
-                      </div>}
+                      )}
+                    </div>
                   </div>
                 </div>
                 
                 <p className="text-muted-foreground mb-4">{business.description}</p>
                 
                 <div className="space-y-2">
-                  {business.address && <div className="flex items-center gap-2">
+                  {business.address && (
+                    <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{business.address}</span>
-                    </div>}
+                    </div>
+                  )}
                   
-                  {business.website && <div className="flex items-center gap-2">
+                  {business.website && (
+                    <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-muted-foreground" />
                       <a href={business.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
                         {business.website}
                       </a>
-                    </div>}
+                    </div>
+                  )}
                   
-                  {business.availability && <div className="flex items-center gap-2">
+                  {business.availability && (
+                    <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{business.availability}</span>
-                    </div>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
-                <BusinessActionButtons businessId={business.id} name={business.name} phone={business.contact_phone} whatsapp={(business as any).whatsapp} instagram={(business as any).instagram} location={business.address || ''} mapLink={(business as any).map_link} />
+                <BusinessActionButtons 
+                  businessId={business.id} 
+                  name={business.name} 
+                  phone={business.contact_phone} 
+                  whatsapp={(business as any).whatsapp} 
+                  instagram={(business as any).instagram} 
+                  location={business.address || ''} 
+                  mapLink={(business as any).map_link} 
+                />
               </div>
             </div>
           </CardContent>
         </Card>
         
         {/* Review Form */}
-        {business.id && <div className="mt-6">
-            <BusinessReviewForm businessId={business.id} businessName={business.name} businessCategory={business.category} onReviewSubmit={handleSubmitReview} />
-          </div>}
+        {business.id && (
+          <div className="mt-6">
+            <BusinessReviewForm 
+              businessId={business.id} 
+              businessName={business.name} 
+              businessCategory={business.category} 
+              businessAddress={business.address}
+              onReviewSubmit={handleSubmitReview} 
+            />
+          </div>
+        )}
         
         {/* Reviews section */}
         <div className="mt-6">
@@ -217,9 +284,17 @@ const BusinessDetails: React.FC = () => {
         </div>
 
         {/* Image Viewer */}
-        {business.images && business.images.length > 0 && <ImageViewer images={business.images} initialIndex={currentImageIndex} open={isImageViewerOpen} onOpenChange={setIsImageViewerOpen} />}
+        {business.images && business.images.length > 0 && (
+          <ImageViewer 
+            images={business.images} 
+            initialIndex={currentImageIndex} 
+            open={isImageViewerOpen} 
+            onOpenChange={setIsImageViewerOpen} 
+          />
+        )}
       </div>
-    </MainLayout>;
+    </MainLayout>
+  );
 };
 
 export default BusinessDetails;

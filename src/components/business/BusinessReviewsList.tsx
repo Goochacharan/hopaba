@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress'; 
 import StarRating from '@/components/marketplace/StarRating';
 import { BusinessReview } from '@/hooks/useBusinessDetail';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,6 +78,11 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
+
+  // Helper function to extract first name
+  const getFirstName = (fullName: string): string => {
+    return fullName.split(' ')[0] || fullName;
+  };
   
   if (reviews.length === 0) {
     return (
@@ -94,17 +98,16 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
         <div key={review.id} className="border-b pb-4 last:border-b-0">
           <div className="flex justify-between items-start">
             <div>
-              <h4 className="font-semibold">{review.name}</h4>
+              <h4 className="font-semibold">{getFirstName(review.name)}</h4>
               <div className="flex items-center mt-1">
                 <StarRating rating={review.rating} showCount={false} className="mr-2" />
-                <span className="text-muted-foreground text-xs">{review.date}</span>
               </div>
               
               {/* Badges */}
               {(review.isMustVisit || review.isHiddenGem) && (
                 <div className="flex space-x-2 mt-2">
                   {review.isMustVisit && (
-                    <Badge variant="success">Must Visit</Badge>
+                    <Badge variant="default" className="bg-green-500">Must Visit</Badge>
                   )}
                   {review.isHiddenGem && (
                     <Badge>Hidden Gem</Badge>
@@ -114,23 +117,17 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
             </div>
           </div>
           
-          {/* Display criteria ratings if available */}
+          {/* Display criteria ratings as simple text list (no progress bars) */}
           {review.criteriaRatings && Object.keys(review.criteriaRatings).length > 0 && (
-            <div className="mt-3 space-y-2">
-              <p className="text-sm text-muted-foreground mb-1">Detailed ratings:</p>
-              {Object.entries(review.criteriaRatings).map(([criterionId, rating]) => (
-                <div key={criterionId} className="flex items-center gap-2">
-                  <div className="text-xs w-24 truncate capitalize">
-                    {criteriaNames[criterionId] || getFallbackName(criterionId)}
-                  </div>
-                  <Progress 
-                    value={rating * 10} 
-                    className="h-2 flex-1" 
-                    style={{ "--progress-color": `hsl(${rating * 12}, 90%, 45%)` } as React.CSSProperties}
-                  />
-                  <div className="text-xs font-medium">{rating}/10</div>
-                </div>
-              ))}
+            <div className="mt-3">
+              <p className="text-sm text-muted-foreground mb-2">Detailed ratings:</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(review.criteriaRatings).map(([criterionId, rating]) => (
+                  <span key={criterionId} className="text-xs bg-muted px-2 py-1 rounded">
+                    {criteriaNames[criterionId] || getFallbackName(criterionId)}: {rating}/10
+                  </span>
+                ))}
+              </div>
             </div>
           )}
           
