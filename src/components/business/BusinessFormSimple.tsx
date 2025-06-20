@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export interface Business {
-  id?: string;  // Made optional to match BusinessForm.tsx
+  id?: string;
   name: string;
   category: string;
   subcategory?: string[];
@@ -31,14 +31,14 @@ export interface Business {
   website?: string;
   instagram?: string;
   images?: string[];
-  tags?: string[];  // Made optional to match BusinessForm.tsx
+  tags?: string[];
   price_range_min?: number;
   price_range_max?: number;
   price_unit?: string;
   experience?: string;
   availability_days?: string[];
-  availability_start_time?: string;  // Changed from hours_from
-  availability_end_time?: string;    // Changed from hours_to
+  availability_start_time?: string;
+  availability_end_time?: string;
   languages?: string[];
   latitude?: number;
   longitude?: number;
@@ -50,7 +50,7 @@ export interface Business {
   hours?: string;
 }
 
-// Updated schema to include latitude and longitude
+// Updated schema to match database fields
 const businessFormSchema = z.object({
   name: z.string().min(2, 'Business name must be at least 2 characters'),
   category: z.string().min(1, 'Please select a category'),
@@ -72,8 +72,8 @@ const businessFormSchema = z.object({
   price_unit: z.string().optional(),
   experience: z.string().optional(),
   availability_days: z.array(z.string()).optional(),
-  hours_from: z.string().optional(),
-  hours_to: z.string().optional(),
+  availability_start_time: z.string().optional(),
+  availability_end_time: z.string().optional(),
   languages: z.array(z.string()).optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -125,8 +125,8 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     price_unit: business?.price_unit || '',
     experience: business?.experience || '',
     availability_days: business?.availability_days || [],
-    hours_from: business?.availability_start_time || '9:00 AM',
-    hours_to: business?.availability_end_time || '5:00 PM',
+    availability_start_time: business?.availability_start_time || '9:00 AM',
+    availability_end_time: business?.availability_end_time || '5:00 PM',
     languages: business?.languages || [],
     latitude: business?.latitude,
     longitude: business?.longitude,
@@ -171,7 +171,11 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
   };
 
   const onSubmit = async (data: BusinessFormValues) => {
+    console.log('=== BUSINESS FORM SUBMISSION STARTED ===');
+    console.log('Form data received:', data);
+    
     if (!user) {
+      console.error('No user authenticated');
       toast({
         title: "Authentication required",
         description: "Please log in to save your business",
@@ -180,64 +184,121 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
       return;
     }
 
+    console.log('User authenticated:', user.id);
+    
+    // Validate required fields
+    const requiredFields = ['name', 'category', 'description', 'address', 'city', 'area', 'postal_code', 'contact_phone', 'whatsapp'];
+    const missingFields = requiredFields.filter(field => !data[field as keyof BusinessFormValues]);
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
+      toast({
+        title: "Missing required fields",
+        description: `Please fill in: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate tags requirement
+    if (!data.tags || data.tags.length < 3) {
+      console.error('Insufficient tags:', data.tags?.length || 0);
+      toast({
+        title: "Tags required",
+        description: "Please add at least 3 tags describing your services",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
+      console.log('Preparing business data for database...');
+      
       const businessData = {
-        name: data.name,
+        name: data.name.trim(),
         category: data.category,
         subcategory: data.subcategory || [],
-        description: data.description,
-        address: data.address,
-        city: data.city,
-        area: data.area,
-        postal_code: data.postal_code,
-        contact_phone: data.contact_phone,
-        whatsapp: data.whatsapp,
-        contact_email: data.contact_email || null,
-        website: data.website || null,
-        instagram: data.instagram || null,
+        description: data.description.trim(),
+        address: data.address.trim(),
+        city: data.city.trim(),
+        area: data.area.trim(),
+        postal_code: data.postal_code.trim(),
+        contact_phone: data.contact_phone.trim(),
+        whatsapp: data.whatsapp.trim(),
+        contact_email: data.contact_email?.trim() || null,
+        website: data.website?.trim() || null,
+        instagram: data.instagram?.trim() || null,
         images: data.images || [],
         tags: data.tags || [],
-        price_range_min: data.price_range_min,
-        price_range_max: data.price_range_max,
-        price_unit: data.price_unit || null,
-        experience: data.experience || null,
+        price_range_min: data.price_range_min || null,
+        price_range_max: data.price_range_max || null,
+        price_unit: data.price_unit?.trim() || 'per hour',
+        experience: data.experience?.trim() || null,
         availability_days: selectedDays,
-        availability_start_time: data.hours_from || null,
-        availability_end_time: data.hours_to || null,
+        availability_start_time: data.availability_start_time || '9:00 AM',
+        availability_end_time: data.availability_end_time || '5:00 PM',
         languages: data.languages || [],
-        latitude: data.latitude,
-        longitude: data.longitude,
+        latitude: data.latitude || null,
+        longitude: data.longitude || null,
         user_id: user.id,
+        approval_status: 'pending'
       };
+
+      console.log('Final business data for database:', businessData);
 
       let result;
       if (business?.id) {
+        console.log('Updating existing business with ID:', business.id);
         result = await supabase
           .from('service_providers')
           .update(businessData)
           .eq('id', business.id)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .select();
       } else {
+        console.log('Creating new business...');
         result = await supabase
           .from('service_providers')
-          .insert(businessData);
+          .insert([businessData])
+          .select();
       }
+
+      console.log('Database operation result:', result);
 
       if (result.error) {
-        throw result.error;
+        console.error('Database error details:', result.error);
+        throw new Error(`Database error: ${result.error.message}`);
       }
 
-      onSaved();
-    } catch (error) {
+      if (!result.data || result.data.length === 0) {
+        console.error('No data returned from database operation');
+        throw new Error('No data returned from database');
+      }
+
+      console.log('Business saved successfully:', result.data[0]);
+      
       toast({
-        title: "Error",
-        description: "Failed to save business. Please try again.",
+        title: "Success!",
+        description: business?.id ? "Business updated successfully" : "Business created successfully and submitted for approval",
+      });
+      
+      onSaved();
+    } catch (error: any) {
+      console.error('=== BUSINESS FORM SUBMISSION ERROR ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to save business. Please check all required fields and try again.",
         variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
+      console.log('=== BUSINESS FORM SUBMISSION ENDED ===');
     }
   };
 
