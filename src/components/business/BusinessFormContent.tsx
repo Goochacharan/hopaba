@@ -526,7 +526,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="hours_from"
+            name="availability_start_time"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
@@ -557,7 +557,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           
           <FormField
             control={form.control}
-            name="hours_to"
+            name="availability_end_time"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
