@@ -50,7 +50,7 @@ export interface Business {
   hours?: string;
 }
 
-// Updated schema to match database fields
+// Updated schema with more flexible validation
 const businessFormSchema = z.object({
   name: z.string().min(2, 'Business name must be at least 2 characters'),
   category: z.string().min(1, 'Please select a category'),
@@ -59,9 +59,9 @@ const businessFormSchema = z.object({
   address: z.string().min(5, 'Please enter a valid address'),
   city: z.string().min(2, 'Please enter a valid city'),
   area: z.string().min(2, 'Please enter a valid area'),
-  postal_code: z.string().min(6, 'Please enter a valid 6-digit postal code').max(6),
-  contact_phone: z.string().min(10, 'Please enter a valid phone number'),
-  whatsapp: z.string().min(10, 'Please enter a valid WhatsApp number'),
+  postal_code: z.string().min(5, 'Please enter a valid postal code').max(10),
+  contact_phone: z.string().min(8, 'Please enter a valid phone number'),
+  whatsapp: z.string().min(8, 'Please enter a valid WhatsApp number'),
   contact_email: z.string().email('Please enter a valid email').optional().or(z.literal('')),
   website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
   instagram: z.string().optional(),
@@ -156,7 +156,7 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => {
     const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 10) {
+    if (value.length <= 15) { // Allow more flexibility for international numbers
       form.setValue(fieldName, value, { shouldValidate: true });
     }
   };
@@ -186,20 +186,6 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
 
     console.log('User authenticated:', user.id);
     
-    // Validate required fields
-    const requiredFields = ['name', 'category', 'description', 'address', 'city', 'area', 'postal_code', 'contact_phone', 'whatsapp'];
-    const missingFields = requiredFields.filter(field => !data[field as keyof BusinessFormValues]);
-    
-    if (missingFields.length > 0) {
-      console.error('Missing required fields:', missingFields);
-      toast({
-        title: "Missing required fields",
-        description: `Please fill in: ${missingFields.join(', ')}`,
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Validate tags requirement
     if (!data.tags || data.tags.length < 3) {
       console.error('Insufficient tags:', data.tags?.length || 0);
@@ -216,6 +202,19 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     try {
       console.log('Preparing business data for database...');
       
+      // Clean and validate phone numbers
+      const cleanPhone = (phone: string) => {
+        const cleaned = phone.replace(/\D/g, '');
+        return cleaned.length >= 8 ? cleaned : '';
+      };
+
+      const contactPhone = cleanPhone(data.contact_phone);
+      const whatsappPhone = cleanPhone(data.whatsapp);
+
+      if (!contactPhone || !whatsappPhone) {
+        throw new Error('Please enter valid phone numbers (at least 8 digits)');
+      }
+
       const businessData = {
         name: data.name.trim(),
         category: data.category,
@@ -225,8 +224,8 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
         city: data.city.trim(),
         area: data.area.trim(),
         postal_code: data.postal_code.trim(),
-        contact_phone: data.contact_phone.trim(),
-        whatsapp: data.whatsapp.trim(),
+        contact_phone: contactPhone,
+        whatsapp: whatsappPhone,
         contact_email: data.contact_email?.trim() || null,
         website: data.website?.trim() || null,
         instagram: data.instagram?.trim() || null,
@@ -269,7 +268,15 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
 
       if (result.error) {
         console.error('Database error details:', result.error);
-        throw new Error(`Database error: ${result.error.message}`);
+        
+        // Provide more specific error messages
+        if (result.error.message.includes('duplicate')) {
+          throw new Error('A business with this name already exists');
+        } else if (result.error.message.includes('constraint')) {
+          throw new Error('Please check all required fields are filled correctly');
+        } else {
+          throw new Error(`Database error: ${result.error.message}`);
+        }
       }
 
       if (!result.data || result.data.length === 0) {
@@ -289,7 +296,6 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
       console.error('=== BUSINESS FORM SUBMISSION ERROR ===');
       console.error('Error details:', error);
       console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
       
       toast({
         title: "Submission Failed",
