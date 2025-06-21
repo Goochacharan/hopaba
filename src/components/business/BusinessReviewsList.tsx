@@ -10,75 +10,6 @@ interface BusinessReviewsListProps {
 }
 
 const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) => {
-  const [criteriaNames, setCriteriaNames] = useState<{[key: string]: string}>({});
-  
-  // Get all unique criteria IDs from all reviews
-  const allCriteriaIds = React.useMemo(() => {
-    const ids = new Set<string>();
-    reviews.forEach(review => {
-      if (review.criteriaRatings) {
-        Object.keys(review.criteriaRatings).forEach(id => ids.add(id));
-      }
-    });
-    return Array.from(ids);
-  }, [reviews]);
-
-  // Fetch criteria names from the database
-  useEffect(() => {
-    const fetchCriteriaNames = async () => {
-      if (allCriteriaIds.length === 0) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('review_criteria')
-          .select('id, name')
-          .in('id', allCriteriaIds);
-        
-        if (error) {
-          throw error;
-        }
-        
-        const namesMap: {[key: string]: string} = {};
-        data?.forEach(criterion => {
-          namesMap[criterion.id] = criterion.name;
-        });
-        
-        // For any missing criteria, provide a fallback name
-        allCriteriaIds.forEach(id => {
-          if (!namesMap[id]) {
-            namesMap[id] = getFallbackName(id);
-          }
-        });
-        
-        setCriteriaNames(namesMap);
-      } catch (err) {
-        console.error('Error fetching criteria names:', err);
-        
-        // Set fallback names if fetch fails
-        const fallbackNames: {[key: string]: string} = {};
-        allCriteriaIds.forEach(id => {
-          fallbackNames[id] = getFallbackName(id);
-        });
-        setCriteriaNames(fallbackNames);
-      }
-    };
-    
-    fetchCriteriaNames();
-  }, [allCriteriaIds]);
-  
-  // Helper function to format criterion ID to readable name
-  const getFallbackName = (criterionId: string): string => {
-    const id = criterionId.toLowerCase();
-    if (id.includes('amb')) return 'Ambience';
-    if (id.includes('tast') || id.includes('food')) return 'Taste';
-    if (id.includes('price') || id.includes('val')) return 'Price';
-    if (id.includes('hyg') || id.includes('clean')) return 'Hygiene';
-    if (id.includes('serv')) return 'Service';
-    return criterionId.replace(/_/g, ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
   // Helper function to extract first name from email or full name
   const getFirstName = (fullName: string): string => {
     // If it's an email, extract the part before @
@@ -125,20 +56,6 @@ const BusinessReviewsList: React.FC<BusinessReviewsListProps> = ({ reviews }) =>
               )}
             </div>
           </div>
-          
-          {/* Display criteria ratings as simple text list (no progress bars) */}
-          {review.criteriaRatings && Object.keys(review.criteriaRatings).length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm text-muted-foreground mb-2">Detailed ratings:</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(review.criteriaRatings).map(([criterionId, rating]) => (
-                  <span key={criterionId} className="text-xs bg-muted px-2 py-1 rounded">
-                    {criteriaNames[criterionId] || getFallbackName(criterionId)}: {rating}/10
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
           
           {review.text && (
             <p className="mt-2 text-sm">{review.text}</p>

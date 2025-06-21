@@ -16,6 +16,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { calculateAndLogDistance } from '@/utils/distanceUtils';
 import RatingBadge from '@/components/business/RatingBadge';
 import StarRating from '@/components/marketplace/StarRating';
+import InteractiveMapInterface from '@/components/business/InteractiveMapInterface';
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string; }>();
@@ -39,6 +40,32 @@ const BusinessDetails: React.FC = () => {
     isCreating,
     isUpdating
   } = useBusinessReviews(id || '');
+
+  // Helper function to extract neighborhood/area from full address
+  const getNeighborhoodFromAddress = (fullAddress: string): string => {
+    if (!fullAddress) return '';
+    
+    // Split by comma and look for area/neighborhood pattern
+    const parts = fullAddress.split(',').map(part => part.trim());
+    
+    // Find the part that looks like a neighborhood (usually contains 'nagar', 'colony', etc.)
+    const neighborhoodPart = parts.find(part => 
+      /\b(nagar|colony|layout|extension|cross|road|street|area|sector)\b/i.test(part)
+    );
+    
+    if (neighborhoodPart) {
+      return neighborhoodPart;
+    }
+    
+    // If no specific neighborhood pattern, take the first meaningful part (not postal codes or states)
+    const meaningfulPart = parts.find(part => 
+      part.length > 3 && 
+      !/^\d+$/.test(part) && // Not just numbers
+      !/^[A-Z]{2}$/i.test(part) // Not state codes
+    );
+    
+    return meaningfulPart || parts[0] || fullAddress;
+  };
 
   // Calculate distance when business data is available
   useEffect(() => {
@@ -192,7 +219,7 @@ const BusinessDetails: React.FC = () => {
                       {business.category}
                     </Badge>
                     
-                    {/* Distance Display */}
+                    {/* Distance Display - Remove (straight-line) text */}
                     {distance && (
                       <div className="flex items-center gap-2 mb-2">
                         <Navigation className="h-4 w-4 text-muted-foreground" />
@@ -229,7 +256,7 @@ const BusinessDetails: React.FC = () => {
                   {business.address && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{business.address}</span>
+                      <span className="text-sm">{getNeighborhoodFromAddress(business.address)}</span>
                     </div>
                   )}
                   
@@ -264,6 +291,14 @@ const BusinessDetails: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Interactive Map Interface */}
+        <InteractiveMapInterface
+          businessName={business.name}
+          address={business.address}
+          latitude={business.latitude}
+          longitude={business.longitude}
+        />
         
         {/* Review Form */}
         {business.id && (

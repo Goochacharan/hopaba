@@ -23,6 +23,32 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   const [marker, setMarker] = useState<any>(null);
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
 
+  // Helper function to extract neighborhood/area from full address
+  const getNeighborhoodFromAddress = (fullAddress: string): string => {
+    if (!fullAddress) return '';
+    
+    // Split by comma and look for area/neighborhood pattern
+    const parts = fullAddress.split(',').map(part => part.trim());
+    
+    // Find the part that looks like a neighborhood (usually contains 'nagar', 'colony', etc.)
+    const neighborhoodPart = parts.find(part => 
+      /\b(nagar|colony|layout|extension|cross|road|street|area|sector)\b/i.test(part)
+    );
+    
+    if (neighborhoodPart) {
+      return neighborhoodPart;
+    }
+    
+    // If no specific neighborhood pattern, take the first meaningful part (not postal codes or states)
+    const meaningfulPart = parts.find(part => 
+      part.length > 3 && 
+      !/^\d+$/.test(part) && // Not just numbers
+      !/^[A-Z]{2}$/i.test(part) // Not state codes
+    );
+    
+    return meaningfulPart || parts[0] || fullAddress;
+  };
+
   // Get coordinates from props or geocode address
   useEffect(() => {
     if (latitude && longitude) {
@@ -96,7 +122,7 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
             {businessName} Location
           </h3>
           {address && (
-            <p className="text-sm text-muted-foreground mt-1">{address}</p>
+            <p className="text-sm text-muted-foreground mt-1">{getNeighborhoodFromAddress(address)}</p>
           )}
         </div>
         <GoogleMapsLoader>
