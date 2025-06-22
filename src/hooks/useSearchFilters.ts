@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { SortOption } from '@/components/SortButton';
 
@@ -18,7 +19,9 @@ export interface InboxFilters {
   city: string;
   postalCode: string;
   priceType: 'all' | 'negotiable' | 'fixed' | 'wholesale';
-  sortBy: 'price' | 'latest' | 'rating' | 'distance';
+  sortBy: 'price' | 'latest' | 'rating' | 'distance' | 'newest' | 'oldest';
+  status: 'all' | 'read' | 'unread';
+  category: string;
 }
 
 export function useSearchFilters(initialFilters?: Partial<SearchFilters>) {
@@ -59,7 +62,9 @@ export function useInboxFilters(initialFilters?: Partial<InboxFilters>) {
   const [city, setCity] = useState<string>(initialFilters?.city || '');
   const [postalCode, setPostalCode] = useState<string>(initialFilters?.postalCode || '');
   const [priceType, setPriceType] = useState<'all' | 'negotiable' | 'fixed' | 'wholesale'>(initialFilters?.priceType || 'all');
-  const [sortBy, setSortBy] = useState<'price' | 'latest' | 'rating' | 'distance'>(initialFilters?.sortBy || 'latest');
+  const [sortBy, setSortBy] = useState<'price' | 'latest' | 'rating' | 'distance' | 'newest' | 'oldest'>(initialFilters?.sortBy || 'latest');
+  const [status, setStatus] = useState<'all' | 'read' | 'unread'>(initialFilters?.status || 'all');
+  const [category, setCategory] = useState<string>(initialFilters?.category || '');
 
   return {
     filters: {
@@ -68,7 +73,9 @@ export function useInboxFilters(initialFilters?: Partial<InboxFilters>) {
       city,
       postalCode,
       priceType,
-      sortBy
+      sortBy,
+      status,
+      category
     },
     setters: {
       setMinRating,
@@ -76,7 +83,9 @@ export function useInboxFilters(initialFilters?: Partial<InboxFilters>) {
       setCity,
       setPostalCode,
       setPriceType,
-      setSortBy
+      setSortBy,
+      setStatus,
+      setCategory
     }
   };
 }

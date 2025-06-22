@@ -24,8 +24,12 @@ interface InboxFiltersProps {
   setPostalCode: (value: string) => void;
   priceType: 'all' | 'negotiable' | 'fixed' | 'wholesale';
   setPriceType: (value: 'all' | 'negotiable' | 'fixed' | 'wholesale') => void;
-  sortBy: 'price' | 'latest' | 'rating' | 'distance';
-  setSortBy: (value: 'price' | 'latest' | 'rating' | 'distance') => void;
+  sortBy: 'price' | 'latest' | 'rating' | 'distance' | 'newest' | 'oldest';
+  setSortBy: (value: 'price' | 'latest' | 'rating' | 'distance' | 'newest' | 'oldest') => void;
+  status: 'all' | 'read' | 'unread';
+  setStatus: (value: 'all' | 'read' | 'unread') => void;
+  category: string;
+  setCategory: (value: string) => void;
   isLocationEnabled?: boolean;
 }
 
@@ -42,6 +46,10 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
   setPriceType,
   sortBy,
   setSortBy,
+  status,
+  setStatus,
+  category,
+  setCategory,
   isLocationEnabled = false
 }) => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -100,6 +108,8 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
     setCity('');
     setPostalCode('');
     setPriceType('all');
+    setStatus('all');
+    setCategory('');
     setActiveFilter(null);
   };
 
@@ -299,6 +309,8 @@ const InboxFilters: React.FC<InboxFiltersProps> = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="latest">Latest</SelectItem>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="oldest">Oldest</SelectItem>
             <SelectItem value="rating">Rating</SelectItem>
             <SelectItem value="price">Price</SelectItem>
             {isLocationEnabled && (

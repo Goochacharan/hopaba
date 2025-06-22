@@ -129,7 +129,21 @@ const Inbox: React.FC = () => {
             };
           }
 
-          const distanceData = await calculateItemDistance(userLoc, providerDetails as ProviderWithDistance);
+          // Create a proper ProviderWithDistance object
+          const providerForDistance: ProviderWithDistance = {
+            provider_id: conversation.provider_id,
+            provider_name: providerDetails.name,
+            user_id: conversation.provider_id, // This might need to be adjusted based on your data structure
+            name: providerDetails.name,
+            category: providerDetails.category,
+            subcategory: providerDetails.subcategory,
+            address: providerDetails.address,
+            city: providerDetails.city,
+            area: providerDetails.area,
+            postal_code: providerDetails.postal_code
+          };
+
+          const distanceData = await calculateItemDistance(userLoc, providerForDistance);
           
           return {
             ...conversation,
@@ -302,6 +316,7 @@ const Inbox: React.FC = () => {
         case 'oldest':
           return new Date(a.last_message_at).getTime() - new Date(b.last_message_at).getTime();
         case 'newest':
+        case 'latest':
         default:
           return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
       }
