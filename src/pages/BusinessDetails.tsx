@@ -16,7 +16,6 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { calculateAndLogDistance } from '@/utils/distanceUtils';
 import RatingBadge from '@/components/business/RatingBadge';
 import StarRating from '@/components/marketplace/StarRating';
-import InteractiveMapInterface from '@/components/business/InteractiveMapInterface';
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string; }>();
@@ -59,7 +58,7 @@ const BusinessDetails: React.FC = () => {
     fetchDistance();
   }, [business]);
 
-  // Convert 5-star rating to 100-point scale
+  // Convert 5-star rating to 100-point scale - using same calculation as BusinessCardPublic
   const ratingOutOf100 = Math.round(averageRating * 20);
 
   // Handle image click to open the image viewer
@@ -265,16 +264,6 @@ const BusinessDetails: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Interactive Map Interface */}
-        <InteractiveMapInterface
-          businessName={business.name}
-          address={business.address}
-          area={business.area}
-          city={business.city}
-          latitude={business.latitude}
-          longitude={business.longitude}
-        />
         
         {/* Review Form */}
         {business.id && (
