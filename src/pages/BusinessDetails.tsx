@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +15,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { calculateAndLogDistance } from '@/utils/distanceUtils';
 import RatingBadge from '@/components/business/RatingBadge';
 import StarRating from '@/components/marketplace/StarRating';
+import { calculateOverallRating } from '@/utils/ratingUtils';
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string; }>();
@@ -58,8 +58,8 @@ const BusinessDetails: React.FC = () => {
     fetchDistance();
   }, [business]);
 
-  // Convert 5-star rating to 100-point scale - using same calculation as BusinessCardPublic
-  const ratingOutOf100 = Math.round(averageRating * 20);
+  // Use same calculation as BusinessCardPublic - criteria-based rating
+  const ratingOutOf100 = calculateOverallRating(averageCriteriaRatings);
 
   // Handle image click to open the image viewer
   const handleImageClick = (index: number) => {
