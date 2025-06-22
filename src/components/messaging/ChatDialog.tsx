@@ -208,7 +208,6 @@ const ChatDialog: React.FC<ChatDialogProps> = ({
           <ConversationHeader 
             otherPartyName={otherPartyName}
             conversation={conversation}
-            onClose={() => onOpenChange(false)}
           />
         </div>
         
