@@ -1,4 +1,5 @@
-import { distanceService, type Location } from '@/services/distanceService';
+
+import { unifiedDistanceService, type Location } from '@/lib/unifiedDistanceService';
 import type { LocationFilterData } from '@/components/search/LocationFilter';
 import type { ServiceRequest } from '@/types/serviceRequestTypes';
 
@@ -37,88 +38,28 @@ export interface ServiceRequestWithDistance extends ServiceRequest {
 }
 
 /**
- * Extract coordinates from Google Maps link
- */
-export function extractCoordinatesFromMapLink(mapLink?: string): Location | null {
-  if (!mapLink) return null;
-  
-  try {
-    // Try to extract coordinates from various Google Maps URL formats
-    const patterns = [
-      /@(-?\d+\.?\d*),(-?\d+\.?\d*)/, // @lat,lng format
-      /q=(-?\d+\.?\d*),(-?\d+\.?\d*)/, // q=lat,lng format
-      /ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/, // ll=lat,lng format
-    ];
-    
-    for (const pattern of patterns) {
-      const match = mapLink.match(pattern);
-      if (match) {
-        return {
-          lat: parseFloat(match[1]),
-          lng: parseFloat(match[2])
-        };
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.warn('Failed to extract coordinates from map link:', mapLink, error);
-    return null;
-  }
-}
-
-/**
- * Get location coordinates for a business/provider
- */
-export async function getItemLocation(item: BusinessWithDistance | ProviderWithDistance): Promise<Location | null> {
-  // First try to use existing coordinates
-  if (item.latitude && item.longitude) {
-    return {
-      lat: item.latitude,
-      lng: item.longitude
-    };
-  }
-  
-  // Try to extract from map link
-  if (item.map_link) {
-    const coords = extractCoordinatesFromMapLink(item.map_link);
-    if (coords) return coords;
-  }
-  
-  // Try to geocode postal code
-  if (item.postal_code) {
-    try {
-      return await distanceService.getCoordinatesFromPostalCode(item.postal_code);
-    } catch (error) {
-      console.warn('Google geocoding failed, trying fallback for:', item.postal_code);
-      try {
-        return await distanceService.getCoordinatesFromPostalCodeFallback(item.postal_code);
-      } catch (fallbackError) {
-        console.warn('Fallback geocoding also failed for:', item.postal_code);
-      }
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Calculate distance between user location and an item (business/provider)
+ * Calculate distance between user location and an item (business/provider) using unified service
  */
 export async function calculateItemDistance(
   userLocation: Location,
   item: BusinessWithDistance | ProviderWithDistance
-): Promise<{ distance: number; distanceText: string } | null> {
+): Promise<{ distance: number; distanceText: string; isPrecise: boolean } | null> {
   try {
-    const itemLocation = await getItemLocation(item);
-    if (!itemLocation) return null;
+    const result = await unifiedDistanceService.calculateBusinessDistance(userLocation, {
+      id: 'id' in item ? item.id : item.provider_id,
+      name: 'name' in item ? item.name : item.provider_name,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      postal_code: item.postal_code,
+      map_link: item.map_link
+    });
     
-    // Calculate straight-line distance
-    const distance = distanceService.calculateStraightLineDistance(userLocation, itemLocation);
+    if (!result) return null;
     
     return {
-      distance,
-      distanceText: `${distance.toFixed(1)} km away`
+      distance: result.distance,
+      distanceText: result.distanceText,
+      isPrecise: result.isPrecise
     };
   } catch (error) {
     console.warn('Failed to calculate distance for item:', item, error);
@@ -127,7 +68,7 @@ export async function calculateItemDistance(
 }
 
 /**
- * Filter and sort businesses by distance
+ * Filter and sort businesses by distance using unified service
  */
 export async function filterBusinessesByLocation(
   businesses: BusinessWithDistance[],
@@ -143,7 +84,7 @@ export async function filterBusinessesByLocation(
     businessCount: businesses.length
   });
   
-  // Calculate distances for all businesses
+  // Calculate distances for all businesses using unified service
   const businessesWithDistance = await Promise.all(
     businesses.map(async (business) => {
       const distanceData = await calculateItemDistance(locationFilter.userLocation!, business);
@@ -183,7 +124,7 @@ export async function filterBusinessesByLocation(
 }
 
 /**
- * Filter and sort providers by distance
+ * Filter and sort providers by distance using unified service
  */
 export async function filterProvidersByLocation(
   providers: ProviderWithDistance[],
@@ -199,7 +140,7 @@ export async function filterProvidersByLocation(
     providerCount: providers.length
   });
   
-  // Calculate distances for all providers
+  // Calculate distances for all providers using unified service
   const providersWithDistance = await Promise.all(
     providers.map(async (provider) => {
       const distanceData = await calculateItemDistance(locationFilter.userLocation!, provider);

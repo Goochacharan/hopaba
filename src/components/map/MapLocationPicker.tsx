@@ -1,11 +1,10 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Loader2, Search } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import GoogleMapsLoader from './GoogleMapsLoader';
 import AddressAutocomplete from './AddressAutocomplete';
-import { calculateDistance } from '@/lib/locationUtils';
+import { unifiedDistanceService } from '@/lib/unifiedDistanceService';
 
 interface MapLocationPickerProps {
   initialLocation?: { lat: number; lng: number };
@@ -48,45 +47,48 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   // Get user's current location on component mount
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setUserLocation(location);
-          console.log('📍 User location obtained:', location);
-        },
-        (error) => {
-          console.log('Location permission denied or unavailable:', error);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-      );
-    }
+    const getUserLocation = async () => {
+      try {
+        const location = await unifiedDistanceService.getUserLocation();
+        setUserLocation(location);
+        console.log('📍 User location obtained:', location);
+      } catch (error) {
+        console.log('Location permission denied or unavailable:', error);
+      }
+    };
+
+    getUserLocation();
   }, []);
 
   // Calculate distance when both user location and selected location are available
   useEffect(() => {
-    if (userLocation && currentLocation) {
-      const dist = calculateDistance(
-        userLocation.lat,
-        userLocation.lng,
-        currentLocation.lat,
-        currentLocation.lng,
-        'K'
-      );
-      
-      if (dist < 1) {
-        setDistance(`${Math.round(dist * 1000)}m away`);
+    const calculateDistance = async () => {
+      if (userLocation && currentLocation) {
+        try {
+          const result = await unifiedDistanceService.calculateBusinessDistance(
+            userLocation,
+            {
+              latitude: currentLocation.lat,
+              longitude: currentLocation.lng
+            }
+          );
+          
+          if (result) {
+            setDistance(result.distanceText);
+            console.log('📏 Distance calculated:', result.distance);
+          } else {
+            setDistance(null);
+          }
+        } catch (error) {
+          console.error('Failed to calculate distance:', error);
+          setDistance(null);
+        }
       } else {
-        setDistance(`${dist.toFixed(1)}km away`);
+        setDistance(null);
       }
-      
-      console.log('📏 Distance calculated:', dist);
-    } else {
-      setDistance(null);
-    }
+    };
+
+    calculateDistance();
   }, [userLocation, currentLocation]);
 
   // Update map when external location changes (from address field or search button)
