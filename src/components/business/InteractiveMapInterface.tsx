@@ -26,113 +26,90 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
-  const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodingError, setGeocodingError] = useState<string | null>(null);
-  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Check if Google Maps is available
+  // Process location data when Google Maps is ready
   useEffect(() => {
-    const checkGoogleMaps = () => {
-      if ((window as any).google?.maps) {
-        console.log('✅ Google Maps API is available');
-        setIsGoogleMapsReady(true);
-      } else {
-        console.log('⏳ Google Maps API not yet available, checking again...');
-        setTimeout(checkGoogleMaps, 500);
+    const processLocation = async () => {
+      if (!(window as any).google?.maps) {
+        console.log('⏳ Google Maps not ready yet');
+        return;
       }
-    };
 
-    checkGoogleMaps();
-  }, []);
+      console.log('🗺️ Processing location data:', {
+        businessName,
+        hasLatLng: !!(latitude && longitude),
+        hasAddress: !!address,
+        hasAreaCity: !!(area || city)
+      });
 
-  // Get coordinates from props or geocode address
-  useEffect(() => {
-    if (!isGoogleMapsReady) {
-      console.log('⏳ Waiting for Google Maps API to be ready...');
-      return;
-    }
+      setIsProcessing(true);
+      setError(null);
 
-    console.log('🗺️ InteractiveMapInterface - Processing location data:', {
-      businessName,
-      address,
-      area,
-      city,
-      latitude,
-      longitude
-    });
-
-    if (latitude && longitude) {
-      console.log('✅ Using provided coordinates:', { lat: latitude, lng: longitude });
-      setCoordinates({ lat: latitude, lng: longitude });
-    } else {
-      console.log('🔍 Starting geocoding process...');
-      setIsGeocoding(true);
-      setGeocodingError(null);
-      
-      const geocoder = new (window as any).google.maps.Geocoder();
-      
-      // Try multiple address combinations for better geocoding success
-      const addressesToTry = [
-        address ? `${businessName}, ${address}` : null,
-        address ? address : null,
-        area && city ? `${area}, ${city}` : null,
-        city ? city : null
-      ].filter(Boolean);
-
-      console.log('📍 Address combinations to try:', addressesToTry);
-
-      const tryGeocode = async (addressList: string[], index = 0): Promise<void> => {
-        if (index >= addressList.length) {
-          console.error('❌ All geocoding attempts failed');
-          setGeocodingError('Unable to find location. Please check the address.');
-          setIsGeocoding(false);
+      try {
+        // Use provided coordinates if available
+        if (latitude && longitude) {
+          console.log('✅ Using provided coordinates:', { lat: latitude, lng: longitude });
+          setCoordinates({ lat: latitude, lng: longitude });
+          setIsProcessing(false);
           return;
         }
 
-        const currentAddress = addressList[index];
-        console.log(`🔍 Trying geocoding with: "${currentAddress}" (attempt ${index + 1})`);
+        // Fallback to geocoding
+        console.log('🔍 Starting geocoding...');
+        const geocoder = new (window as any).google.maps.Geocoder();
+        
+        // Build address string for geocoding
+        const addressParts = [businessName, address, area, city].filter(Boolean);
+        const geocodeAddress = addressParts.join(', ');
+        
+        console.log(`📍 Geocoding address: "${geocodeAddress}"`);
 
-        geocoder.geocode({ address: currentAddress }, (results: any, status: string) => {
-          console.log(`📍 Geocoding result for "${currentAddress}":`, { status, results });
+        geocoder.geocode({ address: geocodeAddress }, (results: any, status: string) => {
+          console.log('📍 Geocoding result:', { status, resultCount: results?.length || 0 });
           
           if (status === 'OK' && results && results[0]) {
             const location = results[0].geometry.location;
             const coords = { lat: location.lat(), lng: location.lng() };
             console.log('✅ Geocoding successful:', coords);
             setCoordinates(coords);
-            setIsGeocoding(false);
           } else {
-            console.log(`⚠️ Geocoding failed for "${currentAddress}", trying next...`);
-            tryGeocode(addressList, index + 1);
+            console.error('❌ Geocoding failed:', status);
+            setError('Unable to find location on map');
           }
+          setIsProcessing(false);
         });
-      };
 
-      if (addressesToTry.length > 0) {
-        tryGeocode(addressesToTry);
-      } else {
-        console.error('❌ No valid addresses to geocode');
-        setGeocodingError('No location information available.');
-        setIsGeocoding(false);
+      } catch (err) {
+        console.error('💥 Location processing error:', err);
+        setError('Failed to process location data');
+        setIsProcessing(false);
       }
-    }
-  }, [businessName, address, area, city, latitude, longitude, isGoogleMapsReady]);
+    };
+
+    processLocation();
+  }, [businessName, address, area, city, latitude, longitude]);
 
   // Initialize map when coordinates are available
   useEffect(() => {
-    if (!mapRef.current || !coordinates || !isGoogleMapsReady || !(window as any).google?.maps) {
-      console.log('⏳ Waiting for map requirements:', {
-        hasMapRef: !!mapRef.current,
-        hasCoordinates: !!coordinates,
-        isGoogleMapsReady,
-        hasGoogleMaps: !!(window as any).google?.maps
-      });
+    if (!mapRef.current || !coordinates || !(window as any).google?.maps) {
       return;
     }
 
-    console.log('🗺️ Initializing Google Map with coordinates:', coordinates);
+    console.log('🗺️ Initializing map with coordinates:', coordinates);
 
     try {
+      // Clean up existing map and marker
+      if (marker) {
+        marker.setMap(null);
+        setMarker(null);
+      }
+      if (map) {
+        setMap(null);
+      }
+
+      // Create new map
       const newMap = new (window as any).google.maps.Map(mapRef.current, {
         center: coordinates,
         zoom: 15,
@@ -141,38 +118,34 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
         fullscreenControl: false,
       });
 
+      // Create marker
       const newMarker = new (window as any).google.maps.Marker({
         position: coordinates,
         map: newMap,
         title: businessName,
       });
 
-      console.log('✅ Google Map and marker created successfully');
+      console.log('✅ Map and marker created successfully');
       setMap(newMap);
       setMarker(newMarker);
 
-      return () => {
-        if (newMarker) {
-          newMarker.setMap(null);
-        }
-      };
-    } catch (error) {
-      console.error('❌ Error initializing Google Map:', error);
-      setGeocodingError('Failed to initialize map. Please try refreshing the page.');
+    } catch (err) {
+      console.error('❌ Map initialization error:', err);
+      setError('Failed to initialize map');
     }
-  }, [coordinates, businessName, isGoogleMapsReady]);
+  }, [coordinates, businessName]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (marker) {
+        marker.setMap(null);
+      }
+    };
+  }, [marker]);
 
   const MapContent = () => {
-    if (!isGoogleMapsReady) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>Loading Google Maps...</span>
-        </div>
-      );
-    }
-
-    if (isGeocoding) {
+    if (isProcessing) {
       return (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -181,13 +154,11 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
       );
     }
 
-    if (geocodingError) {
+    if (error) {
       return (
         <Alert>
           <MapPin className="h-4 w-4" />
-          <AlertDescription>
-            {geocodingError}
-          </AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       );
     }
@@ -197,7 +168,7 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
         <Alert>
           <MapPin className="h-4 w-4" />
           <AlertDescription>
-            Unable to load map for this location. Please check the address.
+            No location information available for this business.
           </AlertDescription>
         </Alert>
       );
