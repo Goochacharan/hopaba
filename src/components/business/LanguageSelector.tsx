@@ -19,7 +19,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ form }) => {
   return (
     <FormField
       control={form.control}
-      name="language_ids"
+      name="languages"
       render={({ field }) => (
         <FormItem>
           <FormLabel className="flex items-center gap-2">
