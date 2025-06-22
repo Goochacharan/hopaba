@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -19,7 +20,7 @@ import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import {
-  InboxFilters,
+  type InboxFilters,
   useInboxFilters
 } from '@/hooks/useSearchFilters';
 
@@ -97,7 +98,7 @@ interface InboxFiltersProps {
   onSortChange: (sortBy: string) => void;
 }
 
-const InboxFilters: React.FC<InboxFiltersProps> = ({
+const InboxFiltersComponent: React.FC<InboxFiltersProps> = ({
   filters,
   onFilterChange,
   sortOptions,
@@ -148,8 +149,8 @@ export default function Inbox() {
     refetchConversations
   } = useConversations();
 
-  // Initialize general presence tracking
-  usePresence('general');
+  // Initialize general presence tracking and get isUserOnline function
+  const { isUserOnline } = usePresence('general');
 
   // Initialize inbox filters using the custom hook
   const { filters: inboxFilters, setters: inboxFilterSetters } = useInboxFilters();
@@ -209,7 +210,7 @@ export default function Inbox() {
       if (!providerDetails) return false;
 
       // Apply filters
-      if (inboxFilters.city && !providerDetails.city?.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
+      if (inboxFilters.city && providerDetails.city && !providerDetails.city.toLowerCase().includes(inboxFilters.city.toLowerCase())) {
         return false;
       }
 
@@ -280,7 +281,7 @@ export default function Inbox() {
           <TabsContent value="messages">
             <div className="space-y-6">
               {/* Search and Filters */}
-              <InboxFilters 
+              <InboxFiltersComponent 
                 filters={inboxFilters}
                 onFilterChange={handleInboxFilterChange}
                 sortOptions={inboxSortOptions}
