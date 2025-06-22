@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -310,7 +311,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             // Continue with the rest of the processing...
             console.log('Enhancing data for', baseDataToUse.length, 'providers (fallback)');
             const enhancedData = await Promise.all(
-              (baseDataToUse || []).map(async (provider) => {
+              (baseDataToUse || []).map(async (provider, index) => {
                 try {
                   console.log(`Processing provider ${index + 1}/${baseDataToUse.length}:`, provider.provider_id, provider.provider_name);
                 
