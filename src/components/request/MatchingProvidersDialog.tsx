@@ -896,21 +896,15 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                       )}
                     </div>
                     
-                    {/* Address Information */}
+                    {/* Address Information - Updated to match main shop page format */}
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
-                        {provider.address ? 
-                          `${provider.address}, ${provider.area}, ${provider.city}` :
-                          `${provider.area}, ${provider.city}`
-                        }
-                        {provider.postal_code && (
-                          <span className="text-xs ml-1">({provider.postal_code})</span>
-                        )}
+                        {[provider.area, provider.city].filter(Boolean).join(', ')}
                       </span>
                     </div>
 
-                    {/* Distance from user */}
+                    {/* Distance from user - Updated formatting */}
                     {provider.calculatedDistance !== null && provider.calculatedDistance !== undefined && (
                       <div className="flex items-center gap-2 text-sm text-primary py-2">
                         <Navigation className="h-4 w-4" />
