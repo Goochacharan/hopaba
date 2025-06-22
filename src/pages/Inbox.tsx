@@ -11,12 +11,12 @@ import { Loader2, MessageSquare, Clock, MapPin, Star, Navigation, Phone } from '
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import InboxFilters from '@/components/InboxFilters';
 import { useUnifiedDistance } from '@/hooks/useUnifiedDistance';
 import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import { useBusinessReviews } from '@/hooks/useBusinessReviews';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
+import { useInboxFilters } from '@/hooks/useSearchFilters';
 
 type ConversationWithDistance = {
   id: string;
@@ -26,6 +26,7 @@ type ConversationWithDistance = {
   last_message_at: string;
   created_at: string;
   updated_at: string;
+  unread_count: number;
   service_requests: any;
   service_providers: any;
   latest_quotation: any;
@@ -56,14 +57,12 @@ export default function Inbox() {
   // Distance calculation
   const { userLocation, calculateDistances } = useUnifiedDistance();
   
-  // State for filters and distance-enhanced conversations
-  const [filters, setFilters] = useState({
-    status: 'all',
-    category: 'all',
-    sortBy: 'recent'
-  });
+  // State for distance-enhanced conversations
   const [conversationsWithDistance, setConversationsWithDistance] = useState<ConversationWithDistance[]>([]);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+
+  // Use the inbox filters hook
+  const { filters, setters } = useInboxFilters();
 
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
@@ -110,7 +109,7 @@ export default function Inbox() {
           return {
             ...conv,
             calculatedDistance: distanceResult?.distance || null,
-            distanceText: distanceResult?.text || null
+            distanceText: distanceResult?.distanceText || null
           };
         });
 
@@ -139,19 +138,13 @@ export default function Inbox() {
     let filtered = [...conversationsWithDistance];
 
     // Apply filters
-    if (filters.status !== 'all') {
+    if (filters.sortBy !== 'latest') {
       filtered = filtered.filter(conv => {
-        if (filters.status === 'unread') {
+        if (filters.sortBy === 'rating') {
           return conv.unread_count > 0;
         }
         return true;
       });
-    }
-
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(conv => 
-        conv.service_requests?.category?.toLowerCase() === filters.category.toLowerCase()
-      );
     }
 
     // Apply sorting
@@ -164,9 +157,9 @@ export default function Inbox() {
           if (a.calculatedDistance !== null) return -1;
           if (b.calculatedDistance !== null) return 1;
           return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-        case 'oldest':
+        case 'rating':
           return new Date(a.last_message_at).getTime() - new Date(b.last_message_at).getTime();
-        case 'recent':
+        case 'latest':
         default:
           return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
       }
@@ -181,17 +174,11 @@ export default function Inbox() {
     
     let filtered = [...userRequests];
 
-    if (filters.category !== 'all') {
-      filtered = filtered.filter(request => 
-        request.category?.toLowerCase() === filters.category.toLowerCase()
-      );
-    }
-
     // Sort by creation date (most recent first)
     filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     return filtered;
-  }, [userRequests, filters]);
+  }, [userRequests]);
 
   const handleConversationClick = async (conversation: ConversationWithDistance) => {
     try {
@@ -265,9 +252,6 @@ export default function Inbox() {
           </Badge>
         )}
       </div>
-
-      {/* Filters */}
-      <InboxFilters onFiltersChange={setFilters} />
 
       {/* Distance calculation indicator */}
       {isCalculatingDistances && (
