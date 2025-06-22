@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -38,20 +39,41 @@ export const useBusinessLanguages = (businessId: string) => {
         return [];
       }
       
-      // Convert language names to language objects
       if (serviceProviderData?.languages && serviceProviderData.languages.length > 0) {
-        const { data: languageObjects, error: languageObjectsError } = await supabase
-          .from('languages')
-          .select('id, name, code')
-          .in('name', serviceProviderData.languages);
+        // Check if the stored values are UUIDs (language IDs) or plain text (language names)
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const firstValue = serviceProviderData.languages[0];
         
-        if (languageObjectsError) {
-          console.error('Error fetching language objects:', languageObjectsError);
-          // Return simple objects with just names
-          return serviceProviderData.languages.map((name: string) => ({ id: name, name, code: '' }));
+        if (uuidPattern.test(firstValue)) {
+          // Values are UUIDs (language IDs), fetch the corresponding language names
+          console.log('Detected language IDs, fetching language names from languages table');
+          const { data: languageObjects, error: languageObjectsError } = await supabase
+            .from('languages')
+            .select('id, name, code')
+            .in('id', serviceProviderData.languages);
+          
+          if (languageObjectsError) {
+            console.error('Error fetching language objects by IDs:', languageObjectsError);
+            return [];
+          }
+          
+          return languageObjects || [];
+        } else {
+          // Values are plain text (language names), convert to language objects
+          console.log('Detected language names, converting to language objects');
+          const { data: languageObjects, error: languageObjectsError } = await supabase
+            .from('languages')
+            .select('id, name, code')
+            .in('name', serviceProviderData.languages);
+          
+          if (languageObjectsError) {
+            console.error('Error fetching language objects by names:', languageObjectsError);
+            // Return simple objects with just names for backward compatibility
+            return serviceProviderData.languages.map((name: string) => ({ id: name, name, code: '' }));
+          }
+          
+          return languageObjects || [];
         }
-        
-        return languageObjects || [];
       }
       
       return [];
@@ -95,13 +117,32 @@ export const useServiceProviderLanguages = (providerId: string) => {
       if (serviceProviderError || !serviceProviderData?.languages) {
         return [];
       }
+
+      // Check if the stored values are UUIDs (language IDs) or plain text (language names)
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const firstValue = serviceProviderData.languages[0];
       
-      // Convert language names to objects
-      return serviceProviderData.languages.map((name: string) => ({ 
-        id: name, 
-        name, 
-        code: '' 
-      }));
+      if (uuidPattern.test(firstValue)) {
+        // Values are UUIDs (language IDs), fetch the corresponding language names
+        const { data: languageObjects, error: languageObjectsError } = await supabase
+          .from('languages')
+          .select('id, name, code')
+          .in('id', serviceProviderData.languages);
+        
+        if (languageObjectsError) {
+          console.error('Error fetching language objects by IDs:', languageObjectsError);
+          return [];
+        }
+        
+        return languageObjects || [];
+      } else {
+        // Values are plain text (language names), convert to objects for backward compatibility
+        return serviceProviderData.languages.map((name: string) => ({ 
+          id: name, 
+          name, 
+          code: '' 
+        }));
+      }
     },
     enabled: !!providerId,
     staleTime: 1000 * 60 * 5,
