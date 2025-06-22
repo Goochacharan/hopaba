@@ -52,7 +52,7 @@ const LocationHeader = ({ name, rating, reviewCount, onImageClick, images }: Loc
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden mb-6">
-      <div className="relative aspect-[16/9] w-full overflow-hidden">
+      <div className="relative aspect-[4/3] w-full overflow-hidden">
         <Carousel className="w-full h-full">
           <CarouselContent className="h-full">
             {images.map((img, index) => (

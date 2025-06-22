@@ -175,12 +175,12 @@ const BusinessDetails: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {business.images && business.images.length > 0 && (
-                <div className="md:w-1/2">
+                <div className="md:w-3/4">
                   <Carousel className="w-full">
                     <CarouselContent>
                       {business.images.map((image, index) => (
                         <CarouselItem key={index}>
-                          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
+                          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
                             <img src={image} alt={`${business.name} image ${index + 1}`} className="object-cover w-full h-full" />
                           </div>
                         </CarouselItem>
