@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { calculateAndLogDistance } from '@/utils/distanceUtils';
 import RatingBadge from '@/components/business/RatingBadge';
 import StarRating from '@/components/marketplace/StarRating';
 import { calculateOverallRating } from '@/utils/ratingUtils';
+import InteractiveMapInterface from '@/components/business/InteractiveMapInterface';
 
 const BusinessDetails: React.FC = () => {
   const { id } = useParams<{ id: string; }>();
@@ -275,6 +277,16 @@ const BusinessDetails: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Interactive Map Interface */}
+        <InteractiveMapInterface 
+          businessName={business.name}
+          address={business.address}
+          area={business.area}
+          city={business.city}
+          latitude={business.latitude ? Number(business.latitude) : undefined}
+          longitude={business.longitude ? Number(business.longitude) : undefined}
+        />
         
         {/* Review Form */}
         {business.id && (
