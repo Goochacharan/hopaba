@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,13 +40,18 @@ const BusinessDetails: React.FC = () => {
     isUpdating
   } = useBusinessReviews(id || '');
 
-  // Calculate distance when business data is available - use consistent method
+  // Use pre-calculated distance from business object for consistency with main shop page
   useEffect(() => {
     const fetchDistance = async () => {
       if (business) {
         try {
-          // Use postal_code for consistency with main shop page
-          // This ensures both pages calculate distance the same way
+          // First check if we have pre-calculated distance (same as main shop page)
+          if ((business as any).distanceText) {
+            setDistance((business as any).distanceText);
+            return;
+          }
+          
+          // If no pre-calculated distance, fall back to calculation
           const addressToUse = business.postal_code || business.address;
           
           if (addressToUse) {
