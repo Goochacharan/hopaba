@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -21,7 +19,7 @@ import { calculateOverallRating, getRatingColor } from '@/utils/ratingUtils';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import {
-  type InboxFilters,
+  type InboxFilters as InboxFiltersType,
   useInboxFilters
 } from '@/hooks/useSearchFilters';
 
@@ -92,8 +90,8 @@ const ProviderLanguagesDisplay: React.FC<{ providerId: string }> = ({ providerId
 
 // Filter component for Inbox
 interface InboxFiltersProps {
-  filters: InboxFilters;
-  onFilterChange: (newFilters: InboxFilters) => void;
+  filters: InboxFiltersType;
+  onFilterChange: (newFilters: InboxFiltersType) => void;
   sortOptions: { label: string; value: string }[];
   currentSort: string;
   onSortChange: (sortBy: string) => void;
@@ -207,7 +205,7 @@ export default function Inbox() {
   } = inboxFilterSetters;
 
   // Function to handle filter changes
-  const handleInboxFilterChange = (newFilters: InboxFilters) => {
+  const handleInboxFilterChange = (newFilters: InboxFiltersType) => {
     setInboxMinRating(newFilters.minRating);
     setInboxLanguages(newFilters.languages);
     setInboxCity(newFilters.city);
@@ -341,7 +339,7 @@ export default function Inbox() {
                   <p className="text-muted-foreground mb-6">
                     There was a problem loading your messages. Please try again.
                   </p>
-                  <Button onClick={refetchConversations}>Try Again</Button>
+                  <Button onClick={handleRefresh}>Try Again</Button>
                 </div>
               ) : !filteredConversations || filteredConversations.length === 0 ? (
                 <div className="text-center py-12">
