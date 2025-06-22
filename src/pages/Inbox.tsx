@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
@@ -76,9 +75,10 @@ export default function Inbox() {
       }
 
       if (!userLocation) {
-        // If no user location, just set conversations without distance
+        // If no user location, just set conversations without distance but preserve all properties
         const conversationsWithoutDistance = conversations.map(conv => ({
           ...conv,
+          unread_count: 0, // Add default unread_count since it might be missing from the original data
           calculatedDistance: null,
           distanceText: null
         }));
@@ -103,11 +103,12 @@ export default function Inbox() {
         // Calculate distances
         const distanceResults = await calculateDistances(businessLocationData);
 
-        // Enhance conversations with distance data
+        // Enhance conversations with distance data while preserving all original properties
         const enhancedConversations = conversations.map(conv => {
           const distanceResult = distanceResults.get(conv.provider_id);
           return {
             ...conv,
+            unread_count: 0, // Add default unread_count since it might be missing from the original data
             calculatedDistance: distanceResult?.distance || null,
             distanceText: distanceResult?.distanceText || null
           };
@@ -116,9 +117,10 @@ export default function Inbox() {
         setConversationsWithDistance(enhancedConversations);
       } catch (error) {
         console.error('Error calculating distances for conversations:', error);
-        // Fallback to conversations without distance data
+        // Fallback to conversations without distance data but preserve all properties
         const conversationsWithoutDistance = conversations.map(conv => ({
           ...conv,
+          unread_count: 0, // Add default unread_count since it might be missing from the original data
           calculatedDistance: null,
           distanceText: null
         }));
