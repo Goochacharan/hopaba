@@ -5,6 +5,7 @@ import { MapPin, Navigation, Loader2, Search } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import GoogleMapsLoader from './GoogleMapsLoader';
 import AddressAutocomplete from './AddressAutocomplete';
+import { calculateDistance } from '@/lib/locationUtils';
 
 interface MapLocationPickerProps {
   initialLocation?: { lat: number; lng: number };
@@ -42,6 +43,51 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const geocoderRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(initialLocation);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [distance, setDistance] = useState<string | null>(null);
+
+  // Get user's current location on component mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(location);
+          console.log('📍 User location obtained:', location);
+        },
+        (error) => {
+          console.log('Location permission denied or unavailable:', error);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      );
+    }
+  }, []);
+
+  // Calculate distance when both user location and selected location are available
+  useEffect(() => {
+    if (userLocation && currentLocation) {
+      const dist = calculateDistance(
+        userLocation.lat,
+        userLocation.lng,
+        currentLocation.lat,
+        currentLocation.lng,
+        'K'
+      );
+      
+      if (dist < 1) {
+        setDistance(`${Math.round(dist * 1000)}m away`);
+      } else {
+        setDistance(`${dist.toFixed(1)}km away`);
+      }
+      
+      console.log('📏 Distance calculated:', dist);
+    } else {
+      setDistance(null);
+    }
+  }, [userLocation, currentLocation]);
 
   // Update map when external location changes (from address field or search button)
   useEffect(() => {
@@ -259,6 +305,14 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           )}
         </Button>
       </div>
+
+      {/* Distance Display */}
+      {distance && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <Navigation className="h-4 w-4" />
+          <span>{distance}</span>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex gap-2 mb-4">
