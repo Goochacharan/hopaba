@@ -97,8 +97,22 @@ const businessSchema = z.object({
   instagram: z.string().optional(),
   map_link: z.string().optional(),
   price_unit: z.string().optional(),
-  price_range_min: z.number().optional(),
-  price_range_max: z.number().optional(),
+  price_range_min: z.union([
+    z.number().min(0, { message: "Minimum price must be 0 or greater" }),
+    z.nan(),
+    z.undefined()
+  ]).optional().transform((val) => {
+    if (val === undefined || isNaN(val as number)) return undefined;
+    return val as number;
+  }),
+  price_range_max: z.union([
+    z.number().min(0, { message: "Maximum price must be 0 or greater" }),
+    z.nan(),
+    z.undefined()
+  ]).optional().transform((val) => {
+    if (val === undefined || isNaN(val as number)) return undefined;
+    return val as number;
+  }),
   availability: z.string().optional(),
   languages: z.array(z.string()).optional(),
   experience: z.string().optional(),

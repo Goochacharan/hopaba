@@ -79,8 +79,22 @@ const businessFormSchema = z.object({
   instagram: z.string().optional(),
   images: z.array(z.string()).optional(),
   tags: z.array(z.string()).min(3, 'Please add at least 3 tags describing your services'),
-  price_range_min: z.number().min(0).optional(),
-  price_range_max: z.number().min(0).optional(),
+  price_range_min: z.union([
+    z.number().min(0, { message: "Minimum price must be 0 or greater" }),
+    z.nan(),
+    z.undefined()
+  ]).optional().transform((val) => {
+    if (val === undefined || isNaN(val as number)) return undefined;
+    return val as number;
+  }),
+  price_range_max: z.union([
+    z.number().min(0, { message: "Maximum price must be 0 or greater" }),
+    z.nan(),
+    z.undefined()
+  ]).optional().transform((val) => {
+    if (val === undefined || isNaN(val as number)) return undefined;
+    return val as number;
+  }),
   price_unit: z.string().optional(),
   experience: z.string().optional(),
   availability_days: z.array(z.string()).optional(),
