@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
@@ -137,6 +138,46 @@ const InboxFiltersComponent: React.FC<InboxFiltersProps> = ({
   );
 };
 
+// Enhanced type for conversation with full provider details
+interface ConversationWithProvider {
+  id: string;
+  request_id: string;
+  provider_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  service_requests?: {
+    id: string;
+    title: string;
+    category: string;
+    subcategory?: string;
+    user_id: string;
+  };
+  service_providers: {
+    id: string;
+    name: string;
+    user_id: string;
+    category?: string;
+    subcategory?: string[];
+    city?: string;
+    area?: string;
+    contact_phone?: string;
+    images?: string[];
+    rating?: number;
+    review_count?: number;
+    overallScore?: number;
+    calculatedDistance?: number;
+    latest_pricing?: {
+      pricing_type?: string;
+      quotation_price?: number;
+      wholesale_price?: number;
+      negotiable_price?: number;
+    };
+  };
+  latest_quotation?: number;
+}
+
 export default function Inbox() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -205,7 +246,7 @@ export default function Inbox() {
   const filteredConversations = useMemo(() => {
     if (!conversations) return [];
 
-    return conversations.filter(conversation => {
+    return (conversations as ConversationWithProvider[]).filter(conversation => {
       const providerDetails = conversation.service_providers;
       if (!providerDetails) return false;
 
@@ -470,3 +511,4 @@ export default function Inbox() {
     </MainLayout>
   );
 }
+
