@@ -52,7 +52,7 @@ const LocationHeader = ({ name, rating, reviewCount, onImageClick, images }: Loc
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-border overflow-hidden mb-6">
-      <div className="w-full h-[400px] relative overflow-hidden">
+      <div className="relative aspect-[16/9] w-full overflow-hidden">
         <Carousel className="w-full h-full">
           <CarouselContent className="h-full">
             {images.map((img, index) => (
@@ -61,7 +61,7 @@ const LocationHeader = ({ name, rating, reviewCount, onImageClick, images }: Loc
                 <img 
                   src={img} 
                   alt={`${name} - image ${index + 1}`} 
-                  className={`w-full h-[400px] object-cover transition-all duration-500 ${imageLoaded[index] ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'} cursor-pointer`} 
+                  className={`w-full h-full object-cover transition-all duration-500 ${imageLoaded[index] ? 'opacity-100 blur-0' : 'opacity-0 blur-sm'} cursor-pointer`} 
                   onLoad={() => handleImageLoad(index)}
                   onClick={() => onImageClick(index)}
                 />
@@ -70,8 +70,8 @@ const LocationHeader = ({ name, rating, reviewCount, onImageClick, images }: Loc
           </CarouselContent>
           {images.length > 1 && (
             <>
-              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90" />
-              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white/90" />
+              <CarouselPrevious />
+              <CarouselNext />
             </>
           )}
         </Carousel>
