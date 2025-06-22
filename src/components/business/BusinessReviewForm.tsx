@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -8,7 +7,6 @@ import { Toggle } from '@/components/ui/toggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import InteractiveMapInterface from './InteractiveMapInterface';
 
 interface ReviewFormProps {
   businessId: string;
@@ -150,12 +148,6 @@ const BusinessReviewForm: React.FC<ReviewFormProps> = ({
 
   return (
     <>
-      {/* Interactive Map Interface */}
-      <InteractiveMapInterface 
-        businessName={businessName}
-        address={businessAddress}
-      />
-      
       {/* Write Review Button - No Card wrapper */}
       <div className="mb-6 flex justify-center">
         <Button 
