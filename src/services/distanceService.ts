@@ -163,6 +163,24 @@ class DistanceService {
   }
 
   /**
+   * Calculate distance between two locations and return formatted result
+   */
+  async calculateDistance(userLocation: Location, businessLocation: Location): Promise<DistanceResult> {
+    try {
+      // Try Google Distance Matrix API first if available
+      if (GOOGLE_MAPS_API_KEY) {
+        const result = await this.calculateDistanceWithGoogle(userLocation, businessLocation);
+        return result;
+      }
+    } catch (error) {
+      console.warn('⚠️ Google Distance Matrix API failed, using straight-line distance:', error);
+    }
+
+    // Fallback to straight-line distance calculation
+    return this.calculateStraightLineDistanceWithEstimate(userLocation, businessLocation);
+  }
+
+  /**
    * Calculate straight-line distance with estimated travel time and format it properly
    */
   private calculateStraightLineDistanceWithEstimate(userLocation: Location, businessLocation: Location): DistanceResult {
@@ -327,6 +345,3 @@ class DistanceService {
 
 // Export singleton instance
 export const distanceService = new DistanceService();
-
-// Export types for use in other files
-export type { Location, DistanceResult };
