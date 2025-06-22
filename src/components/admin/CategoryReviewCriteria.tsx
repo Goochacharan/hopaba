@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,20 +22,48 @@ const CategoryReviewCriteria = () => {
     const fetchCategories = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('service_providers')
-          .select('category')
-          .eq('approval_status', 'approved')
-          .order('category');
-        
-        if (error) throw error;
-        
-        const uniqueCategories = Array.from(new Set(data.map(item => item.category)));
+        // Fetch from all three sources to get comprehensive category list
+        const [categoriesData, serviceProvidersData, marketplaceData] = await Promise.all([
+          supabase.from('categories').select('name').order('name'),
+          supabase.from('service_providers').select('category').eq('approval_status', 'approved'),
+          supabase.from('marketplace_listings').select('category').eq('approval_status', 'approved')
+        ]);
+
+        // Collect all categories and deduplicate
+        const allCategories = new Set<string>();
+
+        // Add categories from categories table
+        if (categoriesData.data) {
+          categoriesData.data.forEach(item => {
+            if (item.name) allCategories.add(item.name);
+          });
+        }
+
+        // Add categories from service providers
+        if (serviceProvidersData.data) {
+          serviceProvidersData.data.forEach(item => {
+            if (item.category) allCategories.add(item.category);
+          });
+        }
+
+        // Add categories from marketplace listings
+        if (marketplaceData.data) {
+          marketplaceData.data.forEach(item => {
+            if (item.category) allCategories.add(item.category);
+          });
+        }
+
+        // Convert to sorted array
+        const uniqueCategories = Array.from(allCategories).sort();
         setCategories(uniqueCategories);
         
         if (uniqueCategories.length > 0 && !selectedCategory) {
           setSelectedCategory(uniqueCategories[0]);
         }
+
+        if (categoriesData.error) console.error('Error fetching categories:', categoriesData.error);
+        if (serviceProvidersData.error) console.error('Error fetching service provider categories:', serviceProvidersData.error);
+        if (marketplaceData.error) console.error('Error fetching marketplace categories:', marketplaceData.error);
       } catch (err: any) {
         console.error('Error fetching categories:', err);
         setError(err.message);
