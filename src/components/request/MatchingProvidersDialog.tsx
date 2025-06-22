@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -311,7 +310,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
             // Continue with the rest of the processing...
             console.log('Enhancing data for', baseDataToUse.length, 'providers (fallback)');
             const enhancedData = await Promise.all(
-              (baseDataToUse || []).map(async (provider, index) => {
+              (baseDataToUse || []).map(async (provider: MatchingProviderResult, index: number) => {
                 try {
                   console.log(`Processing provider ${index + 1}/${baseDataToUse.length}:`, provider.provider_id, provider.provider_name);
                 
@@ -901,7 +900,10 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
-                        {provider.area}, {provider.city}
+                        {provider.address ? 
+                          `${provider.address}, ${provider.area}, ${provider.city}` :
+                          `${provider.area}, ${provider.city}`
+                        }
                         {provider.postal_code && (
                           <span className="text-xs ml-1">({provider.postal_code})</span>
                         )}

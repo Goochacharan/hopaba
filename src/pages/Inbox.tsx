@@ -188,6 +188,7 @@ const Inbox: React.FC = () => {
   }, [userRequests, conversations, allConversationUnreadCounts]);
   
 
+
   // Fetch enhanced provider details for conversations
   const { data: enhancedProviderDetails = {} } = useQuery({
     queryKey: ['enhancedProviderDetails', requestConversations.map(c => c.provider_id)],
@@ -803,16 +804,21 @@ const Inbox: React.FC = () => {
                                       />
                                     )}
                                     
-                                    {/* Address Information */}
-                                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                                      <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                      <span className="line-clamp-2">
-                                        {providerDetails.area}, {providerDetails.city}
-                                        {providerDetails.postal_code && (
-                                          <span className="text-xs ml-1">({providerDetails.postal_code})</span>
-                                        )}
-                                      </span>
-                                    </div>
+                                    {/* Address Information - single display */}
+                                    {providerDetails && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>
+                                          {providerDetails.address ? 
+                                            `${providerDetails.address}, ${providerDetails.area}, ${providerDetails.city}` :
+                                            `${providerDetails.area}, ${providerDetails.city}`
+                                          }
+                                          {providerDetails.postal_code && (
+                                            <span className="text-xs ml-1">({providerDetails.postal_code})</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
                                     
                                     {/* Distance Information */}
                                     {conversation.calculatedDistance !== null && conversation.calculatedDistance !== undefined && (
