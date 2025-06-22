@@ -1,10 +1,7 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PendingServiceProviders } from './PendingServiceProviders';
-import { PendingMarketplaceListings } from './PendingMarketplaceListings';
-import { PendingEvents } from './PendingEvents';
-import SellerListingLimits from './SellerListingLimits';
-import HighLimitSellers from './HighLimitSellers';
 import CategoryManager from './CategoryManager';
 import { usePendingListings } from '@/hooks/usePendingListings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus } from 'lucide-react';
 
 const AdminPanelTabs = () => {
-  // Use the hook to get all the required data and functions for the pending items components
+  // Use the hook to get data for services
   const { 
     pendingListings, 
     loading, 
@@ -33,29 +30,13 @@ const AdminPanelTabs = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [newSubcategory, setNewSubcategory] = useState("");
 
-  // Handler functions for approving/rejecting different types of content
+  // Handler functions for approving/rejecting services
   const handleApproveService = (id: string) => {
     updateApprovalStatus('services', id, 'approved');
   };
 
   const handleRejectService = (id: string) => {
     updateApprovalStatus('services', id, 'rejected');
-  };
-
-  const handleApproveMarketplaceListing = (id: string) => {
-    updateApprovalStatus('marketplace', id, 'approved');
-  };
-
-  const handleRejectMarketplaceListing = (id: string) => {
-    updateApprovalStatus('marketplace', id, 'rejected');
-  };
-
-  const handleApproveEvent = (id: string) => {
-    updateApprovalStatus('events', id, 'approved');
-  };
-
-  const handleRejectEvent = (id: string) => {
-    updateApprovalStatus('events', id, 'rejected');
   };
   
   const handleAddSubcategory = async () => {
@@ -106,12 +87,8 @@ const AdminPanelTabs = () => {
 
   return (
     <Tabs defaultValue="services" className="w-full space-y-6">
-      <TabsList className="grid grid-cols-3 md:grid-cols-6">
+      <TabsList className="grid grid-cols-2">
         <TabsTrigger value="services">Services</TabsTrigger>
-        <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
-        <TabsTrigger value="events">Events</TabsTrigger>
-        <TabsTrigger value="seller_limits">Seller Limits</TabsTrigger>
-        <TabsTrigger value="high_limit_sellers">High Limit Sellers</TabsTrigger>
         <TabsTrigger value="categories">Categories</TabsTrigger>
       </TabsList>
       
@@ -124,36 +101,6 @@ const AdminPanelTabs = () => {
           onReject={handleRejectService}
           onRefresh={refreshListings}
         />
-      </TabsContent>
-      
-      <TabsContent value="marketplace" className="space-y-4">
-        <PendingMarketplaceListings 
-          listings={pendingListings.marketplace}
-          loading={loading}
-          error={error}
-          onApprove={handleApproveMarketplaceListing}
-          onReject={handleRejectMarketplaceListing}
-          onRefresh={refreshListings}
-        />
-      </TabsContent>
-      
-      <TabsContent value="events" className="space-y-4">
-        <PendingEvents 
-          events={pendingListings.events}
-          loading={loading}
-          error={error}
-          onApprove={handleApproveEvent}
-          onReject={handleRejectEvent}
-          onRefresh={refreshListings}
-        />
-      </TabsContent>
-      
-      <TabsContent value="seller_limits" className="space-y-4">
-        <SellerListingLimits />
-      </TabsContent>
-      
-      <TabsContent value="high_limit_sellers" className="space-y-4">
-        <HighLimitSellers />
       </TabsContent>
 
       <TabsContent value="categories" className="space-y-4">
