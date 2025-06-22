@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -322,10 +321,6 @@ const ProviderInbox: React.FC<ProviderInboxProps> = ({
             setPriceType={inboxSetters.setPriceType}
             sortBy={inboxFilters.sortBy}
             setSortBy={inboxSetters.setSortBy}
-            status={inboxFilters.status}
-            setStatus={inboxSetters.setStatus}
-            category={inboxFilters.category}
-            setCategory={inboxSetters.setCategory}
             isLocationEnabled={isLocationEnabled}
           />
         </div>
