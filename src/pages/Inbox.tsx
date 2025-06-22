@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,22 @@ import { cn } from '@/lib/utils';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
 
+// Enhanced conversation type with distance calculation
+type ConversationWithDistance = {
+  id: string;
+  user_id: string;
+  provider_id: string;
+  request_id: string;
+  last_message_at: string;
+  created_at: string;
+  updated_at: string;
+  service_requests: any;
+  service_providers: any;
+  latest_quotation: any;
+  calculatedDistance?: number | null;
+  distanceText?: string | null;
+};
+
 const Inbox = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -29,6 +46,12 @@ const Inbox = () => {
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
   const { isUserOnline } = usePresence('general');
 
+  // Fixed: Use correct property names from useServiceRequests
+  const { 
+    userRequests = [], 
+    isLoadingUserRequests: requestsLoading 
+  } = useServiceRequests();
+
   // Simplified conversations loading with better error handling
   const { 
     conversations = [], 
@@ -36,11 +59,8 @@ const Inbox = () => {
     isLoading: conversationsLoading 
   } = useConversationsOptimized();
 
-  // Simplified service requests loading
-  const { 
-    data: userRequests = [], 
-    isLoading: requestsLoading 
-  } = useServiceRequests();
+  // Type conversations with distance properties
+  const conversationsWithDistance = conversations as ConversationWithDistance[];
 
   // Get user location for distance calculations
   const getUserLocation = async () => {
@@ -61,17 +81,17 @@ const Inbox = () => {
 
   // Enhanced provider details with error handling
   const { data: enhancedProviderDetails = {} } = useQuery({
-    queryKey: ['enhanced-provider-details', conversations.map(c => c.provider_id)],
+    queryKey: ['enhanced-provider-details', conversationsWithDistance.map(c => c.provider_id)],
     queryFn: async () => {
-      if (!conversations || conversations.length === 0) return {};
+      if (!conversationsWithDistance || conversationsWithDistance.length === 0) return {};
       
       const details: Record<string, any> = {};
       
       try {
         // Get provider details in batches to avoid overwhelming the API
         const batchSize = 5;
-        for (let i = 0; i < conversations.length; i += batchSize) {
-          const batch = conversations.slice(i, i + batchSize);
+        for (let i = 0; i < conversationsWithDistance.length; i += batchSize) {
+          const batch = conversationsWithDistance.slice(i, i + batchSize);
           
           await Promise.all(batch.map(async (conversation) => {
             try {
@@ -103,7 +123,7 @@ const Inbox = () => {
       
       return details;
     },
-    enabled: conversations.length > 0,
+    enabled: conversationsWithDistance.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1 // Only retry once to avoid hanging
   });
@@ -111,7 +131,7 @@ const Inbox = () => {
   // Calculate distances with error handling
   useEffect(() => {
     const calculateDistances = async () => {
-      if (!conversations || conversations.length === 0) return;
+      if (!conversationsWithDistance || conversationsWithDistance.length === 0) return;
 
       const location = await getUserLocation();
       if (!location) return;
@@ -119,14 +139,17 @@ const Inbox = () => {
       setIsCalculatingDistances(true);
       try {
         // Calculate distances for conversations with provider details
-        for (const conversation of conversations) {
+        for (const conversation of conversationsWithDistance) {
           const providerDetail = enhancedProviderDetails[conversation.provider_id];
-          if (providerDetail && !conversation.calculatedDistance) {
+          if (providerDetail && conversation.calculatedDistance === undefined) {
             try {
               const distanceData = await calculateItemDistance(location, providerDetail as ProviderWithDistance);
               conversation.calculatedDistance = distanceData?.distance || null;
+              conversation.distanceText = distanceData?.distanceText || null;
             } catch (error) {
               console.warn(`Failed to calculate distance for provider ${conversation.provider_id}:`, error);
+              conversation.calculatedDistance = null;
+              conversation.distanceText = null;
             }
           }
         }
@@ -140,14 +163,14 @@ const Inbox = () => {
     if (Object.keys(enhancedProviderDetails).length > 0) {
       calculateDistances();
     }
-  }, [conversations, enhancedProviderDetails]);
+  }, [conversationsWithDistance, enhancedProviderDetails]);
 
   // Simplified unread count calculation
   const unreadCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     
     try {
-      conversations.forEach(conversation => {
+      conversationsWithDistance.forEach(conversation => {
         const requestId = conversation.request_id;
         if (!counts[requestId]) {
           counts[requestId] = 0;
@@ -160,12 +183,12 @@ const Inbox = () => {
     }
     
     return counts;
-  }, [conversations]);
+  }, [conversationsWithDistance]);
 
   // Filtered conversations with error handling
   const filteredConversations = useMemo(() => {
     try {
-      let filtered = conversations;
+      let filtered = conversationsWithDistance;
 
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -184,7 +207,7 @@ const Inbox = () => {
       console.error('Error filtering conversations:', error);
       return [];
     }
-  }, [conversations, enhancedProviderDetails, searchTerm]);
+  }, [conversationsWithDistance, enhancedProviderDetails, searchTerm]);
 
   // Handle call function
   const handleCall = (e: React.MouseEvent, phone?: string, providerName?: string) => {
