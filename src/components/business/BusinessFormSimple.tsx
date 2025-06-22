@@ -60,8 +60,20 @@ const businessFormSchema = z.object({
   city: z.string().min(2, 'Please enter a valid city'),
   area: z.string().min(2, 'Please enter a valid area'),
   postal_code: z.string().min(5, 'Please enter a valid postal code').max(10),
-  contact_phone: z.string().min(8, 'Please enter a valid phone number'),
-  whatsapp: z.string().min(8, 'Please enter a valid WhatsApp number'),
+  contact_phone: z.string()
+    .refine(phone => phone.startsWith('+91'), {
+      message: "Phone number must start with +91."
+    })
+    .refine(phone => phone.slice(3).replace(/\D/g, '').length === 10, {
+      message: "Please enter a 10-digit phone number (excluding +91)."
+    }),
+  whatsapp: z.string()
+    .refine(phone => phone.startsWith('+91'), {
+      message: "WhatsApp number must start with +91."
+    })
+    .refine(phone => phone.slice(3).replace(/\D/g, '').length === 10, {
+      message: "Please enter a 10-digit WhatsApp number (excluding +91)."
+    }),
   contact_email: z.string().email('Please enter a valid email').optional().or(z.literal('')),
   website: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
   instagram: z.string().optional(),
@@ -113,8 +125,8 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     city: business?.city || '',
     area: business?.area || '',
     postal_code: business?.postal_code || '',
-    contact_phone: business?.contact_phone || '',
-    whatsapp: business?.whatsapp || '',
+    contact_phone: business?.contact_phone || '+91',
+    whatsapp: business?.whatsapp || '+91',
     contact_email: business?.contact_email || '',
     website: business?.website || '',
     instagram: business?.instagram || '',
@@ -155,10 +167,24 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
   }, [form, dbCategories]);
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'contact_phone' | 'whatsapp') => {
-    const value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 15) { // Allow more flexibility for international numbers
-      form.setValue(fieldName, value, { shouldValidate: true });
+    let value = e.target.value;
+    
+    // Ensure the value starts with +91
+    if (!value.startsWith('+91')) {
+      value = '+91' + value.replace('+91', '');
     }
+    
+    // Extract only the digits after +91
+    const digits = value.slice(3).replace(/\D/g, '');
+    
+    // Limit to 10 digits
+    const limitedDigits = digits.slice(0, 10);
+    
+    // Set the final value
+    const finalValue = '+91' + limitedDigits;
+    e.target.value = finalValue;
+    
+    form.setValue(fieldName, finalValue, { shouldValidate: true });
   };
 
   const handleDayToggle = (day: string, checked: boolean) => {
@@ -202,19 +228,6 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
     try {
       console.log('Preparing business data for database...');
       
-      // Clean and validate phone numbers
-      const cleanPhone = (phone: string) => {
-        const cleaned = phone.replace(/\D/g, '');
-        return cleaned.length >= 8 ? cleaned : '';
-      };
-
-      const contactPhone = cleanPhone(data.contact_phone);
-      const whatsappPhone = cleanPhone(data.whatsapp);
-
-      if (!contactPhone || !whatsappPhone) {
-        throw new Error('Please enter valid phone numbers (at least 8 digits)');
-      }
-
       const businessData = {
         name: data.name.trim(),
         category: data.category,
@@ -224,8 +237,8 @@ const BusinessFormSimple: React.FC<BusinessFormSimpleProps> = ({
         city: data.city.trim(),
         area: data.area.trim(),
         postal_code: data.postal_code.trim(),
-        contact_phone: contactPhone,
-        whatsapp: whatsappPhone,
+        contact_phone: data.contact_phone,
+        whatsapp: data.whatsapp,
         contact_email: data.contact_email?.trim() || null,
         website: data.website?.trim() || null,
         instagram: data.instagram?.trim() || null,

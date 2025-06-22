@@ -268,13 +268,16 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               <FormControl>
                 <Input 
                   placeholder="Enter phone number" 
-                  value={field.value} 
+                  value={field.value || "+91"}
                   onChange={(e) => {
                     field.onChange(e);
                     handlePhoneInput(e, 'contact_phone');
                   }}
                 />
               </FormControl>
+              <FormDescription>
+                10-digit mobile number required
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -292,13 +295,16 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
               <FormControl>
                 <Input 
                   placeholder="Enter WhatsApp number" 
-                  value={field.value}
+                  value={field.value || "+91"}
                   onChange={(e) => {
                     field.onChange(e);
                     handlePhoneInput(e, 'whatsapp');
                   }}
                 />
               </FormControl>
+              <FormDescription>
+                10-digit mobile number required
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -390,7 +396,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             name="price_range_min"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Min Price (₹)</FormLabel>
+                <FormLabel>Min Price (₹) <span className="text-xs text-muted-foreground">(optional)</span></FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -409,7 +415,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
             name="price_range_max"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Max Price (₹)</FormLabel>
+                <FormLabel>Max Price (₹) <span className="text-xs text-muted-foreground">(optional)</span></FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -429,8 +435,8 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           name="price_unit"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Price Unit</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormLabel>Price Unit <span className="text-xs text-muted-foreground">(optional)</span></FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || undefined}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a price unit" />
