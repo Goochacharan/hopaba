@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -176,12 +175,12 @@ const BusinessDetails: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-6">
               {business.images && business.images.length > 0 && (
-                <div className="md:w-1/3">
+                <div className="md:w-1/2">
                   <Carousel className="w-full">
                     <CarouselContent>
                       {business.images.map((image, index) => (
                         <CarouselItem key={index}>
-                          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
+                          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg cursor-pointer" onClick={() => handleImageClick(index)}>
                             <img src={image} alt={`${business.name} image ${index + 1}`} className="object-cover w-full h-full" />
                           </div>
                         </CarouselItem>
@@ -189,8 +188,8 @@ const BusinessDetails: React.FC = () => {
                     </CarouselContent>
                     {business.images.length > 1 && (
                       <>
-                        <CarouselPrevious className="left-2" />
-                        <CarouselNext className="right-2" />
+                        <CarouselPrevious />
+                        <CarouselNext />
                       </>
                     )}
                   </Carousel>
