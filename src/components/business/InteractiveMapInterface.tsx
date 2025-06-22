@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import GoogleMapsLoader from '@/components/map/GoogleMapsLoader';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MapPin } from 'lucide-react';
+import { MapPin, Loader2 } from 'lucide-react';
 
 interface InteractiveMapInterfaceProps {
   businessName: string;
@@ -26,25 +26,89 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   // Get coordinates from props or geocode address
   useEffect(() => {
+    console.log('🗺️ InteractiveMapInterface - Initial data:', {
+      businessName,
+      address,
+      area,
+      city,
+      latitude,
+      longitude
+    });
+
     if (latitude && longitude) {
+      console.log('✅ Using provided coordinates:', { lat: latitude, lng: longitude });
       setCoordinates({ lat: latitude, lng: longitude });
-    } else if (address && (window as any).google?.maps) {
+    } else if ((window as any).google?.maps) {
+      console.log('🔍 Starting geocoding process...');
+      setIsGeocoding(true);
+      setGeocodingError(null);
+      
       const geocoder = new (window as any).google.maps.Geocoder();
-      geocoder.geocode({ address: `${businessName}, ${address}` }, (results: any, status: string) => {
-        if (status === 'OK' && results && results[0]) {
-          const location = results[0].geometry.location;
-          setCoordinates({ lat: location.lat(), lng: location.lng() });
+      
+      // Try multiple address combinations for better geocoding success
+      const addressesToTry = [
+        address ? `${businessName}, ${address}` : null,
+        address ? address : null,
+        area && city ? `${area}, ${city}` : null,
+        city ? city : null
+      ].filter(Boolean);
+
+      console.log('📍 Address combinations to try:', addressesToTry);
+
+      const tryGeocode = async (addressList: string[], index = 0): Promise<void> => {
+        if (index >= addressList.length) {
+          console.error('❌ All geocoding attempts failed');
+          setGeocodingError('Unable to find location. Please check the address.');
+          setIsGeocoding(false);
+          return;
         }
-      });
+
+        const currentAddress = addressList[index];
+        console.log(`🔍 Trying geocoding with: "${currentAddress}" (attempt ${index + 1})`);
+
+        geocoder.geocode({ address: currentAddress }, (results: any, status: string) => {
+          console.log(`📍 Geocoding result for "${currentAddress}":`, { status, results });
+          
+          if (status === 'OK' && results && results[0]) {
+            const location = results[0].geometry.location;
+            const coords = { lat: location.lat(), lng: location.lng() };
+            console.log('✅ Geocoding successful:', coords);
+            setCoordinates(coords);
+            setIsGeocoding(false);
+          } else {
+            console.log(`⚠️ Geocoding failed for "${currentAddress}", trying next...`);
+            tryGeocode(addressList, index + 1);
+          }
+        });
+      };
+
+      if (addressesToTry.length > 0) {
+        tryGeocode(addressesToTry);
+      } else {
+        console.error('❌ No valid addresses to geocode');
+        setGeocodingError('No location information available.');
+        setIsGeocoding(false);
+      }
     }
-  }, [businessName, address, latitude, longitude]);
+  }, [businessName, address, area, city, latitude, longitude]);
 
   // Initialize map when coordinates are available
   useEffect(() => {
-    if (!mapRef.current || !coordinates || !(window as any).google?.maps) return;
+    if (!mapRef.current || !coordinates || !(window as any).google?.maps) {
+      console.log('⏳ Waiting for map requirements:', {
+        hasMapRef: !!mapRef.current,
+        hasCoordinates: !!coordinates,
+        hasGoogleMaps: !!(window as any).google?.maps
+      });
+      return;
+    }
+
+    console.log('🗺️ Initializing Google Map with coordinates:', coordinates);
 
     const newMap = new (window as any).google.maps.Map(mapRef.current, {
       center: coordinates,
@@ -60,6 +124,7 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
       title: businessName,
     });
 
+    console.log('✅ Google Map and marker created successfully');
     setMap(newMap);
     setMarker(newMarker);
 
@@ -71,6 +136,26 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   }, [coordinates, businessName]);
 
   const MapContent = () => {
+    if (isGeocoding) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Finding location...</span>
+        </div>
+      );
+    }
+
+    if (geocodingError) {
+      return (
+        <Alert>
+          <MapPin className="h-4 w-4" />
+          <AlertDescription>
+            {geocodingError}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
     if (!coordinates) {
       return (
         <Alert>
