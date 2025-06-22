@@ -896,13 +896,13 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                       )}
                     </div>
                     
-                    {/* Address Information */}
+                    {/* Address Information - Changed to show only area, city */}
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <span className="line-clamp-2">
-                        {provider.address ? 
-                          `${provider.address}, ${provider.area}, ${provider.city}` :
-                          `${provider.area}, ${provider.city}`
+                        {provider.area && provider.city ? 
+                          `${provider.area}, ${provider.city}` :
+                          provider.city || 'Location not specified'
                         }
                         {provider.postal_code && (
                           <span className="text-xs ml-1">({provider.postal_code})</span>
