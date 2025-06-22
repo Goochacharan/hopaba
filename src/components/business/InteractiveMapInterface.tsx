@@ -28,10 +28,31 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+
+  // Check if Google Maps is available
+  useEffect(() => {
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        console.log('✅ Google Maps API is available');
+        setIsGoogleMapsReady(true);
+      } else {
+        console.log('⏳ Google Maps API not yet available, checking again...');
+        setTimeout(checkGoogleMaps, 500);
+      }
+    };
+
+    checkGoogleMaps();
+  }, []);
 
   // Get coordinates from props or geocode address
   useEffect(() => {
-    console.log('🗺️ InteractiveMapInterface - Initial data:', {
+    if (!isGoogleMapsReady) {
+      console.log('⏳ Waiting for Google Maps API to be ready...');
+      return;
+    }
+
+    console.log('🗺️ InteractiveMapInterface - Processing location data:', {
       businessName,
       address,
       area,
@@ -43,7 +64,7 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
     if (latitude && longitude) {
       console.log('✅ Using provided coordinates:', { lat: latitude, lng: longitude });
       setCoordinates({ lat: latitude, lng: longitude });
-    } else if ((window as any).google?.maps) {
+    } else {
       console.log('🔍 Starting geocoding process...');
       setIsGeocoding(true);
       setGeocodingError(null);
@@ -95,14 +116,15 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
         setIsGeocoding(false);
       }
     }
-  }, [businessName, address, area, city, latitude, longitude]);
+  }, [businessName, address, area, city, latitude, longitude, isGoogleMapsReady]);
 
   // Initialize map when coordinates are available
   useEffect(() => {
-    if (!mapRef.current || !coordinates || !(window as any).google?.maps) {
+    if (!mapRef.current || !coordinates || !isGoogleMapsReady || !(window as any).google?.maps) {
       console.log('⏳ Waiting for map requirements:', {
         hasMapRef: !!mapRef.current,
         hasCoordinates: !!coordinates,
+        isGoogleMapsReady,
         hasGoogleMaps: !!(window as any).google?.maps
       });
       return;
@@ -110,32 +132,46 @@ const InteractiveMapInterface: React.FC<InteractiveMapInterfaceProps> = ({
 
     console.log('🗺️ Initializing Google Map with coordinates:', coordinates);
 
-    const newMap = new (window as any).google.maps.Map(mapRef.current, {
-      center: coordinates,
-      zoom: 15,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+    try {
+      const newMap = new (window as any).google.maps.Map(mapRef.current, {
+        center: coordinates,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
 
-    const newMarker = new (window as any).google.maps.Marker({
-      position: coordinates,
-      map: newMap,
-      title: businessName,
-    });
+      const newMarker = new (window as any).google.maps.Marker({
+        position: coordinates,
+        map: newMap,
+        title: businessName,
+      });
 
-    console.log('✅ Google Map and marker created successfully');
-    setMap(newMap);
-    setMarker(newMarker);
+      console.log('✅ Google Map and marker created successfully');
+      setMap(newMap);
+      setMarker(newMarker);
 
-    return () => {
-      if (newMarker) {
-        newMarker.setMap(null);
-      }
-    };
-  }, [coordinates, businessName]);
+      return () => {
+        if (newMarker) {
+          newMarker.setMap(null);
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error initializing Google Map:', error);
+      setGeocodingError('Failed to initialize map. Please try refreshing the page.');
+    }
+  }, [coordinates, businessName, isGoogleMapsReady]);
 
   const MapContent = () => {
+    if (!isGoogleMapsReady) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Loading Google Maps...</span>
+        </div>
+      );
+    }
+
     if (isGeocoding) {
       return (
         <div className="flex items-center justify-center py-8">
