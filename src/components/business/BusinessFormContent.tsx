@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { Business, BusinessFormValues } from './BusinessFormSimple';
@@ -469,7 +468,7 @@ const BusinessFormContent: React.FC<BusinessFormContentProps> = ({
           name="experience"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Professional Experience</FormLabel>
+              <FormLabel>Professional Experience <span className="text-xs text-muted-foreground">(optional)</span></FormLabel>
               <Select 
                 onValueChange={field.onChange} 
                 value={field.value || undefined}
