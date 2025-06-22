@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,14 +41,20 @@ const BusinessDetails: React.FC = () => {
     isUpdating
   } = useBusinessReviews(id || '');
 
-  // Calculate distance when business data is available
+  // Calculate distance when business data is available - use consistent method
   useEffect(() => {
     const fetchDistance = async () => {
-      if (business?.address) {
+      if (business) {
         try {
-          const result = await calculateAndLogDistance(business.address);
-          if (result) {
-            setDistance(result.distance);
+          // Use postal_code for consistency with main shop page
+          // This ensures both pages calculate distance the same way
+          const addressToUse = business.postal_code || business.address;
+          
+          if (addressToUse) {
+            const result = await calculateAndLogDistance(addressToUse);
+            if (result) {
+              setDistance(result.distance);
+            }
           }
         } catch (error) {
           console.error('Failed to calculate distance:', error);
