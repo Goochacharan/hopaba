@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -550,92 +549,95 @@ const Shop = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* City and Pin Code Filters - Moved to top */}
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={selectedCity}
-            onChange={(e) => handleCityChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            {cities.map(city => (
-              <option key={city} value={city}>{city}</option>
-            ))}
-          </select>
-          
-          <input
-            type="text"
-            placeholder="Postal Code"
-            value={postalCode}
-            onChange={(e) => handlePostalCodeChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {/* Sticky Category Filter */}
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
-          <CategoryScrollBar
-            selected={selectedCategory}
-            onSelect={handleCategoryChange}
-            selectedSubcategory={selectedSubcategories}
-            onSubcategorySelect={(subcategories) => {
-              setSelectedSubcategories(subcategories);
-              setCurrentPage(1); // Reset to first page
-              const newParams = new URLSearchParams(searchParams);
-              if (subcategories.length > 0) {
-                newParams.set('subcategory', subcategories[0]);
-              } else {
-                newParams.delete('subcategory');
-              }
-              newParams.delete('page');
-              setSearchParams(newParams);
-            }}
-          />
-        </div>
-
-        {/* Sticky Search Controls (Filter Bar) */}
-        <div className="sticky top-[120px] z-30 bg-background/95 backdrop-blur-sm border-b pb-2">
-          <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-            <SearchControls 
-              distance={filters.distance} 
-              setDistance={setters.setDistance} 
-              minRating={filters.minRating} 
-              setMinRating={setters.setMinRating} 
-              priceRange={filters.priceRange} 
-              setPriceRange={setters.setPriceRange} 
-              openNowOnly={filters.openNowOnly} 
-              setOpenNowOnly={setters.setOpenNowOnly} 
-              hiddenGemOnly={filters.hiddenGemOnly} 
-              setHiddenGemOnly={setters.setHiddenGemOnly} 
-              mustVisitOnly={filters.mustVisitOnly} 
-              setMustVisitOnly={setters.setMustVisitOnly} 
-              sortBy={filters.sortBy} 
-              onSortChange={handleSortChange} 
+      <div className="container mx-auto px-4 py-6">
+        {/* Sticky Header Section - All bars grouped together */}
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
+          {/* City and Pin Code Filters */}
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={selectedCity}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {cities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+            
+            <input
+              type="text"
+              placeholder="Postal Code"
+              value={postalCode}
+              onChange={(e) => handlePostalCodeChange(e.target.value)}
+              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
-          </Suspense>
-        </div>
+          </div>
 
-        {/* Search Bar - Moved below filter bar */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search businesses..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <button
-            onClick={handleSearch}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-          >
-            Search
-          </button>
+          {/* Category Filter */}
+          <div className="border-b">
+            <CategoryScrollBar
+              selected={selectedCategory}
+              onSelect={handleCategoryChange}
+              selectedSubcategory={selectedSubcategories}
+              onSubcategorySelect={(subcategories) => {
+                setSelectedSubcategories(subcategories);
+                setCurrentPage(1); // Reset to first page
+                const newParams = new URLSearchParams(searchParams);
+                if (subcategories.length > 0) {
+                  newParams.set('subcategory', subcategories[0]);
+                } else {
+                  newParams.delete('subcategory');
+                }
+                newParams.delete('page');
+                setSearchParams(newParams);
+              }}
+            />
+          </div>
+
+          {/* Filter Bar */}
+          <div className="border-b pb-2">
+            <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+              <SearchControls 
+                distance={filters.distance} 
+                setDistance={setters.setDistance} 
+                minRating={filters.minRating} 
+                setMinRating={setters.setMinRating} 
+                priceRange={filters.priceRange} 
+                setPriceRange={setters.setPriceRange} 
+                openNowOnly={filters.openNowOnly} 
+                setOpenNowOnly={setters.setOpenNowOnly} 
+                hiddenGemOnly={filters.hiddenGemOnly} 
+                setHiddenGemOnly={setters.setHiddenGemOnly} 
+                mustVisitOnly={filters.mustVisitOnly} 
+                setMustVisitOnly={setters.setMustVisitOnly} 
+                sortBy={filters.sortBy} 
+                onSortChange={handleSortChange} 
+              />
+            </Suspense>
+          </div>
+
+          {/* Search Bar */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search businesses..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Search
+            </button>
+          </div>
         </div>
 
         {/* Results Summary */}
         {!isLoading && (
-          <div className="flex justify-between items-center text-sm text-muted-foreground">
+          <div className="flex justify-between items-center text-sm text-muted-foreground mb-4">
             <span>
               Showing {finalBusinesses.length} of {totalCount} businesses
               {currentPage > 1 && ` (Page ${currentPage} of ${totalPages})`}
