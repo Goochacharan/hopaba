@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -29,7 +28,7 @@ export default {
 					'Helvetica Neue',
 					'Arial',
 					'sans-serif'
-				],
+				]
 			},
 			colors: {
 				border: 'hsl(var(--border))',
