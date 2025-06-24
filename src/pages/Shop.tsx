@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -550,22 +551,25 @@ const Shop = () => {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Search Bar */}
-        <div className="flex gap-2">
+        {/* City and Pin Code Filters - Moved to top */}
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={selectedCity}
+            onChange={(e) => handleCityChange(e.target.value)}
+            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {cities.map(city => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
+          
           <input
             type="text"
-            placeholder="Search businesses..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Postal Code"
+            value={postalCode}
+            onChange={(e) => handlePostalCodeChange(e.target.value)}
+            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <button
-            onClick={handleSearch}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-          >
-            Search
-          </button>
         </div>
 
         {/* Sticky Category Filter */}
@@ -611,25 +615,22 @@ const Shop = () => {
           </Suspense>
         </div>
 
-        {/* Location Filters - Moved below filter bar */}
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            value={selectedCity}
-            onChange={(e) => handleCityChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            {cities.map(city => (
-              <option key={city} value={city}>{city}</option>
-            ))}
-          </select>
-          
+        {/* Search Bar - Moved below filter bar */}
+        <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Postal Code"
-            value={postalCode}
-            onChange={(e) => handlePostalCodeChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Search businesses..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Search
+          </button>
         </div>
 
         {/* Results Summary */}
