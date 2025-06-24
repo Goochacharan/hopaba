@@ -14,8 +14,8 @@ const borderStyle = "border border-[#eaeaea]";
 // Shadow for depth
 const depthShadow = "shadow-[0_2px_14px_0_rgba(22,25,34,0.13)]";
 
-// Rectangular shape & spacing - fixed size for all buttons
-const buttonShapeStyles = "flex-shrink-0 px-3 py-2 rounded-[11px] text-sm font-medium select-none cursor-pointer w-32 h-14 transition-all duration-150 flex items-center justify-center";
+// Rectangular shape & spacing - fixed size for all buttons, now with bold font
+const buttonShapeStyles = "flex-shrink-0 px-3 py-2 rounded-[11px] text-sm font-bold select-none cursor-pointer w-32 h-14 transition-all duration-150 flex items-center justify-center";
 
 // Selected and idle states
 const selectedStyles = "ring-2 ring-amber-700 border-amber-700 scale-105";
@@ -127,7 +127,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
           return <button key={cat} className={cn(buttonShapeStyles, buttonBaseStyles, borderStyle, depthShadow, isSelected ? selectedStyles : idleStyles, "break-words justify-between")} onClick={() => handleCategorySelect(cat)} type="button" aria-label={cat} style={{
             boxShadow: "0px 4px 18px rgba(22,25,34,0.11)"
           }}>
-                <span className="block whitespace-normal text-center leading-normal px-1 break-words text-xs">{cat}</span>
+                <span className="block whitespace-normal text-center leading-normal px-1 break-words text-xs font-bold">{cat}</span>
                 {cat !== "All" && onSubcategorySelect && <ChevronDown className="ml-1 h-4 w-4 opacity-70 flex-shrink-0" />}
               </button>;
         })}

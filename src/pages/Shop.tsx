@@ -550,56 +550,26 @@ const Shop = () => {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
-        {/* <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">Discover Local Businesses</h1>
-          <p className="text-muted-foreground">
-            Find the best service providers in your area
-          </p>
-        </div> */}
+        {/* Search Bar */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Search businesses..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={handleSearch}
+            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Search
+          </button>
+        </div>
 
-        {/* Search and Filters */}
-        <div className="space-y-4">
-          {/* Location Filters */}
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={selectedCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {cities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-            
-            <input
-              type="text"
-              placeholder="Postal Code"
-              value={postalCode}
-              onChange={(e) => handlePostalCodeChange(e.target.value)}
-              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Search businesses..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              onClick={handleSearch}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-            >
-              Search
-            </button>
-          </div>
-
-          {/* Category Filter */}
+        {/* Sticky Category Filter */}
+        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b">
           <CategoryScrollBar
             selected={selectedCategory}
             onSelect={handleCategoryChange}
@@ -617,29 +587,51 @@ const Shop = () => {
               setSearchParams(newParams);
             }}
           />
-
         </div>
 
-        {/* Search Controls */}
-        <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-          <SearchControls 
-            distance={filters.distance} 
-            setDistance={setters.setDistance} 
-            minRating={filters.minRating} 
-            setMinRating={setters.setMinRating} 
-            priceRange={filters.priceRange} 
-            setPriceRange={setters.setPriceRange} 
-            openNowOnly={filters.openNowOnly} 
-            setOpenNowOnly={setters.setOpenNowOnly} 
-            hiddenGemOnly={filters.hiddenGemOnly} 
-            setHiddenGemOnly={setters.setHiddenGemOnly} 
-            mustVisitOnly={filters.mustVisitOnly} 
-            setMustVisitOnly={setters.setMustVisitOnly} 
-            sortBy={filters.sortBy} 
-            onSortChange={handleSortChange} 
+        {/* Sticky Search Controls (Filter Bar) */}
+        <div className="sticky top-[120px] z-30 bg-background/95 backdrop-blur-sm border-b pb-2">
+          <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+            <SearchControls 
+              distance={filters.distance} 
+              setDistance={setters.setDistance} 
+              minRating={filters.minRating} 
+              setMinRating={setters.setMinRating} 
+              priceRange={filters.priceRange} 
+              setPriceRange={setters.setPriceRange} 
+              openNowOnly={filters.openNowOnly} 
+              setOpenNowOnly={setters.setOpenNowOnly} 
+              hiddenGemOnly={filters.hiddenGemOnly} 
+              setHiddenGemOnly={setters.setHiddenGemOnly} 
+              mustVisitOnly={filters.mustVisitOnly} 
+              setMustVisitOnly={setters.setMustVisitOnly} 
+              sortBy={filters.sortBy} 
+              onSortChange={handleSortChange} 
+            />
+          </Suspense>
+        </div>
+
+        {/* Location Filters - Moved below filter bar */}
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={selectedCity}
+            onChange={(e) => handleCityChange(e.target.value)}
+            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {cities.map(city => (
+              <option key={city} value={city}>{city}</option>
+            ))}
+          </select>
+          
+          <input
+            type="text"
+            placeholder="Postal Code"
+            value={postalCode}
+            onChange={(e) => handlePostalCodeChange(e.target.value)}
+            className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           />
-        </Suspense>
-        
+        </div>
+
         {/* Results Summary */}
         {!isLoading && (
           <div className="flex justify-between items-center text-sm text-muted-foreground">
