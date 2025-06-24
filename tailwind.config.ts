@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -20,14 +21,16 @@ export default {
 		extend: {
 			fontFamily: {
 				sans: [
-					'Inter',
 					'-apple-system',
 					'BlinkMacSystemFont',
-					'San Francisco',
 					'Segoe UI',
 					'Roboto',
 					'Helvetica Neue',
+					'Arial',
 					'sans-serif',
+					'Apple Color Emoji',
+					'Segoe UI Emoji',
+					'Segoe UI Symbol',
 				],
 			},
 			colors: {
