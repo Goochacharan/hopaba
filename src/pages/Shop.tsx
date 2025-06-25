@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -551,8 +550,8 @@ const Shop = () => {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        {/* Sticky Header Section - Positioned below MainLayout header */}
-        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
+        {/* Sticky Header Section - All bars grouped together */}
+        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
           {/* City and Pin Code Filters */}
           <div className="grid grid-cols-2 gap-2">
             <select
