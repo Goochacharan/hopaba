@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -138,7 +139,7 @@ const Shop = () => {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(subcategoryParam ? [subcategoryParam] : []);
   const [searchTerm, setSearchTerm] = useState<string>(searchQuery);
   const [inputValue, setInputValue] = useState<string>(searchQuery);
-  const [selectedCity, setSelectedCity] = useState<string>(cityParam);
+  const [filterSelectedCity, setFilterSelectedCity] = useState<string>(cityParam);
   const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
   const [currentPage, setCurrentPage] = useState<number>(pageParam);
 
@@ -147,11 +148,11 @@ const Shop = () => {
 
   // Debounce search inputs for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const debouncedCity = useDebounce(selectedCity, 200);
+  const debouncedCity = useDebounce(filterSelectedCity, 200);
   const debouncedPostalCode = useDebounce(postalCode, 200);
 
   // Location context
-  const { userLocation, selectedCity, isLocationEnabled } = useLocation();
+  const { userLocation, selectedCity: contextSelectedCity, isLocationEnabled } = useLocation();
 
   // Distance caching
   const { calculateDistancesForBusinesses } = useDistanceCache();
@@ -498,7 +499,7 @@ const Shop = () => {
 
   // Handle city change
   const handleCityChange = useCallback((city: string) => {
-    setSelectedCity(city);
+    setFilterSelectedCity(city);
     setCurrentPage(1); // Reset to first page
     const newParams = new URLSearchParams(searchParams);
     if (city !== 'All Cities') {
@@ -552,11 +553,11 @@ const Shop = () => {
     if (isLocationEnabled && userLocation) {
       return 'Current Location';
     }
-    if (selectedCity) {
-      return selectedCity;
+    if (contextSelectedCity) {
+      return contextSelectedCity;
     }
     return 'Location not set';
-  }, [isLocationEnabled, userLocation, selectedCity]);
+  }, [isLocationEnabled, userLocation, contextSelectedCity]);
 
   return (
     <MainLayout>
@@ -591,7 +592,7 @@ const Shop = () => {
           {/* City and Pin Code Filters */}
           <div className="grid grid-cols-2 gap-2">
             <select
-              value={selectedCity}
+              value={filterSelectedCity}
               onChange={(e) => handleCityChange(e.target.value)}
               className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             >
