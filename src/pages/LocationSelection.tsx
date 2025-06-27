@@ -16,7 +16,7 @@ const CITIES = [
 
 const LocationSelection = () => {
   const navigate = useNavigate();
-  const { enableLocation, isCalculatingLocation, setSelectedCity, hasLocationPreference } = useLocation();
+  const { enableLocation, isCalculatingLocation, setSelectedCity, hasLocationPreference, locationDisplayName } = useLocation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingCity, setIsLoadingCity] = useState(false);
@@ -76,6 +76,27 @@ const LocationSelection = () => {
     }
   };
 
+  // Get the display text for current location button
+  const getCurrentLocationText = () => {
+    if (isCalculatingLocation) {
+      return 'Getting Location...';
+    }
+    if (locationDisplayName) {
+      return locationDisplayName;
+    }
+    return 'Use your current location';
+  };
+
+  const getCurrentLocationDescription = () => {
+    if (isCalculatingLocation) {
+      return 'Please wait...';
+    }
+    if (locationDisplayName) {
+      return 'Current location detected';
+    }
+    return 'Enable location to find nearby services';
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -121,10 +142,10 @@ const LocationSelection = () => {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-amber-700">
-                    {isCalculatingLocation ? 'Getting Location...' : 'Use your current location'}
+                    {getCurrentLocationText()}
                   </p>
                   <p className="text-sm text-amber-600">
-                    Enable location to find nearby services
+                    {getCurrentLocationDescription()}
                   </p>
                 </div>
               </div>
