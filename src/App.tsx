@@ -1,14 +1,16 @@
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/hooks/useAuth';
-import { LocationProvider } from '@/contexts/LocationContext';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { LocationProvider, useLocation } from '@/contexts/LocationContext';
 import { queryClient } from '@/lib/queryClient';
 import { lazy, Suspense } from 'react';
 import LoadingScreen from '@/components/LoadingScreen';
 
 // Lazy load pages for better performance
+const Welcome = lazy(() => import('@/pages/Welcome'));
+const LocationSelection = lazy(() => import('@/pages/LocationSelection'));
 const Shop = lazy(() => import('@/pages/Shop'));
 const SearchResults = lazy(() => import('@/pages/SearchResults'));
 const BusinessDetails = lazy(() => import('@/pages/BusinessDetails'));
@@ -31,7 +33,67 @@ const AdminPanel = lazy(() => import('@/pages/AdminPanel'));
 const Map = lazy(() => import('@/pages/Map'));
 const DistanceDemo = lazy(() => import('@/pages/DistanceDemo'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
+const TermsConditions = lazy(() => import('@/pages/TermsConditions'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const { hasLocationPreference } = useLocation();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
+    return <Navigate to="/welcome" replace />;
+  }
+
+  if (!hasLocationPreference) {
+    return <Navigate to="/location-selection" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Auth Route Component (for login/signup when already authenticated)
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const { hasLocationPreference } = useLocation();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (user) {
+    if (!hasLocationPreference) {
+      return <Navigate to="/location-selection" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Location Route Component (for location selection)
+const LocationRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  const { hasLocationPreference } = useLocation();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
+    return <Navigate to="/welcome" replace />;
+  }
+
+  if (hasLocationPreference) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
   return (
@@ -42,29 +104,133 @@ function App() {
             <div className="App">
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
-                  <Route path="/" element={<Shop />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/search" element={<SearchResults />} />
-                  <Route path="/business/:id" element={<BusinessDetails />} />
-                  <Route path="/seller/:id" element={<SellerDetails />} />
-                  <Route path="/listing/:id" element={<MarketplaceListingDetails />} />
-                  <Route path="/location/:id" element={<LocationDetails />} />
-                  <Route path="/messages/:id?" element={<Messages />} />
-                  <Route path="/messages-listing" element={<MessagesListing />} />
-                  <Route path="/inbox" element={<Inbox />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/post-request" element={<PostRequest />} />
-                  <Route path="/requests" element={<Requests />} />
-                  <Route path="/request/:id" element={<RequestDetail />} />
-                  <Route path="/service-requests" element={<ServiceRequests />} />
-                  <Route path="/provider-requests" element={<ProviderRequests />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/map" element={<Map />} />
-                  <Route path="/distance-demo" element={<DistanceDemo />} />
+                  {/* Welcome page for unauthenticated users */}
+                  <Route path="/welcome" element={<Welcome />} />
+                  
+                  {/* Auth routes */}
+                  <Route path="/login" element={
+                    <AuthRoute>
+                      <Login />
+                    </AuthRoute>
+                  } />
+                  <Route path="/signup" element={
+                    <AuthRoute>
+                      <Signup />
+                    </AuthRoute>
+                  } />
+                  
+                  {/* Location selection for authenticated users without location */}
+                  <Route path="/location-selection" element={
+                    <LocationRoute>
+                      <LocationSelection />
+                    </LocationRoute>
+                  } />
+                  
+                  {/* Protected routes - require auth and location */}
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <Shop />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/shop" element={
+                    <ProtectedRoute>
+                      <Shop />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/search" element={
+                    <ProtectedRoute>
+                      <SearchResults />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/business/:id" element={
+                    <ProtectedRoute>
+                      <BusinessDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/seller/:id" element={
+                    <ProtectedRoute>
+                      <SellerDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/listing/:id" element={
+                    <ProtectedRoute>
+                      <MarketplaceListingDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/location/:id" element={
+                    <ProtectedRoute>
+                      <LocationDetails />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/messages/:id?" element={
+                    <ProtectedRoute>
+                      <Messages />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/messages-listing" element={
+                    <ProtectedRoute>
+                      <MessagesListing />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inbox" element={
+                    <ProtectedRoute>
+                      <Inbox />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/post-request" element={
+                    <ProtectedRoute>
+                      <PostRequest />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/requests" element={
+                    <ProtectedRoute>
+                      <Requests />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/request/:id" element={
+                    <ProtectedRoute>
+                      <RequestDetail />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/service-requests" element={
+                    <ProtectedRoute>
+                      <ServiceRequests />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/provider-requests" element={
+                    <ProtectedRoute>
+                      <ProviderRequests />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <ProtectedRoute>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/map" element={
+                    <ProtectedRoute>
+                      <Map />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/distance-demo" element={
+                    <ProtectedRoute>
+                      <DistanceDemo />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Public routes */}
                   <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                  <Route path="/terms-conditions" element={<TermsConditions />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { distanceService } from '@/services/distanceService';
 import { useToast } from '@/hooks/use-toast';
@@ -11,10 +12,12 @@ interface LocationContextType {
   userLocation: Location | null;
   isLocationEnabled: boolean;
   isCalculatingLocation: boolean;
+  hasLocationPreference: boolean;
+  selectedCity: string | null;
   enableLocation: () => Promise<void>;
   disableLocation: () => void;
   calculateDistance: (targetLocation: Location) => number | null;
-
+  setSelectedCity: (city: string) => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -35,37 +38,43 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
   const [userLocation, setUserLocation] = useState<Location | null>(null);
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isCalculatingLocation, setIsCalculatingLocation] = useState(false);
+  const [selectedCity, setSelectedCityState] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Check if user has any location preference (GPS or city)
+  const hasLocationPreference = isLocationEnabled || selectedCity !== null;
 
   // Load location state from localStorage on mount
   useEffect(() => {
     try {
       const savedLocationEnabled = localStorage.getItem('locationEnabled');
       const savedUserLocation = localStorage.getItem('userLocation');
+      const savedSelectedCity = localStorage.getItem('selectedCity');
       
       if (savedLocationEnabled === 'true') {
         console.log('📍 Location was previously enabled, restoring state');
         
         if (savedUserLocation) {
           const location = JSON.parse(savedUserLocation);
-          // Set both location and enabled state in a single batch
           setUserLocation(location);
           setIsLocationEnabled(true);
           console.log('✅ Restored user location from storage:', location);
         } else {
-          // Only set enabled state if no location data
           setIsLocationEnabled(true);
         }
       }
+
+      if (savedSelectedCity) {
+        setSelectedCityState(savedSelectedCity);
+        console.log('✅ Restored selected city from storage:', savedSelectedCity);
+      }
     } catch (error) {
       console.error('❌ Failed to restore location state from localStorage:', error);
-      // Clear corrupted data
       localStorage.removeItem('locationEnabled');
       localStorage.removeItem('userLocation');
+      localStorage.removeItem('selectedCity');
     }
   }, []);
-  
-
 
   const enableLocation = async () => {
     if (!navigator.geolocation) {
@@ -83,7 +92,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
           { 
             enableHighAccuracy: true, 
             timeout: 10000, 
-            maximumAge: 5 * 60 * 1000 // Cache for 5 minutes
+            maximumAge: 5 * 60 * 1000
           }
         );
       });
@@ -96,7 +105,10 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       setUserLocation(location);
       setIsLocationEnabled(true);
       
-      // Save to localStorage
+      // Clear city selection when GPS is enabled
+      setSelectedCityState(null);
+      localStorage.removeItem('selectedCity');
+      
       localStorage.setItem('locationEnabled', 'true');
       localStorage.setItem('userLocation', JSON.stringify(location));
       
@@ -105,7 +117,6 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       console.error('❌ Failed to get user location:', error);
       setIsLocationEnabled(false);
       
-      // Clear localStorage on error
       localStorage.removeItem('locationEnabled');
       localStorage.removeItem('userLocation');
     } finally {
@@ -117,11 +128,22 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
     setUserLocation(null);
     setIsLocationEnabled(false);
     
-    // Remove from localStorage
     localStorage.removeItem('locationEnabled');
     localStorage.removeItem('userLocation');
     
     console.log('🔒 Location disabled and cleared from storage');
+  };
+
+  const setSelectedCity = (city: string) => {
+    setSelectedCityState(city);
+    localStorage.setItem('selectedCity', city);
+    
+    // Clear GPS location when city is selected
+    if (isLocationEnabled) {
+      disableLocation();
+    }
+    
+    console.log('🏙️ Selected city set:', city);
   };
 
   const calculateDistance = (targetLocation: Location): number | null => {
@@ -129,15 +151,16 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
     return distanceService.calculateStraightLineDistance(userLocation, targetLocation);
   };
 
-
-
   const value: LocationContextType = {
     userLocation,
     isLocationEnabled,
     isCalculatingLocation,
+    hasLocationPreference,
+    selectedCity,
     enableLocation,
     disableLocation,
-    calculateDistance
+    calculateDistance,
+    setSelectedCity
   };
 
   return (
@@ -145,4 +168,4 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       {children}
     </LocationContext.Provider>
   );
-}; 
+};

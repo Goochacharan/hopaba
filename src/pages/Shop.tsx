@@ -4,7 +4,7 @@ import CategoryScrollBar from '@/components/business/CategoryScrollBar';
 import { useBusinessesOptimized, useBusinessesCount } from '@/hooks/useBusinessesOptimized';
 import { useBusinessReviewsAggregated } from '@/hooks/useBusinessReviewsAggregated';
 import { calculateOverallRating } from '@/utils/ratingUtils';
-import { Loader2, Search, FilterX, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Search, FilterX, X, ChevronLeft, ChevronRight, MapPin, Navigation } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -151,7 +151,7 @@ const Shop = () => {
   const debouncedPostalCode = useDebounce(postalCode, 200);
 
   // Location context
-  const { userLocation } = useLocation();
+  const { userLocation, selectedCity, isLocationEnabled } = useLocation();
 
   // Distance caching
   const { calculateDistancesForBusinesses } = useDistanceCache();
@@ -547,11 +547,47 @@ const Shop = () => {
     'All Cities', 'Bengaluru', 'Mumbai', 'Delhi', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'
   ], []);
 
+  // Get display location for the header
+  const displayLocation = useMemo(() => {
+    if (isLocationEnabled && userLocation) {
+      return 'Current Location';
+    }
+    if (selectedCity) {
+      return selectedCity;
+    }
+    return 'Location not set';
+  }, [isLocationEnabled, userLocation, selectedCity]);
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
+        {/* Location Display Header - NEW */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2">
+              {isLocationEnabled ? (
+                <Navigation className="h-5 w-5 text-amber-600" />
+              ) : (
+                <MapPin className="h-5 w-5 text-amber-600" />
+              )}
+              <div>
+                <p className="text-sm text-amber-700">Searching in</p>
+                <p className="font-semibold text-amber-900">{displayLocation}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/location-selection')}
+              className="border-amber-300 text-amber-700 hover:bg-amber-100"
+            >
+              Change
+            </Button>
+          </div>
+        </div>
+
         {/* Sticky Header Section - All bars grouped together */}
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
+        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
           {/* City and Pin Code Filters */}
           <div className="grid grid-cols-2 gap-2">
             <select
