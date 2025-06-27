@@ -34,7 +34,11 @@ const LocationSelection = () => {
         description: "Using your current location for nearby results"
       });
       // Navigate back to shop or previous page
-      navigate(hasLocationPreference ? -1 : '/');
+      if (hasLocationPreference) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       toast({
         title: "Location access failed",
@@ -54,7 +58,11 @@ const LocationSelection = () => {
         description: `Using ${city} for your search`
       });
       // Navigate back to shop or previous page
-      navigate(hasLocationPreference ? -1 : '/');
+      if (hasLocationPreference) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
       setIsLoadingCity(false);
     }, 1000);
   };
