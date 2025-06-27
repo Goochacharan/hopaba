@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import MainLayout from '@/components/MainLayout';
 import CategoryScrollBar from '@/components/business/CategoryScrollBar';
@@ -152,7 +151,7 @@ const Shop = () => {
   const debouncedPostalCode = useDebounce(postalCode, 200);
 
   // Location context
-  const { userLocation, selectedCity: contextSelectedCity, isLocationEnabled } = useLocation();
+  const { userLocation, selectedCity: contextSelectedCity, isLocationEnabled, locationDisplayName } = useLocation();
 
   // Distance caching
   const { calculateDistancesForBusinesses } = useDistanceCache();
@@ -550,6 +549,9 @@ const Shop = () => {
 
   // Get display location for the header
   const displayLocation = useMemo(() => {
+    if (locationDisplayName) {
+      return locationDisplayName;
+    }
     if (isLocationEnabled && userLocation) {
       return 'Current Location';
     }
@@ -557,12 +559,12 @@ const Shop = () => {
       return contextSelectedCity;
     }
     return 'Location not set';
-  }, [isLocationEnabled, userLocation, contextSelectedCity]);
+  }, [isLocationEnabled, userLocation, contextSelectedCity, locationDisplayName]);
 
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        {/* Location Display Header - NEW */}
+        {/* Location Display Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
             <div className="flex items-center gap-2">

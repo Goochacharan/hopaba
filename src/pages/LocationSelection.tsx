@@ -15,9 +15,9 @@ const CITIES = [
 
 const LocationSelection = () => {
   const navigate = useNavigate();
-  const { enableLocation, isCalculatingLocation } = useLocation();
+  const { enableLocation, isCalculatingLocation, setSelectedCity } = useLocation();
   const { toast } = useToast();
-  const [selectedCity, setSelectedCity] = useState<string>('');
+  const [selectedCityOption, setSelectedCityOption] = useState<string>('');
   const [isLoadingCity, setIsLoadingCity] = useState(false);
 
   const handleCurrentLocation = async () => {
@@ -38,15 +38,15 @@ const LocationSelection = () => {
   };
 
   const handleCitySelection = async () => {
-    if (!selectedCity) return;
+    if (!selectedCityOption) return;
     
     setIsLoadingCity(true);
     // Simulate saving city preference
     setTimeout(() => {
-      localStorage.setItem('selectedCity', selectedCity);
+      setSelectedCity(selectedCityOption);
       toast({
         title: "Location set",
-        description: `Using ${selectedCity} for your search`
+        description: `Using ${selectedCityOption} for your search`
       });
       navigate('/');
       setIsLoadingCity(false);
@@ -89,7 +89,7 @@ const LocationSelection = () => {
 
             {/* City Selection */}
             <div className="space-y-3">
-              <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <Select value={selectedCityOption} onValueChange={setSelectedCityOption}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a city" />
                 </SelectTrigger>
@@ -102,7 +102,7 @@ const LocationSelection = () => {
 
               <Button 
                 onClick={handleCitySelection}
-                disabled={!selectedCity || isLoadingCity}
+                disabled={!selectedCityOption || isLoadingCity}
                 variant="outline" 
                 className="w-full border-amber-600 text-amber-600 hover:bg-amber-50 py-3 text-lg"
               >
