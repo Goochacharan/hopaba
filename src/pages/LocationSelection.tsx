@@ -2,23 +2,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { MapPin, Navigation, ArrowLeft, Search, Loader2 } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const CITIES = [
   'Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Ahmedabad', 
-  'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur'
+  'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur',
+  'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Bhopal'
 ];
 
 const LocationSelection = () => {
   const navigate = useNavigate();
-  const { enableLocation, isCalculatingLocation, setSelectedCity } = useLocation();
+  const { enableLocation, isCalculatingLocation, setSelectedCity, hasLocationPreference } = useLocation();
   const { toast } = useToast();
-  const [selectedCityOption, setSelectedCityOption] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoadingCity, setIsLoadingCity] = useState(false);
+
+  // Filter cities based on search term
+  const filteredCities = CITIES.filter(city => 
+    city.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleCurrentLocation = async () => {
     try {
@@ -27,7 +33,8 @@ const LocationSelection = () => {
         title: "Location detected",
         description: "Using your current location for nearby results"
       });
-      navigate('/');
+      // Navigate back to shop or previous page
+      navigate(hasLocationPreference ? -1 : '/');
     } catch (error) {
       toast({
         title: "Location access failed",
@@ -37,83 +44,120 @@ const LocationSelection = () => {
     }
   };
 
-  const handleCitySelection = async () => {
-    if (!selectedCityOption) return;
-    
+  const handleCitySelection = async (city: string) => {
     setIsLoadingCity(true);
     // Simulate saving city preference
     setTimeout(() => {
-      setSelectedCity(selectedCityOption);
+      setSelectedCity(city);
       toast({
         title: "Location set",
-        description: `Using ${selectedCityOption} for your search`
+        description: `Using ${city} for your search`
       });
-      navigate('/');
+      // Navigate back to shop or previous page
+      navigate(hasLocationPreference ? -1 : '/');
       setIsLoadingCity(false);
     }, 1000);
   };
 
+  const handleBack = () => {
+    if (hasLocationPreference) {
+      navigate(-1); // Go back to previous page
+    } else {
+      // If no location is set, can't go back to shop
+      navigate('/welcome');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MapPin className="h-8 w-8 text-amber-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-amber-900 mb-2">Choose Your Location</h1>
-          <p className="text-amber-700">Help us find the best services near you</p>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center">
+        <button 
+          onClick={handleBack}
+          className="mr-3 p-2 hover:bg-gray-100 rounded-full"
+        >
+          <ArrowLeft className="h-5 w-5 text-gray-600" />
+        </button>
+        <h1 className="text-lg font-semibold text-gray-900">Select Location</h1>
+      </div>
+
+      <div className="px-4 py-6">
+        {/* Search Input */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search for area, street name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-12 text-base border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+          />
         </div>
 
-        {/* Location Options */}
-        <Card className="shadow-lg border-amber-200">
-          <CardHeader>
-            <CardTitle className="text-center text-amber-900">Location Options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Current Location */}
-            <Button 
-              onClick={handleCurrentLocation} 
+        {/* Current Location Option */}
+        <Card className="mb-4 border-amber-200">
+          <CardContent className="p-0">
+            <Button
+              onClick={handleCurrentLocation}
               disabled={isCalculatingLocation}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg flex items-center justify-center gap-2"
+              variant="ghost"
+              className="w-full h-auto p-4 justify-start text-left hover:bg-amber-50"
             >
-              {isCalculatingLocation ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Navigation className="h-5 w-5" />
-              )}
-              {isCalculatingLocation ? 'Getting Location...' : 'Use Current Location'}
+              <div className="flex items-center w-full">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-3">
+                  {isCalculatingLocation ? (
+                    <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+                  ) : (
+                    <Navigation className="h-5 w-5 text-amber-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-amber-700">
+                    {isCalculatingLocation ? 'Getting Location...' : 'Use your current location'}
+                  </p>
+                  <p className="text-sm text-amber-600">
+                    Enable location to find nearby services
+                  </p>
+                </div>
+              </div>
             </Button>
-
-            <div className="text-center text-gray-500 text-sm">or</div>
-
-            {/* City Selection */}
-            <div className="space-y-3">
-              <Select value={selectedCityOption} onValueChange={setSelectedCityOption}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a city" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CITIES.map(city => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button 
-                onClick={handleCitySelection}
-                disabled={!selectedCityOption || isLoadingCity}
-                variant="outline" 
-                className="w-full border-amber-600 text-amber-600 hover:bg-amber-50 py-3 text-lg"
-              >
-                {isLoadingCity ? (
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                ) : null}
-                {isLoadingCity ? 'Setting Location...' : 'Continue with Selected City'}
-              </Button>
-            </div>
           </CardContent>
         </Card>
+
+        {/* City List */}
+        <div className="space-y-1">
+          {filteredCities.map((city) => (
+            <Card key={city} className="border-gray-200">
+              <CardContent className="p-0">
+                <Button
+                  onClick={() => handleCitySelection(city)}
+                  disabled={isLoadingCity}
+                  variant="ghost"
+                  className="w-full h-auto p-4 justify-start text-left hover:bg-gray-50"
+                >
+                  <div className="flex items-center w-full">
+                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                      <MapPin className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{city}</p>
+                    </div>
+                    {isLoadingCity && (
+                      <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                    )}
+                  </div>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* No results message */}
+        {searchTerm && filteredCities.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No cities found matching "{searchTerm}"</p>
+          </div>
+        )}
       </div>
     </div>
   );
