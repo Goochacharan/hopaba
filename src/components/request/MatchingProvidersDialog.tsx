@@ -30,7 +30,7 @@ interface MatchingProvider {
   contact_phone?: string;
   images?: string[];
   user_id?: string;
-  calculatedDistance?: number;
+  calculatedDistance?: number | null;
   rating?: number;
   reviewCount?: number;
   overallScore?: number;
@@ -99,8 +99,8 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     }
   }, []);
 
-  // Fetch the request details - using any to avoid deep inference
-  const { data: request } = useQuery({
+  // Fetch the request details - explicit any to avoid deep inference
+  const { data: request } = useQuery<any>({
     queryKey: ['serviceRequest', requestId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -115,8 +115,8 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     enabled: !!requestId,
   });
 
-  // Fetch matching providers - using any to avoid deep inference
-  const { data: providers = [], isLoading } = useQuery({
+  // Fetch matching providers - explicit any to avoid deep inference
+  const { data: providers = [], isLoading } = useQuery<any>({
     queryKey: ['matchingProviders', requestId, request?.category, request?.subcategory, request?.city],
     queryFn: async () => {
       if (!request) return [];
@@ -141,7 +141,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       if (error) throw error;
 
       // Fetch reviews for all providers
-      const providerIds = data?.map(p => p.id) || [];
+      const providerIds = data?.map((p: any) => p.id) || [];
       if (providerIds.length === 0) return [];
 
       const { data: reviewsData } = await supabase
@@ -151,22 +151,22 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
 
       const reviews = reviewsData || [];
 
-      // Process providers with rating data
-      const processedProviders = data.map(provider => {
-        const providerReviews = reviews.filter(r => r.business_id === provider.id);
+      // Process providers with rating data and ensure calculatedDistance is included
+      const processedProviders: MatchingProvider[] = data.map((provider: any) => {
+        const providerReviews = reviews.filter((r: any) => r.business_id === provider.id);
         
         let rating = 4.5; // Default rating
         let reviewCount = 0;
         let overallScore = 0;
         
         if (providerReviews.length > 0) {
-          rating = providerReviews.reduce((sum, review) => sum + review.rating, 0) / providerReviews.length;
+          rating = providerReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / providerReviews.length;
           reviewCount = providerReviews.length;
           
           // Calculate overall score using criteria ratings
           const aggregatedCriteriaRatings: Record<string, number[]> = {};
           
-          providerReviews.forEach(review => {
+          providerReviews.forEach((review: any) => {
             // Safely cast Json to our expected type
             const criteriaRatings = review.criteria_ratings as Record<string, number> | null;
             if (criteriaRatings && typeof criteriaRatings === 'object') {
@@ -195,8 +195,9 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
           ...provider,
           rating,
           reviewCount,
-          overallScore
-        };
+          overallScore,
+          calculatedDistance: null // Initialize calculatedDistance
+        } as MatchingProvider;
       });
 
       return processedProviders;
@@ -223,8 +224,8 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       try {
         // Prepare businesses data for distance calculation
         const businessesForDistanceCalc = providers
-          .filter(provider => provider.postal_code) // Only include providers with postal codes
-          .map(provider => ({
+          .filter((provider: MatchingProvider) => provider.postal_code) // Only include providers with postal codes
+          .map((provider: MatchingProvider) => ({
             id: provider.id,
             name: provider.name,
             postal_code: provider.postal_code,
@@ -245,7 +246,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
         });
 
         // Apply distances to providers
-        const providersWithDistanceData = providers.map(provider => ({
+        const providersWithDistanceData: MatchingProvider[] = providers.map((provider: MatchingProvider) => ({
           ...provider,
           calculatedDistance: distanceMap.get(provider.id) || null
         }));
@@ -273,9 +274,9 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
   }, [providers?.length, userLocation?.lat, userLocation?.lng, isLocationEnabled]);
 
   // Use providers with distance if available, otherwise use original providers
-  const displayProviders = isLocationEnabled && providersWithDistance.length > 0
+  const displayProviders: MatchingProvider[] = isLocationEnabled && providersWithDistance.length > 0
     ? providersWithDistance
-    : providers || [];
+    : (providers || []).map((p: any) => ({ ...p, calculatedDistance: null } as MatchingProvider));
 
   // Sort providers by distance if location is enabled, otherwise by rating
   const sortedProviders = useMemo(() => {
