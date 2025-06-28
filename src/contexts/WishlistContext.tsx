@@ -3,22 +3,19 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Recommendation } from '@/lib/mockData';
 import { MarketplaceListing } from '@/hooks/useMarketplaceListings';
 import { Event } from '@/hooks/types/recommendationTypes';
-import { Business } from '@/hooks/useBusinesses';
 import { useToast } from '@/hooks/use-toast';
 
 export type WishlistItem = 
   | (Recommendation & { type: 'location' })
   | (MarketplaceListing & { type: 'marketplace' })
-  | (Event & { type: 'event' })
-  | (Business & { type: 'business' });
+  | (Event & { type: 'event' });
 
 interface WishlistContextType {
   wishlist: WishlistItem[];
   addToWishlist: (item: WishlistItem) => void;
-  removeFromWishlist: (itemId: string, itemType: 'location' | 'marketplace' | 'event' | 'business') => void;
-  isInWishlist: (itemId: string, itemType?: 'location' | 'marketplace' | 'event' | 'business') => boolean;
+  removeFromWishlist: (itemId: string, itemType: 'location' | 'marketplace' | 'event') => void;
+  isInWishlist: (itemId: string, itemType?: 'location' | 'marketplace' | 'event') => boolean;
   toggleWishlist: (item: WishlistItem) => void;
-  getBusinessWishlist: () => (Business & { type: 'business' })[];
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -75,7 +72,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const removeFromWishlist = (itemId: string, itemType: 'location' | 'marketplace' | 'event' | 'business') => {
+  const removeFromWishlist = (itemId: string, itemType: 'location' | 'marketplace' | 'event') => {
     setWishlist(prev => {
       const filteredList = prev.filter(item => !(item.id === itemId && item.type === itemType));
       
@@ -104,37 +101,24 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const isInWishlist = (itemId: string, itemType?: 'location' | 'marketplace' | 'event' | 'business') => {
+  const isInWishlist = (itemId: string, itemType?: 'location' | 'marketplace' | 'event') => {
     if (itemType) {
       return wishlist.some(item => item.id === itemId && item.type === itemType);
     }
     return wishlist.some(item => item.id === itemId);
   };
 
-  const getBusinessWishlist = () => {
-    return wishlist.filter(item => item.type === 'business') as (Business & { type: 'business' })[];
-  };
-
   // Helper function to get the title/name from different item types
   const getItemTitle = (item: WishlistItem): string => {
     if (item.type === 'location') {
       return (item as Recommendation & { type: 'location' }).name;
-    } else if (item.type === 'business') {
-      return (item as Business & { type: 'business' }).name;
     } else {
       return (item as (MarketplaceListing | Event) & { type: 'marketplace' | 'event' }).title;
     }
   };
 
   return (
-    <WishlistContext.Provider value={{ 
-      wishlist, 
-      addToWishlist, 
-      removeFromWishlist, 
-      isInWishlist, 
-      toggleWishlist, 
-      getBusinessWishlist 
-    }}>
+    <WishlistContext.Provider value={{ wishlist, addToWishlist, removeFromWishlist, isInWishlist, toggleWishlist }}>
       {children}
     </WishlistContext.Provider>
   );

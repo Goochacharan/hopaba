@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film, Navigation, Heart } from 'lucide-react';
+import { MapPin, Clock, Languages, Star, Globe, Instagram, Mail, Film, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Business } from '@/hooks/useBusinesses';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,6 @@ import StarRating from '@/components/marketplace/StarRating';
 import { useToast } from '@/hooks/use-toast';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { useLocation } from '@/contexts/LocationContext';
-import { useWishlist } from '@/contexts/WishlistContext';
 
 interface BusinessCardPublicProps {
   business: Business & {
@@ -29,7 +27,6 @@ interface BusinessCardPublicProps {
 const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, className }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isInWishlist, toggleWishlist } = useWishlist();
   
   // Use global location context only for checking if location is enabled
   const { isLocationEnabled } = useLocation();
@@ -43,9 +40,6 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
     averageCriteriaRatings,
     totalReviews
   } = useBusinessReviews(business.id || '');
-  
-  // Check if business is in wishlist
-  const isBusinessInWishlist = isInWishlist(business.id || '', 'business');
   
   // Memoize expensive calculations
   const formattedPrice = useMemo(() => {
@@ -103,16 +97,6 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
     }
   }, [business.instagram, business.name, toast]);
 
-  // Handle wishlist toggle
-  const handleWishlistClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const businessWishlistItem = {
-      ...business,
-      type: 'business' as const
-    };
-    toggleWishlist(businessWishlistItem);
-  };
-
   // Memoize image source and alt text
   const imageProps = useMemo(() => ({
     src: business.images && business.images.length > 0 ? business.images[0] : null,
@@ -139,15 +123,11 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
             <p className="text-muted-foreground">No image available</p>
           </div>
         )}
-        
-        {/* Category Badge */}
         <div className="absolute top-2 right-2">
           <Badge variant="default" className="bg-primary/90">
             {business.category}
           </Badge>
         </div>
-        
-        {/* Subcategory Badge */}
         {business.subcategory && (
           <div className="absolute top-2 left-2">
             <Badge variant="outline" className="bg-background/90 border-primary/40">
@@ -155,20 +135,6 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
             </Badge>
           </div>
         )}
-        
-        {/* Wishlist Heart Icon */}
-        <button
-          onClick={handleWishlistClick}
-          className="absolute top-2 right-14 p-1.5 rounded-full bg-white/90 hover:bg-white transition-colors shadow-sm"
-          title={isBusinessInWishlist ? "Remove from wishlist" : "Add to wishlist"}
-        >
-          <Heart 
-            className={`h-4 w-4 transition-colors ${isBusinessInWishlist 
-              ? 'fill-red-500 text-red-500' 
-              : 'text-gray-600 hover:text-red-500'
-            }`} 
-          />
-        </button>
       </div>
       
       <CardContent className="p-5 space-y-3">
