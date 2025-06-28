@@ -9,7 +9,7 @@ export type BusinessWishlistItem = {
   id: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string | string[];
   area?: string;
   city?: string;
   images?: string[];

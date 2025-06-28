@@ -49,7 +49,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
     id: business.id || '',
     name: business.name,
     category: business.category,
-    subcategory: business.subcategory,
+    subcategory: Array.isArray(business.subcategory) ? business.subcategory.join(', ') : business.subcategory,
     area: business.area,
     city: business.city,
     images: business.images,
@@ -173,7 +173,7 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
         {business.subcategory && (
           <div className="absolute top-12 right-2">
             <Badge variant="outline" className="bg-background/90 border-primary/40">
-              {business.subcategory}
+              {Array.isArray(business.subcategory) ? business.subcategory.join(', ') : business.subcategory}
             </Badge>
           </div>
         )}

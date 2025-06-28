@@ -19,12 +19,13 @@ import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
 import { useWishlist, BusinessWishlistItem } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MatchingProvider {
   id: string;
   name: string;
   category: string;
-  subcategory?: string;
+  subcategory?: string | string[];
   area?: string;
   city?: string;
   postal_code?: string;
@@ -59,6 +60,7 @@ const ProviderLanguages: React.FC<ProviderLanguagesProps> = ({ providerId }) => 
 export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requestId }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { isLocationEnabled, userLocation } = useLocation();
   const { calculateDistancesForBusinesses } = useDistanceCache();
   const { isUserOnline } = usePresence('general');
@@ -98,7 +100,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
 
       // Add subcategory filter if specified
       if (request.subcategory) {
-        query = query.eq('subcategory', request.subcategory);
+        query = query.contains('subcategory', [request.subcategory]);
       }
 
       // Add city filter if specified
@@ -274,6 +276,15 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
   };
 
   const handleSendMessage = async (providerId: string, providerName: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to send messages",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Create or get existing conversation
       const { data: existingConversation } = await supabase
@@ -294,7 +305,8 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
           .from('conversations')
           .insert({
             request_id: requestId,
-            provider_id: providerId
+            provider_id: providerId,
+            user_id: user.id
           })
           .select('id')
           .single();
@@ -443,7 +455,9 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
                     <div className="flex items-center justify-between">
                       <Badge variant="outline">{provider.category}</Badge>
                       {provider.subcategory && (
-                        <Badge variant="secondary">{provider.subcategory}</Badge>
+                        <Badge variant="secondary">
+                          {Array.isArray(provider.subcategory) ? provider.subcategory.join(', ') : provider.subcategory}
+                        </Badge>
                       )}
                     </div>
                     
