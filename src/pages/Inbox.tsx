@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Trash2 } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Trash2, Heart } from 'lucide-react';
 import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ import { OnlineIndicator } from '@/components/ui/online-indicator';
 import ChatDialog from '@/components/messaging/ChatDialog';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useWishlist, BusinessWishlistItem } from '@/contexts/WishlistContext';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -88,6 +89,7 @@ const Inbox: React.FC = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
+  const { isInWishlist, toggleWishlist } = useWishlist();
   
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
@@ -208,8 +210,6 @@ const Inbox: React.FC = () => {
     
     return counts;
   }, [userRequests, conversations, allConversationUnreadCounts]);
-  
-
 
   // Fetch enhanced provider details for conversations
   const { data: enhancedProviderDetails = {} } = useQuery({
@@ -598,6 +598,25 @@ const Inbox: React.FC = () => {
     }
   };
 
+  // Handle wishlist toggle for provider cards
+  const handleProviderWishlistToggle = (conversation: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const providerDetails = enhancedProviderDetails[conversation.provider_id];
+    
+    const businessWishlistItem: BusinessWishlistItem = {
+      id: conversation.provider_id,
+      name: conversation.service_providers?.name || 'Unknown Provider',
+      category: 'Service Provider', // Default category for service providers
+      area: providerDetails?.area,
+      city: providerDetails?.city,
+      images: providerDetails?.images,
+      contact_phone: providerDetails?.contact_phone,
+      type: 'business'
+    };
+    
+    toggleWishlist(businessWishlistItem);
+  };
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-background">
@@ -804,6 +823,7 @@ const Inbox: React.FC = () => {
                             const unreadCount = conversationUnreadCounts[conversation.id] || 0;
                             const providerDetails = enhancedProviderDetails[conversation.provider_id];
                             const isProviderOnline = isUserOnline(conversation.service_providers?.user_id);
+                            const isProviderInWishlist = isInWishlist(conversation.provider_id, 'business');
                             
                             return (
                               <Card key={conversation.id} className={cn(
@@ -852,13 +872,30 @@ const Inbox: React.FC = () => {
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
-                                    {/* Shop Images Carousel */}
+                                    {/* Shop Images Carousel with Wishlist Heart */}
                                     {providerDetails && (
-                                      <ProviderImageCarousel 
-                                        images={providerDetails.images || []}
-                                        providerName={conversation.service_providers.name || "Service Provider"}
-                                        className="mb-3"
-                                      />
+                                      <div className="relative">
+                                        <ProviderImageCarousel 
+                                          images={providerDetails.images || []}
+                                          providerName={conversation.service_providers.name || "Service Provider"}
+                                          className="mb-3"
+                                        />
+                                        {/* Wishlist Heart Icon Overlay */}
+                                        <button
+                                          onClick={(e) => handleProviderWishlistToggle(conversation, e)}
+                                          className="absolute top-2 left-2 z-20 p-1.5 rounded-full bg-white/90 hover:bg-white transition-all shadow-sm"
+                                          aria-label={isProviderInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                                        >
+                                          <Heart
+                                            className={cn(
+                                              "h-5 w-5 transition-colors",
+                                              isProviderInWishlist
+                                                ? "fill-red-500 text-red-500"
+                                                : "text-gray-600 hover:text-red-500"
+                                            )}
+                                          />
+                                        </button>
+                                      </div>
                                     )}
                                     
                                     {/* Address Information - single display */}
