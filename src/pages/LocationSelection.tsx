@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -37,12 +36,8 @@ const LocationSelection = () => {
         title: "Location detected",
         description: "Using your current location for nearby results"
       });
-      // Navigate back to shop or previous page
-      if (hasLocationPreference) {
-        navigate(-1);
-      } else {
-        navigate('/');
-      }
+      // Always navigate to main shop page after successful location selection
+      navigate('/');
     } catch (error) {
       toast({
         title: "Location access failed",
@@ -61,12 +56,8 @@ const LocationSelection = () => {
         title: "Location set",
         description: `Using ${city} for your search`
       });
-      // Navigate back to shop or previous page
-      if (hasLocationPreference) {
-        navigate(-1);
-      } else {
-        navigate('/');
-      }
+      // Always navigate to main shop page after successful location selection
+      navigate('/');
       setIsLoadingCity(false);
     }, 1000);
   };
@@ -99,12 +90,8 @@ const LocationSelection = () => {
         title: "Location set",
         description: `Using PIN ${pinCode} for your search`
       });
-      // Navigate back to shop or previous page
-      if (hasLocationPreference) {
-        navigate(-1);
-      } else {
-        navigate('/');
-      }
+      // Always navigate to main shop page after successful location selection
+      navigate('/');
       setIsLoadingPinCode(false);
     }, 1000);
   };
