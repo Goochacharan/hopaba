@@ -525,34 +525,34 @@ const Shop = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-6">
-        {/* Location Display Header */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+      <div className="container mx-auto px-4 py-4">
+        {/* Location Display Header - Made more compact */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             <div className="flex items-center gap-2">
               {isLocationEnabled ? (
-                <Navigation className="h-5 w-5 text-amber-600" />
+                <Navigation className="h-4 w-4 text-amber-600" />
               ) : (
-                <MapPin className="h-5 w-5 text-amber-600" />
+                <MapPin className="h-4 w-4 text-amber-600" />
               )}
               <div>
-                <p className="text-sm text-amber-700">Searching in</p>
-                <p className="font-semibold text-amber-900">{displayLocation}</p>
+                <p className="text-xs text-amber-700">Searching in</p>
+                <p className="text-sm font-semibold text-amber-900">{displayLocation}</p>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/location-selection')}
-              className="border-amber-300 text-amber-700 hover:bg-amber-100"
+              className="border-amber-300 text-amber-700 hover:bg-amber-100 h-8 px-3 text-xs"
             >
               Change
             </Button>
           </div>
         </div>
 
-        {/* Search Bar - moved to be right after location header */}
-        <div className="mb-4">
+        {/* Search Bar - Made more compact */}
+        <div className="mb-3">
           <div className="flex gap-2">
             <input
               type="text"
@@ -560,19 +560,19 @@ const Shop = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+              className="px-4 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90"
             >
               Search
             </button>
           </div>
         </div>
 
-        {/* Sticky Header Section - Category and Filter bars only */}
-        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
+        {/* Sticky Header Section - Made more compact */}
+        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-1 mb-4">
           {/* Category Filter */}
           <div className="border-b">
             <CategoryScrollBar
@@ -595,8 +595,8 @@ const Shop = () => {
           </div>
 
           {/* Filter Bar */}
-          <div className="border-b pb-2">
-            <Suspense fallback={<Skeleton className="h-20 w-full" />}>
+          <div className="border-b pb-1">
+            <Suspense fallback={<Skeleton className="h-16 w-full" />}>
               <SearchControls 
                 distance={filters.distance} 
                 setDistance={setters.setDistance} 
