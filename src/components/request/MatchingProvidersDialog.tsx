@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,13 @@ interface MatchingProvider {
   rating?: number;
   reviewCount?: number;
   overallScore?: number;
+}
+
+// Simple review interface to avoid complex type inference
+interface SimpleReview {
+  business_id: string;
+  rating: number;
+  criteria_ratings: Record<string, number> | null;
 }
 
 // Local type definition to avoid circular dependency
@@ -100,10 +106,10 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     }
   }, []);
 
-  // Fetch the request details
-  const { data: request } = useQuery({
+  // Fetch the request details with explicit typing
+  const { data: request } = useQuery<ServiceRequest>({
     queryKey: ['serviceRequest', requestId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ServiceRequest> => {
       const { data, error } = await supabase
         .from('service_requests')
         .select('*')
@@ -116,10 +122,10 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     enabled: !!requestId,
   });
 
-  // Fetch matching providers
-  const { data: providers = [], isLoading } = useQuery({
+  // Fetch matching providers with explicit typing to avoid deep inference
+  const { data: providers = [], isLoading } = useQuery<MatchingProvider[]>({
     queryKey: ['matchingProviders', requestId, request?.category, request?.subcategory, request?.city],
-    queryFn: async () => {
+    queryFn: async (): Promise<MatchingProvider[]> => {
       if (!request) return [];
       
       let query = supabase
@@ -141,18 +147,20 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch reviews for all providers
+      // Fetch reviews for all providers with explicit typing
       const providerIds = data?.map(p => p.id) || [];
       if (providerIds.length === 0) return [];
 
-      const { data: reviews } = await supabase
+      const { data: reviewsData } = await supabase
         .from('business_reviews')
         .select('business_id, rating, criteria_ratings')
         .in('business_id', providerIds);
 
+      const reviews: SimpleReview[] = reviewsData || [];
+
       // Process providers with rating data
-      return data.map(provider => {
-        const providerReviews = reviews?.filter(r => r.business_id === provider.id) || [];
+      const processedProviders: MatchingProvider[] = data.map(provider => {
+        const providerReviews = reviews.filter(r => r.business_id === provider.id);
         
         let rating = 4.5; // Default rating
         let reviewCount = 0;
@@ -191,8 +199,10 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
           rating,
           reviewCount,
           overallScore
-        } as MatchingProvider;
+        };
       });
+
+      return processedProviders;
     },
     enabled: !!request,
   });
