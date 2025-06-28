@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Trash2 } from 'lucide-react';
 import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import ChatDialog from '@/components/messaging/ChatDialog';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -82,7 +83,7 @@ const ProviderLanguages: React.FC<{ providerId: string }> = ({ providerId }) => 
 const Inbox: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { userRequests, isLoadingUserRequests } = useServiceRequests();
+  const { userRequests, isLoadingUserRequests, deleteRequest, isDeleting } = useServiceRequests();
   const { conversations, isLoading: isLoadingConversations, unreadCount } = useConversationsOptimized();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
@@ -125,6 +126,27 @@ const Inbox: React.FC = () => {
     setSelectedRequestId(requestId);
     setActiveTab("messages");
     setRetryCount(0); // Reset retry count when switching requests
+  };
+
+  // Handle deleting a request
+  const handleDeleteRequest = (requestId: string, requestTitle: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent request selection when clicking delete
+    
+    // If we're deleting the currently selected request, we need to handle selection
+    if (selectedRequestId === requestId) {
+      // Find the next request to select after deletion
+      const currentIndex = userRequests?.findIndex(req => req.id === requestId) || 0;
+      const nextRequest = userRequests?.[currentIndex + 1] || userRequests?.[currentIndex - 1];
+      
+      // Set the next selected request before deletion
+      if (nextRequest) {
+        setSelectedRequestId(nextRequest.id);
+      } else {
+        setSelectedRequestId(null);
+      }
+    }
+    
+    deleteRequest(requestId);
   };
   
   // Handle opening chat dialog
@@ -611,14 +633,49 @@ const Inbox: React.FC = () => {
                       >
                         {/* Unread count badge */}
                         {requestUnreadCounts[request.id] > 0 && (
-                          <div className="absolute top-2 right-2">
+                          <div className="absolute top-2 right-8">
                             <Badge variant="destructive" className="h-5 px-1.5 text-xs">
                               {requestUnreadCounts[request.id]}
                             </Badge>
                           </div>
                         )}
                         
-                        <div className="flex justify-between items-start mb-1 pr-8">
+                        {/* Delete Button */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              className="absolute top-2 right-2 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={isDeleting}
+                              title="Delete request"
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Request</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{request.title}"? This action cannot be undone and will also delete all associated conversations and messages.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => handleDeleteRequest(request.id, request.title, e)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <div className="flex justify-between items-start mb-1 pr-10">
                           <h3 className="font-medium truncate">{request.title}</h3>
                           <Badge variant={request.status === 'open' ? 'default' : 'secondary'} className="ml-2">
                             {request.status}
