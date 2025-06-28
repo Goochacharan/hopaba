@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Navigation, ArrowLeft, Search, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MapPin, Navigation, ArrowLeft, Search, Loader2, Hash } from 'lucide-react';
 import { useLocation } from '@/contexts/LocationContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,10 +17,13 @@ const CITIES = [
 
 const LocationSelection = () => {
   const navigate = useNavigate();
-  const { enableLocation, isCalculatingLocation, setSelectedCity, hasLocationPreference, locationDisplayName } = useLocation();
+  const { enableLocation, isCalculatingLocation, setSelectedCity, setSelectedPostalCode, hasLocationPreference, locationDisplayName } = useLocation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [isLoadingCity, setIsLoadingCity] = useState(false);
+  const [isLoadingPinCode, setIsLoadingPinCode] = useState(false);
+  const [selectedCityFromDropdown, setSelectedCityFromDropdown] = useState<string>('');
 
   // Filter cities based on search term
   const filteredCities = CITIES.filter(city => 
@@ -64,6 +68,44 @@ const LocationSelection = () => {
         navigate('/');
       }
       setIsLoadingCity(false);
+    }, 1000);
+  };
+
+  const handlePinCodeSubmit = async () => {
+    if (!pinCode.trim()) {
+      toast({
+        title: "Invalid PIN code",
+        description: "Please enter a valid 6-digit PIN code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate PIN code format (6 digits)
+    if (!/^\d{6}$/.test(pinCode)) {
+      toast({
+        title: "Invalid PIN code",
+        description: "PIN code must be exactly 6 digits",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingPinCode(true);
+    // Simulate saving postal code preference
+    setTimeout(() => {
+      setSelectedPostalCode(pinCode);
+      toast({
+        title: "Location set",
+        description: `Using PIN ${pinCode} for your search`
+      });
+      // Navigate back to shop or previous page
+      if (hasLocationPreference) {
+        navigate(-1);
+      } else {
+        navigate('/');
+      }
+      setIsLoadingPinCode(false);
     }, 1000);
   };
 
@@ -153,35 +195,87 @@ const LocationSelection = () => {
           </CardContent>
         </Card>
 
-        {/* City List */}
-        <div className="space-y-1">
-          {filteredCities.map((city) => (
-            <Card key={city} className="border-gray-200">
-              <CardContent className="p-0">
-                <Button
-                  onClick={() => handleCitySelection(city)}
-                  disabled={isLoadingCity}
-                  variant="ghost"
-                  className="w-full h-auto p-4 justify-start text-left hover:bg-gray-50"
-                >
-                  <div className="flex items-center w-full">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-3">
-                      <MapPin className="h-5 w-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{city}</p>
-                    </div>
-                    {isLoadingCity && (
-                      <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
-                    )}
-                  </div>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* PIN Code Option */}
+        <Card className="mb-4 border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                <Hash className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Enter PIN Code</p>
+                <p className="text-sm text-gray-600">Set location using postal code</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Enter 6-digit PIN code"
+                value={pinCode}
+                onChange={(e) => setPinCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="flex-1 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                maxLength={6}
+              />
+              <Button
+                onClick={handlePinCodeSubmit}
+                disabled={isLoadingPinCode || pinCode.length !== 6}
+                className="px-4 h-10"
+              >
+                {isLoadingPinCode ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Set'
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* No results message */}
+        {/* City Selection Dropdown */}
+        <Card className="mb-4 border-gray-200">
+          <CardContent className="p-4">
+            <div className="flex items-center mb-3">
+              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mr-3">
+                <MapPin className="h-5 w-5 text-gray-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Select City</p>
+                <p className="text-sm text-gray-600">Choose from popular cities</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Select value={selectedCityFromDropdown} onValueChange={setSelectedCityFromDropdown}>
+                <SelectTrigger className="flex-1 h-10 bg-white border-gray-300 focus:border-gray-500 focus:ring-gray-500">
+                  <SelectValue placeholder="Choose a city" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-gray-200 shadow-lg z-50 max-h-60">
+                  {CITIES.map((city) => (
+                    <SelectItem 
+                      key={city} 
+                      value={city}
+                      className="hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={() => selectedCityFromDropdown && handleCitySelection(selectedCityFromDropdown)}
+                disabled={isLoadingCity || !selectedCityFromDropdown}
+                className="px-4 h-10"
+              >
+                {isLoadingCity ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Set'
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* No results message for search */}
         {searchTerm && filteredCities.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500">No cities found matching "{searchTerm}"</p>

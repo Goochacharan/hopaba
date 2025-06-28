@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { distanceService } from '@/services/distanceService';
 import { useToast } from '@/hooks/use-toast';
@@ -14,11 +13,13 @@ interface LocationContextType {
   isCalculatingLocation: boolean;
   hasLocationPreference: boolean;
   selectedCity: string | null;
+  selectedPostalCode: string | null;
   locationDisplayName: string | null;
   enableLocation: () => Promise<void>;
   disableLocation: () => void;
   calculateDistance: (targetLocation: Location) => number | null;
   setSelectedCity: (city: string) => void;
+  setSelectedPostalCode: (postalCode: string) => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -69,11 +70,12 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isCalculatingLocation, setIsCalculatingLocation] = useState(false);
   const [selectedCity, setSelectedCityState] = useState<string | null>(null);
+  const [selectedPostalCode, setSelectedPostalCodeState] = useState<string | null>(null);
   const [locationDisplayName, setLocationDisplayName] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check if user has any location preference (GPS or city)
-  const hasLocationPreference = isLocationEnabled || selectedCity !== null;
+  // Check if user has any location preference (GPS, city, or postal code)
+  const hasLocationPreference = isLocationEnabled || selectedCity !== null || selectedPostalCode !== null;
 
   // Load location state from localStorage on mount
   useEffect(() => {
@@ -81,6 +83,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       const savedLocationEnabled = localStorage.getItem('locationEnabled');
       const savedUserLocation = localStorage.getItem('userLocation');
       const savedSelectedCity = localStorage.getItem('selectedCity');
+      const savedSelectedPostalCode = localStorage.getItem('selectedPostalCode');
       const savedLocationDisplayName = localStorage.getItem('locationDisplayName');
       
       if (savedLocationEnabled === 'true') {
@@ -101,6 +104,11 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
         console.log('✅ Restored selected city from storage:', savedSelectedCity);
       }
 
+      if (savedSelectedPostalCode) {
+        setSelectedPostalCodeState(savedSelectedPostalCode);
+        console.log('✅ Restored selected postal code from storage:', savedSelectedPostalCode);
+      }
+
       if (savedLocationDisplayName) {
         setLocationDisplayName(savedLocationDisplayName);
         console.log('✅ Restored location display name from storage:', savedLocationDisplayName);
@@ -110,6 +118,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       localStorage.removeItem('locationEnabled');
       localStorage.removeItem('userLocation');
       localStorage.removeItem('selectedCity');
+      localStorage.removeItem('selectedPostalCode');
       localStorage.removeItem('locationDisplayName');
     }
   }, []);
@@ -143,9 +152,11 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       setUserLocation(location);
       setIsLocationEnabled(true);
       
-      // Clear city selection when GPS is enabled
+      // Clear city and postal code selection when GPS is enabled
       setSelectedCityState(null);
+      setSelectedPostalCodeState(null);
       localStorage.removeItem('selectedCity');
+      localStorage.removeItem('selectedPostalCode');
       
       localStorage.setItem('locationEnabled', 'true');
       localStorage.setItem('userLocation', JSON.stringify(location));
@@ -189,12 +200,30 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
     localStorage.setItem('selectedCity', city);
     localStorage.setItem('locationDisplayName', city);
     
-    // Clear GPS location when city is selected
+    // Clear GPS location and postal code when city is selected
     if (isLocationEnabled) {
       disableLocation();
     }
+    setSelectedPostalCodeState(null);
+    localStorage.removeItem('selectedPostalCode');
     
     console.log('🏙️ Selected city set:', city);
+  };
+
+  const setSelectedPostalCode = (postalCode: string) => {
+    setSelectedPostalCodeState(postalCode);
+    setLocationDisplayName(`PIN ${postalCode}`);
+    localStorage.setItem('selectedPostalCode', postalCode);
+    localStorage.setItem('locationDisplayName', `PIN ${postalCode}`);
+    
+    // Clear GPS location and city when postal code is selected
+    if (isLocationEnabled) {
+      disableLocation();
+    }
+    setSelectedCityState(null);
+    localStorage.removeItem('selectedCity');
+    
+    console.log('📍 Selected postal code set:', postalCode);
   };
 
   const calculateDistance = (targetLocation: Location): number | null => {
@@ -208,11 +237,13 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
     isCalculatingLocation,
     hasLocationPreference,
     selectedCity,
+    selectedPostalCode,
     locationDisplayName,
     enableLocation,
     disableLocation,
     calculateDistance,
-    setSelectedCity
+    setSelectedCity,
+    setSelectedPostalCode
   };
 
   return (
