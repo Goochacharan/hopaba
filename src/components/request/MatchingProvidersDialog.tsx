@@ -36,13 +36,6 @@ interface MatchingProvider {
   overallScore?: number;
 }
 
-// Simple review interface to avoid complex type inference
-interface SimpleReview {
-  business_id: string;
-  rating: number;
-  criteria_ratings: Record<string, number> | null;
-}
-
 // Local type definition to avoid circular dependency
 interface LocalBusinessWishlistItem {
   id: string;
@@ -106,10 +99,10 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     }
   }, []);
 
-  // Fetch the request details with explicit typing
-  const { data: request } = useQuery<ServiceRequest>({
+  // Fetch the request details - using any to avoid deep inference
+  const { data: request } = useQuery({
     queryKey: ['serviceRequest', requestId],
-    queryFn: async (): Promise<ServiceRequest> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('service_requests')
         .select('*')
@@ -117,15 +110,15 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
         .single();
       
       if (error) throw error;
-      return data as ServiceRequest;
+      return data;
     },
     enabled: !!requestId,
   });
 
-  // Fetch matching providers with explicit typing to avoid deep inference
-  const { data: providers = [], isLoading } = useQuery<MatchingProvider[]>({
+  // Fetch matching providers - using any to avoid deep inference
+  const { data: providers = [], isLoading } = useQuery({
     queryKey: ['matchingProviders', requestId, request?.category, request?.subcategory, request?.city],
-    queryFn: async (): Promise<MatchingProvider[]> => {
+    queryFn: async () => {
       if (!request) return [];
       
       let query = supabase
@@ -147,7 +140,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       const { data, error } = await query;
       if (error) throw error;
 
-      // Fetch reviews for all providers with explicit typing
+      // Fetch reviews for all providers
       const providerIds = data?.map(p => p.id) || [];
       if (providerIds.length === 0) return [];
 
@@ -156,10 +149,10 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
         .select('business_id, rating, criteria_ratings')
         .in('business_id', providerIds);
 
-      const reviews: SimpleReview[] = reviewsData || [];
+      const reviews = reviewsData || [];
 
       // Process providers with rating data
-      const processedProviders: MatchingProvider[] = data.map(provider => {
+      const processedProviders = data.map(provider => {
         const providerReviews = reviews.filter(r => r.business_id === provider.id);
         
         let rating = 4.5; // Default rating
@@ -174,12 +167,16 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
           const aggregatedCriteriaRatings: Record<string, number[]> = {};
           
           providerReviews.forEach(review => {
-            if (review.criteria_ratings) {
-              Object.entries(review.criteria_ratings).forEach(([criterionId, criteriaRating]) => {
-                if (!aggregatedCriteriaRatings[criterionId]) {
-                  aggregatedCriteriaRatings[criterionId] = [];
+            // Safely cast Json to our expected type
+            const criteriaRatings = review.criteria_ratings as Record<string, number> | null;
+            if (criteriaRatings && typeof criteriaRatings === 'object') {
+              Object.entries(criteriaRatings).forEach(([criterionId, criteriaRating]) => {
+                if (typeof criteriaRating === 'number') {
+                  if (!aggregatedCriteriaRatings[criterionId]) {
+                    aggregatedCriteriaRatings[criterionId] = [];
+                  }
+                  aggregatedCriteriaRatings[criterionId].push(criteriaRating);
                 }
-                aggregatedCriteriaRatings[criterionId].push(criteriaRating as number);
               });
             }
           });
