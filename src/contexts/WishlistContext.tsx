@@ -5,7 +5,7 @@ import { MarketplaceListing } from '@/hooks/useMarketplaceListings';
 import { Event } from '@/hooks/types/recommendationTypes';
 import { useToast } from '@/hooks/use-toast';
 
-export type BusinessWishlistItem = {
+export interface BusinessWishlistItem {
   id: string;
   name: string;
   category: string;
@@ -15,7 +15,7 @@ export type BusinessWishlistItem = {
   images?: string[];
   contact_phone?: string;
   type: 'business';
-};
+}
 
 export type WishlistItem = 
   | (Recommendation & { type: 'location' })

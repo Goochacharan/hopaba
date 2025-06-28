@@ -17,7 +17,7 @@ import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel'
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
-import { useWishlist, BusinessWishlistItem } from '@/contexts/WishlistContext';
+import { useWishlist, type BusinessWishlistItem } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
