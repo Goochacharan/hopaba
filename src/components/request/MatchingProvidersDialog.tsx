@@ -68,6 +68,103 @@ const ProviderLanguages: React.FC<ProviderLanguagesProps> = ({ providerId }) => 
   );
 };
 
+// Extract query functions to prevent deep type inference
+const fetchServiceRequest = async (requestId: string) => {
+  const { data, error } = await supabase
+    .from('service_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+  
+  if (error) throw error;
+  return data;
+};
+
+const fetchMatchingProviders = async (request: any) => {
+  if (!request) return [];
+  
+  let query = supabase
+    .from('service_providers')
+    .select('id, name, category, subcategory, area, city, postal_code, contact_phone, images, user_id')
+    .eq('category', request.category)
+    .eq('status', 'approved');
+
+  // Add subcategory filter if specified
+  if (request.subcategory) {
+    query = query.contains('subcategory', [request.subcategory]);
+  }
+
+  // Add city filter if specified
+  if (request.city) {
+    query = query.eq('city', request.city);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  // Fetch reviews for all providers
+  const providerIds = data?.map((p: any) => p.id) || [];
+  if (providerIds.length === 0) return [];
+
+  const { data: reviewsData } = await supabase
+    .from('business_reviews')
+    .select('business_id, rating, criteria_ratings')
+    .in('business_id', providerIds);
+
+  const reviews = reviewsData || [];
+
+  // Process providers with rating data and ensure calculatedDistance is included
+  const processedProviders: MatchingProvider[] = data.map((provider: any) => {
+    const providerReviews = reviews.filter((r: any) => r.business_id === provider.id);
+    
+    let rating = 4.5; // Default rating
+    let reviewCount = 0;
+    let overallScore = 0;
+    
+    if (providerReviews.length > 0) {
+      rating = providerReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / providerReviews.length;
+      reviewCount = providerReviews.length;
+      
+      // Calculate overall score using criteria ratings
+      const aggregatedCriteriaRatings: Record<string, number[]> = {};
+      
+      providerReviews.forEach((review: any) => {
+        // Safely cast Json to our expected type
+        const criteriaRatings = review.criteria_ratings as Record<string, number> | null;
+        if (criteriaRatings && typeof criteriaRatings === 'object') {
+          Object.entries(criteriaRatings).forEach(([criterionId, criteriaRating]) => {
+            if (typeof criteriaRating === 'number') {
+              if (!aggregatedCriteriaRatings[criterionId]) {
+                aggregatedCriteriaRatings[criterionId] = [];
+              }
+              aggregatedCriteriaRatings[criterionId].push(criteriaRating);
+            }
+          });
+        }
+      });
+      
+      // Calculate average for each criterion
+      const averageCriteriaRatings: Record<string, number> = {};
+      Object.entries(aggregatedCriteriaRatings).forEach(([criterionId, ratings]) => {
+        const sum = ratings.reduce((acc, val) => acc + val, 0);
+        averageCriteriaRatings[criterionId] = sum / ratings.length;
+      });
+      
+      overallScore = calculateOverallRating(averageCriteriaRatings);
+    }
+
+    return {
+      ...provider,
+      rating,
+      reviewCount,
+      overallScore,
+      calculatedDistance: null // Initialize calculatedDistance
+    } as MatchingProvider;
+  });
+
+  return processedProviders;
+};
+
 export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requestId }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -99,109 +196,17 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     }
   }, []);
 
-  // Fetch the request details - explicit any to avoid deep inference
-  const { data: request } = useQuery<any>({
+  // Fetch the request details - using extracted function
+  const { data: request } = useQuery({
     queryKey: ['serviceRequest', requestId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('service_requests')
-        .select('*')
-        .eq('id', requestId)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchServiceRequest(requestId),
     enabled: !!requestId,
   });
 
-  // Fetch matching providers - explicit any to avoid deep inference
-  const { data: providers = [], isLoading } = useQuery<any>({
+  // Fetch matching providers - using extracted function
+  const { data: providers = [], isLoading } = useQuery({
     queryKey: ['matchingProviders', requestId, request?.category, request?.subcategory, request?.city],
-    queryFn: async () => {
-      if (!request) return [];
-      
-      let query = supabase
-        .from('service_providers')
-        .select('id, name, category, subcategory, area, city, postal_code, contact_phone, images, user_id')
-        .eq('category', request.category)
-        .eq('status', 'approved');
-
-      // Add subcategory filter if specified
-      if (request.subcategory) {
-        query = query.contains('subcategory', [request.subcategory]);
-      }
-
-      // Add city filter if specified
-      if (request.city) {
-        query = query.eq('city', request.city);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Fetch reviews for all providers
-      const providerIds = data?.map((p: any) => p.id) || [];
-      if (providerIds.length === 0) return [];
-
-      const { data: reviewsData } = await supabase
-        .from('business_reviews')
-        .select('business_id, rating, criteria_ratings')
-        .in('business_id', providerIds);
-
-      const reviews = reviewsData || [];
-
-      // Process providers with rating data and ensure calculatedDistance is included
-      const processedProviders: MatchingProvider[] = data.map((provider: any) => {
-        const providerReviews = reviews.filter((r: any) => r.business_id === provider.id);
-        
-        let rating = 4.5; // Default rating
-        let reviewCount = 0;
-        let overallScore = 0;
-        
-        if (providerReviews.length > 0) {
-          rating = providerReviews.reduce((sum: number, review: any) => sum + review.rating, 0) / providerReviews.length;
-          reviewCount = providerReviews.length;
-          
-          // Calculate overall score using criteria ratings
-          const aggregatedCriteriaRatings: Record<string, number[]> = {};
-          
-          providerReviews.forEach((review: any) => {
-            // Safely cast Json to our expected type
-            const criteriaRatings = review.criteria_ratings as Record<string, number> | null;
-            if (criteriaRatings && typeof criteriaRatings === 'object') {
-              Object.entries(criteriaRatings).forEach(([criterionId, criteriaRating]) => {
-                if (typeof criteriaRating === 'number') {
-                  if (!aggregatedCriteriaRatings[criterionId]) {
-                    aggregatedCriteriaRatings[criterionId] = [];
-                  }
-                  aggregatedCriteriaRatings[criterionId].push(criteriaRating);
-                }
-              });
-            }
-          });
-          
-          // Calculate average for each criterion
-          const averageCriteriaRatings: Record<string, number> = {};
-          Object.entries(aggregatedCriteriaRatings).forEach(([criterionId, ratings]) => {
-            const sum = ratings.reduce((acc, val) => acc + val, 0);
-            averageCriteriaRatings[criterionId] = sum / ratings.length;
-          });
-          
-          overallScore = calculateOverallRating(averageCriteriaRatings);
-        }
-
-        return {
-          ...provider,
-          rating,
-          reviewCount,
-          overallScore,
-          calculatedDistance: null // Initialize calculatedDistance
-        } as MatchingProvider;
-      });
-
-      return processedProviders;
-    },
+    queryFn: () => fetchMatchingProviders(request),
     enabled: !!request,
   });
 
