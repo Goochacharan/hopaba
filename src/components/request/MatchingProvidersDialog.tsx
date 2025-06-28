@@ -17,7 +17,6 @@ import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel'
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
-import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -77,11 +76,29 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
   const { isLocationEnabled, userLocation } = useLocation();
   const { calculateDistancesForBusinesses } = useDistanceCache();
   const { isUserOnline } = usePresence('general');
-  const { isInWishlist, toggleWishlist } = useWishlist();
+  
+  // Simple wishlist state management without external dependencies
+  const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
   
   // State for providers with calculated distances
   const [providersWithDistance, setProvidersWithDistance] = useState<MatchingProvider[]>([]);
   const [isCalculatingDistances, setIsCalculatingDistances] = useState(false);
+
+  // Load wishlist from localStorage
+  useEffect(() => {
+    const savedWishlist = localStorage.getItem('wishlist');
+    if (savedWishlist) {
+      try {
+        const parsedWishlist = JSON.parse(savedWishlist);
+        const businessIds = parsedWishlist
+          .filter((item: any) => item.type === 'business')
+          .map((item: any) => item.id);
+        setWishlistItems(new Set(businessIds));
+      } catch (error) {
+        console.error('Error parsing wishlist:', error);
+      }
+    }
+  }, []);
 
   // Fetch the request details
   const { data: request } = useQuery({
@@ -360,7 +377,48 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       type: 'business'
     };
     
-    toggleWishlist(businessWishlistItem);
+    // Simple wishlist toggle logic
+    const newWishlistItems = new Set(wishlistItems);
+    const isInWishlist = wishlistItems.has(provider.id);
+    
+    if (isInWishlist) {
+      newWishlistItems.delete(provider.id);
+      toast({
+        title: "Removed from wishlist",
+        description: `${provider.name} has been removed from your wishlist.`,
+        duration: 3000,
+      });
+    } else {
+      newWishlistItems.add(provider.id);
+      toast({
+        title: "Added to wishlist",
+        description: `${provider.name} has been added to your wishlist.`,
+        duration: 3000,
+      });
+    }
+    
+    setWishlistItems(newWishlistItems);
+    
+    // Update localStorage
+    const savedWishlist = localStorage.getItem('wishlist');
+    let currentWishlist = [];
+    if (savedWishlist) {
+      try {
+        currentWishlist = JSON.parse(savedWishlist);
+      } catch (error) {
+        console.error('Error parsing wishlist:', error);
+      }
+    }
+    
+    if (isInWishlist) {
+      // Remove from wishlist
+      currentWishlist = currentWishlist.filter((item: any) => !(item.id === provider.id && item.type === 'business'));
+    } else {
+      // Add to wishlist
+      currentWishlist.push(businessWishlistItem);
+    }
+    
+    localStorage.setItem('wishlist', JSON.stringify(currentWishlist));
   };
 
   if (isLoading) {
@@ -399,7 +457,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
       <div className="grid gap-4">
         {sortedProviders.map((provider) => {
           const isProviderOnline = isUserOnline(provider.user_id);
-          const isProviderInWishlist = isInWishlist(provider.id, 'business');
+          const isProviderInWishlist = wishlistItems.has(provider.id);
           
           return (
             <Card key={provider.id} className="relative">
