@@ -129,8 +129,6 @@ const Shop = () => {
   const categoryParam = searchParams.get('category') || 'All';
   const subcategoryParam = searchParams.get('subcategory') || '';
   const searchQuery = searchParams.get('q') || '';
-  const cityParam = searchParams.get('city') || 'All Cities';
-  const postalCodeParam = searchParams.get('postalCode') || '';
   const pageParam = parseInt(searchParams.get('page') || '1');
 
   // Local state
@@ -138,8 +136,6 @@ const Shop = () => {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(subcategoryParam ? [subcategoryParam] : []);
   const [searchTerm, setSearchTerm] = useState<string>(searchQuery);
   const [inputValue, setInputValue] = useState<string>(searchQuery);
-  const [filterSelectedCity, setFilterSelectedCity] = useState<string>(cityParam);
-  const [postalCode, setPostalCode] = useState<string>(postalCodeParam);
   const [currentPage, setCurrentPage] = useState<number>(pageParam);
 
   // Pagination settings
@@ -147,8 +143,6 @@ const Shop = () => {
 
   // Debounce search inputs for better performance
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const debouncedCity = useDebounce(filterSelectedCity, 200);
-  const debouncedPostalCode = useDebounce(postalCode, 200);
 
   // Location context
   const { userLocation, selectedCity: contextSelectedCity, isLocationEnabled, locationDisplayName } = useLocation();
@@ -162,23 +156,23 @@ const Shop = () => {
   // Calculate offset for pagination
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  // Fetch businesses using optimized hook with pagination
+  // Fetch businesses using optimized hook with pagination (removed city and postalCode parameters)
   const { data: businesses, isLoading, error } = useBusinessesOptimized(
     selectedCategory === 'All' ? null : selectedCategory,
     selectedSubcategories.length > 0 ? selectedSubcategories[0] : null,
-    debouncedCity !== 'All Cities' ? debouncedCity : undefined,
-    debouncedPostalCode || undefined,
+    undefined, // removed city filter
+    undefined, // removed postalCode filter
     debouncedSearchTerm || undefined,
     ITEMS_PER_PAGE,
     offset
   );
 
-  // Fetch total count for pagination
+  // Fetch total count for pagination (removed city and postalCode parameters)
   const { data: totalCount = 0 } = useBusinessesCount(
     selectedCategory === 'All' ? null : selectedCategory,
     selectedSubcategories.length > 0 ? selectedSubcategories[0] : null,
-    debouncedCity !== 'All Cities' ? debouncedCity : undefined,
-    debouncedPostalCode || undefined,
+    undefined, // removed city filter
+    undefined, // removed postalCode filter
     debouncedSearchTerm || undefined
   );
 
@@ -496,34 +490,6 @@ const Shop = () => {
     setSearchParams(newParams);
   }, [inputValue, searchParams, setSearchParams]);
 
-  // Handle city change
-  const handleCityChange = useCallback((city: string) => {
-    setFilterSelectedCity(city);
-    setCurrentPage(1); // Reset to first page
-    const newParams = new URLSearchParams(searchParams);
-    if (city !== 'All Cities') {
-      newParams.set('city', city);
-    } else {
-      newParams.delete('city');
-    }
-    newParams.delete('page');
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
-
-  // Handle postal code change
-  const handlePostalCodeChange = useCallback((code: string) => {
-    setPostalCode(code);
-    setCurrentPage(1); // Reset to first page
-    const newParams = new URLSearchParams(searchParams);
-    if (code.trim()) {
-      newParams.set('postalCode', code.trim());
-    } else {
-      newParams.delete('postalCode');
-    }
-    newParams.delete('page');
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
-
   // Handle page change
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -542,10 +508,6 @@ const Shop = () => {
   const handleSortChange = useCallback((sortBy: 'rating' | 'distance' | 'reviewCount' | 'newest') => {
     setters.setSortBy(sortBy);
   }, [setters]);
-
-  const cities = useMemo(() => [
-    'All Cities', 'Bengaluru', 'Mumbai', 'Delhi', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune'
-  ], []);
 
   // Get display location for the header
   const displayLocation = useMemo(() => {
@@ -589,29 +551,28 @@ const Shop = () => {
           </div>
         </div>
 
-        {/* Sticky Header Section - All bars grouped together */}
-        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
-          {/* City and Pin Code Filters */}
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={filterSelectedCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {cities.map(city => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-            
+        {/* Search Bar - moved to be right after location header */}
+        <div className="mb-4">
+          <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Postal Code"
-              value={postalCode}
-              onChange={(e) => handlePostalCodeChange(e.target.value)}
-              className="px-3 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Search businesses..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Search
+            </button>
           </div>
+        </div>
 
+        {/* Sticky Header Section - Category and Filter bars only */}
+        <div className="sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm space-y-1 pb-2 mb-6">
           {/* Category Filter */}
           <div className="border-b">
             <CategoryScrollBar
@@ -653,24 +614,6 @@ const Shop = () => {
                 onSortChange={handleSortChange} 
               />
             </Suspense>
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Search businesses..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              onClick={handleSearch}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-            >
-              Search
-            </button>
           </div>
         </div>
 
