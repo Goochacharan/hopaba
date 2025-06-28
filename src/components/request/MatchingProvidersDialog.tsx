@@ -100,8 +100,8 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
     }
   }, []);
 
-  // Fetch the request details with simplified typing
-  const { data: request } = useQuery<ServiceRequest>({
+  // Fetch the request details with proper type casting
+  const { data: request } = useQuery({
     queryKey: ['serviceRequest', requestId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -111,13 +111,18 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
         .single();
       
       if (error) throw error;
-      return data;
+      
+      // Cast the database result to match our interface
+      return {
+        ...data,
+        status: data.status as 'open' | 'closed'
+      } as ServiceRequest;
     },
     enabled: !!requestId,
   });
 
-  // Fetch matching providers with simplified typing
-  const { data: providers = [], isLoading } = useQuery<MatchingProvider[]>({
+  // Fetch matching providers with proper type handling
+  const { data: providers = [], isLoading } = useQuery({
     queryKey: ['matchingProviders', requestId, request?.category, request?.subcategory, request?.city],
     queryFn: async () => {
       if (!request) return [];
