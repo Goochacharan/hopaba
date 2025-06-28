@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { 
@@ -18,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Heart, X } from 'lucide-react';
 import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,8 @@ import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import ChatDialog from '@/components/messaging/ChatDialog';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
+import { useWishlist } from '@/contexts/WishlistContext';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -92,6 +95,11 @@ const Inbox: React.FC = () => {
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   
+  // Wishlist functionality
+  const { getBusinessWishlist, removeFromWishlist } = useWishlist();
+  const businessWishlist = getBusinessWishlist();
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  
   // Add presence tracking for online status
   const { isUserOnline } = usePresence('general');
   
@@ -137,6 +145,17 @@ const Inbox: React.FC = () => {
   const handleChatClose = () => {
     setChatDialogOpen(false);
     setSelectedConversationId(null);
+  };
+
+  // Handle wishlist item click
+  const handleWishlistItemClick = (businessId: string) => {
+    navigate(`/business/${businessId}`);
+  };
+
+  // Handle remove from wishlist
+  const handleRemoveFromWishlist = (businessId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeFromWishlist(businessId, 'business');
   };
   
   // Get the selected request details
@@ -650,6 +669,70 @@ const Inbox: React.FC = () => {
                     ))}
                   </div>
                 )}
+
+                {/* My List Section */}
+                <div className="border-t border-border mt-4">
+                  <Collapsible open={isWishlistOpen} onOpenChange={setIsWishlistOpen}>
+                    <CollapsibleTrigger asChild>
+                      <button className="w-full p-4 text-left hover:bg-accent transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Heart className="h-4 w-4 text-red-500" />
+                            <h3 className="font-medium">My List</h3>
+                            {businessWishlist.length > 0 && (
+                              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                                {businessWishlist.length}
+                              </Badge>
+                            )}
+                          </div>
+                          <ArrowRight 
+                            className={cn(
+                              "h-4 w-4 transition-transform", 
+                              isWishlistOpen && "rotate-90"
+                            )} 
+                          />
+                        </div>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-2 pb-2 space-y-1">
+                        {businessWishlist.length === 0 ? (
+                          <div className="p-3 text-center text-muted-foreground text-sm">
+                            <Heart className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                            <p>No saved businesses yet.</p>
+                            <p className="text-xs mt-1">Add businesses to your wishlist from the shop page.</p>
+                          </div>
+                        ) : (
+                          businessWishlist.map((business) => (
+                            <div
+                              key={business.id}
+                              className="group relative p-2 rounded-md hover:bg-accent transition-colors cursor-pointer"
+                              onClick={() => handleWishlistItemClick(business.id || '')}
+                            >
+                              <button
+                                onClick={(e) => handleRemoveFromWishlist(business.id || '', e)}
+                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded-full"
+                                title="Remove from wishlist"
+                              >
+                                <X className="h-3 w-3 text-destructive" />
+                              </button>
+                              
+                              <div className="pr-6">
+                                <h4 className="font-medium text-sm truncate">{business.name}</h4>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {business.category}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {[business.area, business.city].filter(Boolean).join(', ')}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </SidebarContent>
               <SidebarRail />
             </Sidebar>
