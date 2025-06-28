@@ -17,7 +17,7 @@ import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel'
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { usePresence } from '@/hooks/usePresence';
-import { useWishlist, type BusinessWishlistItem } from '@/contexts/WishlistContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -36,6 +36,19 @@ interface MatchingProvider {
   rating?: number;
   reviewCount?: number;
   overallScore?: number;
+}
+
+// Local type definition to avoid circular dependency
+interface LocalBusinessWishlistItem {
+  id: string;
+  name: string;
+  category: string;
+  subcategory?: string | string[];
+  area?: string;
+  city?: string;
+  images?: string[];
+  contact_phone?: string;
+  type: 'business';
 }
 
 interface ProviderLanguagesProps {
@@ -335,7 +348,7 @@ export const MatchingProvidersContent: React.FC<{ requestId: string }> = ({ requ
   const handleProviderWishlistToggle = (provider: MatchingProvider, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    const businessWishlistItem: BusinessWishlistItem = {
+    const businessWishlistItem: LocalBusinessWishlistItem = {
       id: provider.id,
       name: provider.name,
       category: provider.category,
