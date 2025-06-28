@@ -953,7 +953,7 @@ const Inbox: React.FC = () => {
                                       onClick={() => handleChatOpen(conversation.id)}
                                     >
                                       <MessageSquare className="h-4 w-4 mr-1" />
-                                      {unreadCount > 0 ? 'View New Messages' : 'View Chat'}
+                                      {unreadCount > 0 ? 'New Messages' : 'View Chat'}
                                     </Button>
                                   </div>
                                 </CardFooter>
