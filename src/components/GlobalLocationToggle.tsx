@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Navigation, Loader2, MapPin } from 'lucide-react';
@@ -10,7 +11,9 @@ const GlobalLocationToggle: React.FC = () => {
     isCalculatingLocation, 
     enableLocation, 
     disableLocation,
-    userLocation 
+    userLocation,
+    locationDisplayName,
+    hasLocationPreference
   } = useLocation();
 
   const handleToggle = () => {
@@ -21,10 +24,27 @@ const GlobalLocationToggle: React.FC = () => {
     }
   };
 
+  // Get the display text for the location
+  const getLocationDisplayText = () => {
+    if (isCalculatingLocation) {
+      return 'Getting Location...';
+    }
+    
+    if (locationDisplayName) {
+      return `Searching in ${locationDisplayName}`;
+    }
+    
+    if (hasLocationPreference) {
+      return 'Location enabled';
+    }
+    
+    return 'Location not set';
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Button
-        variant={isLocationEnabled ? "default" : "outline"}
+        variant={hasLocationPreference ? "default" : "outline"}
         size="sm"
         onClick={handleToggle}
         disabled={isCalculatingLocation}
@@ -32,18 +52,13 @@ const GlobalLocationToggle: React.FC = () => {
       >
         {isCalculatingLocation ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : isLocationEnabled ? (
+        ) : hasLocationPreference ? (
           <Navigation className="h-4 w-4" />
         ) : (
           <MapPin className="h-4 w-4" />
         )}
         <span className="hidden sm:inline">
-          {isCalculatingLocation 
-            ? 'Getting Location...' 
-            : isLocationEnabled 
-              ? 'Location On' 
-              : 'Enable Location'
-          }
+          {getLocationDisplayText()}
         </span>
       </Button>
       
@@ -56,4 +71,4 @@ const GlobalLocationToggle: React.FC = () => {
   );
 };
 
-export default GlobalLocationToggle; 
+export default GlobalLocationToggle;
