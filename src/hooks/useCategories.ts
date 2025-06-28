@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
@@ -7,6 +8,7 @@ export interface Category {
   name: string;
   created_at: string;
   updated_at: string;
+  subcategories?: string[]; // Add subcategories property
 }
 
 export interface Subcategory {
@@ -22,17 +24,35 @@ export const useCategories = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loadingSubcategories, setLoadingSubcategories] = useState(false);
 
-  // Use the same query name to keep compatibility with other components
+  // Fetch categories with their subcategories
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get categories
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
         .order('name');
       
-      if (error) throw new Error(error.message);
-      return data as Category[];
+      if (categoriesError) throw new Error(categoriesError.message);
+      
+      // Then get all subcategories
+      const { data: subcategoriesData, error: subcategoriesError } = await supabase
+        .from('subcategories')
+        .select('*')
+        .order('name');
+      
+      if (subcategoriesError) throw new Error(subcategoriesError.message);
+      
+      // Map subcategories to their parent categories
+      const categoriesWithSubcategories = categoriesData.map(category => ({
+        ...category,
+        subcategories: subcategoriesData
+          .filter(sub => sub.category_id === category.id)
+          .map(sub => sub.name)
+      }));
+      
+      return categoriesWithSubcategories as Category[];
     }
   });
 

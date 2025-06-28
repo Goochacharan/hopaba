@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,13 +12,15 @@ interface CategoryScrollBarProps {
   onSelect: (category: string) => void;
   selectedSubcategory?: string[];
   onSubcategorySelect?: (subcategories: string[]) => void;
+  className?: string; // Add className prop
 }
 
 const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   selected,
   onSelect,
   selectedSubcategory = [],
-  onSubcategorySelect
+  onSubcategorySelect,
+  className // Add className parameter
 }) => {
   const { data: categories = [], isLoading } = useCategories();
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
@@ -35,7 +38,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
   }, [categories]);
 
   return (
-    <ScrollArea className="w-full pb-1">
+    <ScrollArea className={cn("w-full pb-1", className)}>
       <div className="flex items-center gap-1 px-1 py-1 overflow-x-auto min-w-max">
         {/* All Categories Button - Made more compact */}
         <Button
@@ -43,7 +46,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
           size="sm"
           onClick={() => onSelect('All')}
           className={cn(
-            "flex-shrink-0 rounded-full h-8 px-3 text-xs font-medium border transition-colors",
+            "flex-shrink-0 rounded-full h-6 px-2 text-xs font-medium border transition-colors",
             selected === 'All'
               ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
               : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
@@ -66,7 +69,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                 size="sm"
                 onClick={() => onSelect(category.name)}
                 className={cn(
-                  "flex-shrink-0 rounded-full h-8 px-3 text-xs font-medium border transition-colors",
+                  "flex-shrink-0 rounded-full h-6 px-2 text-xs font-medium border transition-colors",
                   isSelected
                     ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                     : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
@@ -88,7 +91,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                   variant={isSelected ? 'default' : 'outline'}
                   size="sm"
                   className={cn(
-                    "flex-shrink-0 rounded-full h-8 px-3 text-xs font-medium border transition-colors gap-1",
+                    "flex-shrink-0 rounded-full h-6 px-2 text-xs font-medium border transition-colors gap-1",
                     isSelected
                       ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                       : "bg-background text-foreground border-border hover:bg-accent hover:text-accent-foreground"
@@ -101,9 +104,9 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                     </span>
                   )}
                   {openPopoverId === category.name ? (
-                    <ChevronUp className="h-3 w-3" />
+                    <ChevronUp className="h-2 w-2" />
                   ) : (
-                    <ChevronDown className="h-3 w-3" />
+                    <ChevronDown className="h-2 w-2" />
                   )}
                 </Button>
               </PopoverTrigger>
@@ -127,7 +130,7 @@ const CategoryScrollBar: React.FC<CategoryScrollBarProps> = ({
                           }
                           setOpenPopoverId(null);
                         }}
-                        className="justify-start text-xs h-8"
+                        className="justify-start text-xs h-6"
                       >
                         {subcategory}
                       </Button>
