@@ -3,7 +3,7 @@ import React from 'react';
 
 const LoadingScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center z-50">
       <style>
         {`
           @keyframes zoomIn {
@@ -29,16 +29,17 @@ const LoadingScreen: React.FC = () => {
       
       <div className="text-center zoom-in-animation">
         <div className="mb-4">
-          <img 
-            src="/lovable-uploads/1a5c7d70-69a2-4e6d-b9a0-50fe3fadcb85.png" 
-            alt="Chowkashi Logo" 
-            className="w-48 h-48 mx-auto object-contain"
-          />
+          <h1 className="text-6xl font-bold text-primary mb-2">
+            Chowkashi
+          </h1>
+          <p className="text-xl text-muted-foreground font-medium">
+            Ask Find Bargain
+          </p>
         </div>
         
         {/* Loading indicator */}
         <div className="mt-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </div>
     </div>
