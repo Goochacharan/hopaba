@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -113,12 +114,39 @@ const BusinessCardPublic: React.FC<BusinessCardPublicProps> = memo(({ business, 
 
   const handleWishlistToggle = useMemo(() => (e: React.MouseEvent) => {
     e.stopPropagation();
-    const wishlistItem = {
-      ...business,
-      type: 'business' as const
-    };
-    toggleWishlist(wishlistItem);
-  }, [business, toggleWishlist]);
+    
+    try {
+      console.log('Wishlist toggle clicked for business:', business.id, business.name);
+      
+      // Validate business data before creating wishlist item
+      if (!business.id || !business.name) {
+        console.error('Invalid business data for wishlist:', business);
+        toast({
+          title: "Error",
+          description: "Cannot add incomplete business data to wishlist.",
+          variant: "destructive",
+          duration: 3000
+        });
+        return;
+      }
+
+      const wishlistItem = {
+        ...business,
+        type: 'business' as const
+      };
+      
+      console.log('Creating wishlist item:', wishlistItem);
+      toggleWishlist(wishlistItem);
+    } catch (error) {
+      console.error('Error in wishlist toggle:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update wishlist. Please try again.",
+        variant: "destructive",
+        duration: 3000
+      });
+    }
+  }, [business, toggleWishlist, toast]);
 
   return (
     <Card 

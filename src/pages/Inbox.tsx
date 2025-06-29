@@ -18,7 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Trash2 } from 'lucide-react';
+import { CalendarIcon, Loader2, MessageSquare, Users, Building, ArrowRight, AlertCircle, RefreshCw, Database, MapPin, Star, Navigation, Phone, Languages, Trash2, Heart } from 'lucide-react';
 import { useConversationsOptimized } from '@/hooks/useConversationsOptimized';
 import { useMultipleConversationUnreadCounts } from '@/hooks/useConversationUnreadCount';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,8 @@ import { OnlineIndicator } from '@/components/ui/online-indicator';
 import ChatDialog from '@/components/messaging/ChatDialog';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useWishlist } from '@/contexts/WishlistContext';
+import WishlistBusinessCard from '@/components/business/WishlistBusinessCard';
 
 // Create a custom sidebar toggle button component that uses useSidebar
 const SidebarToggleButton = () => {
@@ -88,6 +90,11 @@ const Inbox: React.FC = () => {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("messages");
   const [retryCount, setRetryCount] = useState(0);
+  const [sidebarTab, setSidebarTab] = useState<'requests' | 'wishlist'>('requests');
+  
+  // Get wishlist items
+  const { wishlist } = useWishlist();
+  const wishlistBusinesses = wishlist.filter(item => item.type === 'business');
   
   // Chat dialog state
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
@@ -126,6 +133,7 @@ const Inbox: React.FC = () => {
     setSelectedRequestId(requestId);
     setActiveTab("messages");
     setRetryCount(0); // Reset retry count when switching requests
+    setSidebarTab('requests'); // Switch to requests tab when a request is selected
   };
 
   // Handle deleting a request
@@ -209,7 +217,6 @@ const Inbox: React.FC = () => {
     return counts;
   }, [userRequests, conversations, allConversationUnreadCounts]);
   
-
 
   // Fetch enhanced provider details for conversations
   const { data: enhancedProviderDetails = {} } = useQuery({
@@ -336,8 +343,6 @@ const Inbox: React.FC = () => {
       description: `Real-time updates will refresh conversations automatically`,
     });
   };
-
-  // Removed location calculation logic - now handled by global context
 
   // State for conversations with distance calculations
   const [conversationsWithDistance, setConversationsWithDistance] = useState<any[]>([]);
@@ -610,109 +615,142 @@ const Inbox: React.FC = () => {
             
             <Sidebar side="left">
               <SidebarHeader className="border-b border-border p-4">
-                <h2 className="text-lg font-semibold">Your Requests</h2>
+                <Tabs value={sidebarTab} onValueChange={(value) => setSidebarTab(value as 'requests' | 'wishlist')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="requests" className="text-xs">
+                      Requests ({userRequests?.length || 0})
+                    </TabsTrigger>
+                    <TabsTrigger value="wishlist" className="text-xs">
+                      <Heart className="h-3 w-3 mr-1" />
+                      Wishlist ({wishlistBusinesses.length})
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </SidebarHeader>
               <SidebarContent>
-                {isLoadingUserRequests ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : !userRequests || userRequests.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <p>No service requests yet.</p>
-                  </div>
-                ) : (
-                  <div className="p-2 space-y-2">
-                    {userRequests.map((request) => (
-                      <button
-                        key={request.id}
-                        onClick={() => handleRequestClick(request.id)}
-                        className={`w-full text-left p-3 rounded-md transition-colors hover:bg-accent relative ${
-                          selectedRequestId === request.id ? 'bg-accent' : ''
-                        }`}
-                      >
-                        {/* Unread count badge */}
-                        {requestUnreadCounts[request.id] > 0 && (
-                          <div className="absolute top-2 right-8">
-                            <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                              {requestUnreadCounts[request.id]}
-                            </Badge>
-                          </div>
-                        )}
-                        
-                        {/* Delete Button */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button
-                              className="absolute top-2 right-2 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                              disabled={isDeleting}
-                              title="Delete request"
-                            >
-                              {isDeleting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
+                {sidebarTab === 'requests' ? (
+                  <>
+                    {isLoadingUserRequests ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : !userRequests || userRequests.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <p>No service requests yet.</p>
+                      </div>
+                    ) : (
+                      <div className="p-2 space-y-2">
+                        {userRequests.map((request) => (
+                          <button
+                            key={request.id}
+                            onClick={() => handleRequestClick(request.id)}
+                            className={`w-full text-left p-3 rounded-md transition-colors hover:bg-accent relative ${
+                              selectedRequestId === request.id ? 'bg-accent' : ''
+                            }`}
+                          >
+                            {/* Unread count badge */}
+                            {requestUnreadCounts[request.id] > 0 && (
+                              <div className="absolute top-2 right-8">
+                                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                                  {requestUnreadCounts[request.id]}
+                                </Badge>
+                              </div>
+                            )}
+                            
+                            {/* Delete Button */}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button
+                                  className="absolute top-2 right-2 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                  disabled={isDeleting}
+                                  title="Delete request"
+                                >
+                                  {isDeleting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Request</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{request.title}"? This action cannot be undone and will also delete all associated conversations and messages.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={(e) => handleDeleteRequest(request.id, request.title, e)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            
+                            <div className="flex justify-between items-start mb-1 pr-10">
+                              <h3 className="font-medium truncate">{request.title}</h3>
+                              <Badge variant={request.status === 'open' ? 'default' : 'secondary'} className="ml-2">
+                                {request.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center text-xs text-muted-foreground gap-1 mb-1">
+                              <CalendarIcon className="h-3 w-3" />
+                              <span>{format(new Date(request.created_at), 'MMM d, yyyy')}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">Category:</span> {request.category}
+                              {request.subcategory && (
+                                <span> / {request.subcategory}</span>
                               )}
-                            </button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Request</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{request.title}"? This action cannot be undone and will also delete all associated conversations and messages.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={(e) => handleDeleteRequest(request.id, request.title, e)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                        
-                        <div className="flex justify-between items-start mb-1 pr-10">
-                          <h3 className="font-medium truncate">{request.title}</h3>
-                          <Badge variant={request.status === 'open' ? 'default' : 'secondary'} className="ml-2">
-                            {request.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center text-xs text-muted-foreground gap-1 mb-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span>{format(new Date(request.created_at), 'MMM d, yyyy')}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Category:</span> {request.category}
-                          {request.subcategory && (
-                            <span> / {request.subcategory}</span>
-                          )}
-                        </div>
-                        
-                        {/* Show conversation count and unread indicator */}
-                        <div className="flex items-center justify-between mt-2 text-xs">
-                          <span className="text-muted-foreground">
-                            {conversations?.filter(conv => conv.request_id === request.id).length || 0} conversations
-                          </span>
-                          {requestUnreadCounts[request.id] > 0 && (
-                            <span className="text-blue-600 font-medium">
-                              {requestUnreadCounts[request.id]} unread
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                            </div>
+                            
+                            {/* Show conversation count and unread indicator */}
+                            <div className="flex items-center justify-between mt-2 text-xs">
+                              <span className="text-muted-foreground">
+                                {conversations?.filter(conv => conv.request_id === request.id).length || 0} conversations
+                              </span>
+                              {requestUnreadCounts[request.id] > 0 && (
+                                <span className="text-blue-600 font-medium">
+                                  {requestUnreadCounts[request.id]} unread
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {wishlistBusinesses.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <Heart className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+                        <h3 className="text-sm font-medium">No wishlist items</h3>
+                        <p className="text-xs">Add businesses to your wishlist to see them here.</p>
+                      </div>
+                    ) : (
+                      <div className="p-2">
+                        {wishlistBusinesses.map((business) => (
+                          <WishlistBusinessCard 
+                            key={business.id} 
+                            business={business as any}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </SidebarContent>
               <SidebarRail />
             </Sidebar>
             
             <div className="flex-1 overflow-auto p-4">
-              {!selectedRequestId ? (
+              {!selectedRequestId && sidebarTab === 'requests' ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-4 relative">
                   {/* Animated arrow pointing to sidebar */}
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -723,6 +761,14 @@ const Inbox: React.FC = () => {
                   <h2 className="text-xl font-medium">Select a Request</h2>
                   <p className="text-muted-foreground max-w-md">
                     Choose a service request from the sidebar to view messages and matching providers.
+                  </p>
+                </div>
+              ) : sidebarTab === 'wishlist' ? (
+                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                  <Heart className="h-12 w-12 text-muted-foreground mb-2" />
+                  <h2 className="text-xl font-medium">Your Wishlist</h2>
+                  <p className="text-muted-foreground max-w-md">
+                    Your wishlist businesses are displayed in the sidebar. Click on any business to view their profile.
                   </p>
                 </div>
               ) : (
