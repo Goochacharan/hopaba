@@ -86,7 +86,7 @@ const getPricingTypeBadge = (pricingType: string | undefined) => {
     case 'fixed':
       return <Badge variant="default" className="ml-2">Fixed Price</Badge>;
     case 'negotiable':
-      return <Badge variant="condition" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
+      return <Badge variant="outline" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
     case 'wholesale':
       return <Badge variant="secondary" className="ml-2 bg-purple-200 text-purple-800">Wholesale</Badge>;
     default:
@@ -213,7 +213,33 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     }
   };
 
-  // Fetch matching providers using the database function with expanded details
+  // Convert provider data to business object for wishlist
+  const convertProviderToBusiness = (provider: MatchingProviderResult) => {
+    return {
+      id: provider.provider_id,
+      name: provider.provider_name,
+      category: provider.provider_category,
+      subcategory: provider.provider_subcategory,
+      description: '',
+      area: provider.area || '',
+      city: provider.city || '',
+      contact_phone: provider.contact_phone || '',
+      images: provider.images || [],
+      address: provider.address || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      type: 'business' as const
+    };
+  };
+
+  // Handle wishlist toggle for providers
+  const handleProviderWishlistToggle = (e: React.MouseEvent, provider: MatchingProviderResult) => {
+    e.stopPropagation();
+    const businessItem = convertProviderToBusiness(provider);
+    toggleWishlist(businessItem);
+  };
+
+  // ... keep existing code (fetch matching providers using the database function with expanded details)
   const { data: matchingProviders, isLoading, error, refetch } = useQuery({
     queryKey: ['matchingProviders', requestId],
     queryFn: async () => {
@@ -621,29 +647,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
 
     calculateDistances();
   }, [matchingProviders]);
-
-  // Convert provider data to business object for wishlist
-  const convertProviderToBusiness = (provider: MatchingProviderResult) => {
-    return {
-      id: provider.provider_id,
-      name: provider.provider_name,
-      category: provider.provider_category,
-      subcategory: provider.provider_subcategory,
-      description: '',
-      area: provider.area || '',
-      city: provider.city || '',
-      contact_phone: provider.contact_phone || '',
-      images: provider.images || [],
-      type: 'business' as const
-    };
-  };
-
-  // Handle wishlist toggle for providers
-  const handleProviderWishlistToggle = (e: React.MouseEvent, provider: MatchingProviderResult) => {
-    e.stopPropagation();
-    const businessItem = convertProviderToBusiness(provider);
-    toggleWishlist(businessItem);
-  };
 
   // Handle chat with provider
   const handleChatWithProvider = async (provider: MatchingProviderResult) => {

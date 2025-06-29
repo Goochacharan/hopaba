@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useConversations } from '@/hooks/useConversations';
@@ -14,7 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { MatchingProvidersDialog } from '@/components/request/MatchingProvidersDialog';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
-import { InboxFilters } from '@/components/InboxFilters';
+import InboxFilters from '@/components/InboxFilters';
 import { useConversationUnreadCount } from '@/hooks/useConversationUnreadCount';
 import { useServiceProviderUnreadCount } from '@/hooks/useServiceProviderUnreadCount';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -51,7 +52,7 @@ const Inbox = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { conversations, isLoading: conversationsLoading } = useConversations();
-  const { serviceRequests, isLoading: requestsLoading } = useServiceRequests();
+  const { userRequests: serviceRequests, isLoadingUserRequests: requestsLoading } = useServiceRequests();
   const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
@@ -75,6 +76,9 @@ const Inbox = () => {
       city: provider.city || '',
       contact_phone: provider.contact_phone || '',
       images: provider.images || [],
+      address: provider.address || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       type: 'business' as const
     };
   };
@@ -110,15 +114,15 @@ const Inbox = () => {
     return conversations.filter(conversation => conversation.request_id === requestId);
   };
 
-  const { unreadCounts, isLoading: unreadCountsLoading } = useConversationUnreadCount(
-    conversations.map(c => c.id)
+  const { data: unreadCountsData, isLoading: unreadCountsLoading } = useConversationUnreadCount(
+    conversations.map(c => c.id).join(',')
   );
 
   const getUnreadCount = (conversationId: string) => {
-    return unreadCountsLoading ? 0 : unreadCounts[conversationId] || 0;
+    return unreadCountsLoading ? 0 : unreadCountsData || 0;
   };
 
-  const { totalUnreadCount, isLoading: totalUnreadCountLoading } = useServiceProviderUnreadCount(user?.id);
+  const { data: totalUnreadCount, isLoading: totalUnreadCountLoading } = useServiceProviderUnreadCount();
 
   if (!user) {
     return (
@@ -235,23 +239,22 @@ const Inbox = () => {
                                   {/* Provider Images with Wishlist Icon */}
                                   <div className="relative w-12 h-12 flex-shrink-0">
                                     <ProviderImageCarousel 
-                                      images={conversation.provider_images || []}
-                                      providerName={conversation.provider_name || 'Provider'}
+                                      images={conversation.service_providers?.images || []}
+                                      providerName={conversation.service_providers?.name || 'Provider'}
                                       className="w-12 h-12 rounded-md overflow-hidden"
-                                      showDots={false}
                                       autoPlay={false}
                                     />
                                     {/* Wishlist Heart Icon */}
                                     <button
                                       onClick={(e) => handleProviderWishlistToggle(e, {
                                         provider_id: conversation.provider_id,
-                                        provider_name: conversation.provider_name,
-                                        provider_category: conversation.provider_category,
-                                        provider_subcategory: conversation.provider_subcategory,
-                                        images: conversation.provider_images,
-                                        area: conversation.provider_area,
-                                        city: conversation.provider_city,
-                                        contact_phone: conversation.provider_contact_phone
+                                        provider_name: conversation.service_providers?.name,
+                                        provider_category: conversation.service_requests?.category,
+                                        provider_subcategory: conversation.service_requests?.subcategory,
+                                        images: conversation.service_providers?.images || [],
+                                        area: '',
+                                        city: '',
+                                        contact_phone: ''
                                       })}
                                       className="absolute -top-1 -left-1 p-1 rounded-full bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200 z-10"
                                       title={isInWishlist(conversation.provider_id || '', 'business') ? "Remove from wishlist" : "Add to wishlist"}
@@ -269,7 +272,7 @@ const Inbox = () => {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-1">
                                       <h4 className="font-medium text-sm truncate">
-                                        {conversation.provider_name}
+                                        {conversation.service_providers?.name || 'Provider'}
                                       </h4>
                                       {getUnreadCount(conversation.id) > 0 && (
                                         <Badge variant="destructive" className="text-xs px-1 py-0 min-w-[16px] h-4">
@@ -279,14 +282,8 @@ const Inbox = () => {
                                     </div>
                                     
                                     <Badge variant="secondary" className="text-xs mb-1">
-                                      {conversation.provider_category}
+                                      {conversation.service_requests?.category || 'Service'}
                                     </Badge>
-                                    
-                                    {conversation.last_message && (
-                                      <p className="text-xs text-muted-foreground line-clamp-1 mb-1">
-                                        {conversation.last_message}
-                                      </p>
-                                    )}
                                     
                                     <div className="flex items-center justify-between">
                                       <span className="text-xs text-muted-foreground">
@@ -355,7 +352,7 @@ const Inbox = () => {
       />
 
       <RequestDetailsDialog
-        requestId={selectedRequest}
+        request={selectedRequest}
         open={showRequestDetails}
         onOpenChange={setShowRequestDetails}
       />
