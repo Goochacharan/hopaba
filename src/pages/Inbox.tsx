@@ -32,25 +32,10 @@ interface ServiceRequest {
   created_at: string;
 }
 
-interface Conversation {
-  id: string;
-  request_id: string;
-  provider_id: string;
-  provider_name: string;
-  provider_category: string;
-  provider_subcategory: string;
-  last_message: string;
-  last_message_at: string;
-  provider_images: string[];
-  provider_area: string;
-  provider_city: string;
-  provider_contact_phone: string;
-}
-
 const Inbox = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { conversations } = useConversations();
+  const { conversations, isLoadingConversations } = useConversations();
   const { userRequests, isLoadingUserRequests } = useServiceRequests();
   const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   
@@ -169,7 +154,7 @@ const Inbox = () => {
                 <TabsContent value="requests" className="flex-1 mt-0 px-4 pb-4">
                   <ScrollArea className="h-full">
                     <div className="space-y-3">
-                      {/* Simple filter controls without using InboxFilters component */}
+                      {/* Simple filter controls */}
                       <div className="flex gap-2 mb-4">
                         <select
                           value={filters.status}
@@ -186,7 +171,6 @@ const Inbox = () => {
                           className="px-3 py-1 border rounded text-sm"
                         >
                           <option value="all">All Categories</option>
-                          {/* Add more category options as needed */}
                         </select>
                       </div>
                       
@@ -369,7 +353,7 @@ const Inbox = () => {
         request={filteredRequests.find(r => r.id === selectedRequest) || null}
         open={showRequestDetails}
         onOpenChange={setShowRequestDetails}
-        providerId="" // Provide empty string as default
+        providerId=""
       />
     </div>
   );
