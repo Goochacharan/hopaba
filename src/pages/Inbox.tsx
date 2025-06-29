@@ -51,8 +51,8 @@ interface Conversation {
 const Inbox = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { conversations, isLoading: conversationsLoading } = useConversations();
-  const { userRequests: serviceRequests, isLoadingUserRequests: requestsLoading } = useServiceRequests();
+  const { conversations } = useConversations();
+  const { userRequests, isLoadingUserRequests } = useServiceRequests();
   const { wishlist, toggleWishlist, isInWishlist } = useWishlist();
   
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
@@ -70,7 +70,7 @@ const Inbox = () => {
       id: provider.provider_id || provider.id,
       name: provider.provider_name || provider.name,
       category: provider.provider_category || provider.category,
-      subcategory: provider.provider_subcategory || provider.subcategory,
+      subcategory: provider.provider_subcategory ? [provider.provider_subcategory] : [], // Convert to array
       description: provider.description || '',
       area: provider.area || '',
       city: provider.city || '',
@@ -97,7 +97,7 @@ const Inbox = () => {
     }));
   };
 
-  const filteredRequests = serviceRequests.filter(request => {
+  const filteredRequests = userRequests.filter(request => {
     if (filters.status !== 'all' && request.status !== filters.status) {
       return false;
     }
@@ -114,15 +114,15 @@ const Inbox = () => {
     return conversations.filter(conversation => conversation.request_id === requestId);
   };
 
-  const { data: unreadCountsData, isLoading: unreadCountsLoading } = useConversationUnreadCount(
+  const { data: unreadCount, isLoading: unreadCountsLoading } = useConversationUnreadCount(
     conversations.map(c => c.id).join(',')
   );
 
   const getUnreadCount = (conversationId: string) => {
-    return unreadCountsLoading ? 0 : unreadCountsData || 0;
+    return unreadCountsLoading ? 0 : unreadCount || 0;
   };
 
-  const { data: totalUnreadCount, isLoading: totalUnreadCountLoading } = useServiceProviderUnreadCount();
+  const { data: totalUnreadCount } = useServiceProviderUnreadCount();
 
   if (!user) {
     return (
@@ -171,9 +171,8 @@ const Inbox = () => {
                   <ScrollArea className="h-full">
                     <div className="space-y-3">
                       <InboxFilters
-                        filters={filters}
                         onFilterChange={handleFilterChange}
-                        requests={serviceRequests}
+                        requests={userRequests}
                       />
                       {filteredRequests.map((request) => (
                         <div key={request.id} className="space-y-2">
@@ -242,7 +241,6 @@ const Inbox = () => {
                                       images={conversation.service_providers?.images || []}
                                       providerName={conversation.service_providers?.name || 'Provider'}
                                       className="w-12 h-12 rounded-md overflow-hidden"
-                                      autoPlay={false}
                                     />
                                     {/* Wishlist Heart Icon */}
                                     <button
@@ -352,7 +350,7 @@ const Inbox = () => {
       />
 
       <RequestDetailsDialog
-        request={selectedRequest}
+        request={filteredRequests.find(r => r.id === selectedRequest) || null}
         open={showRequestDetails}
         onOpenChange={setShowRequestDetails}
       />

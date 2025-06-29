@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -219,7 +220,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
       id: provider.provider_id,
       name: provider.provider_name,
       category: provider.provider_category,
-      subcategory: provider.provider_subcategory,
+      subcategory: provider.provider_subcategory ? [provider.provider_subcategory] : [], // Convert string to array
       description: '',
       area: provider.area || '',
       city: provider.city || '',
