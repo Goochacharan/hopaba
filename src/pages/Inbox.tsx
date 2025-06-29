@@ -15,7 +15,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { MatchingProvidersDialog } from '@/components/request/MatchingProvidersDialog';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
-import InboxFilters from '@/components/InboxFilters';
 import { useConversationUnreadCount } from '@/hooks/useConversationUnreadCount';
 import { useServiceProviderUnreadCount } from '@/hooks/useServiceProviderUnreadCount';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -170,10 +169,27 @@ const Inbox = () => {
                 <TabsContent value="requests" className="flex-1 mt-0 px-4 pb-4">
                   <ScrollArea className="h-full">
                     <div className="space-y-3">
-                      <InboxFilters
-                        onFilterChange={handleFilterChange}
-                        requests={userRequests}
-                      />
+                      {/* Simple filter controls without using InboxFilters component */}
+                      <div className="flex gap-2 mb-4">
+                        <select
+                          value={filters.status}
+                          onChange={(e) => handleFilterChange('status', e.target.value)}
+                          className="px-3 py-1 border rounded text-sm"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="open">Open</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                        <select
+                          value={filters.category}
+                          onChange={(e) => handleFilterChange('category', e.target.value)}
+                          className="px-3 py-1 border rounded text-sm"
+                        >
+                          <option value="all">All Categories</option>
+                          {/* Add more category options as needed */}
+                        </select>
+                      </div>
+                      
                       {filteredRequests.map((request) => (
                         <div key={request.id} className="space-y-2">
                           <Card 
@@ -238,7 +254,7 @@ const Inbox = () => {
                                   {/* Provider Images with Wishlist Icon */}
                                   <div className="relative w-12 h-12 flex-shrink-0">
                                     <ProviderImageCarousel 
-                                      images={conversation.service_providers?.images || []}
+                                      images={[]} // Empty array since images property doesn't exist
                                       providerName={conversation.service_providers?.name || 'Provider'}
                                       className="w-12 h-12 rounded-md overflow-hidden"
                                     />
@@ -249,7 +265,7 @@ const Inbox = () => {
                                         provider_name: conversation.service_providers?.name,
                                         provider_category: conversation.service_requests?.category,
                                         provider_subcategory: conversation.service_requests?.subcategory,
-                                        images: conversation.service_providers?.images || [],
+                                        images: [], // Empty array since images property doesn't exist
                                         area: '',
                                         city: '',
                                         contact_phone: ''
@@ -353,6 +369,7 @@ const Inbox = () => {
         request={filteredRequests.find(r => r.id === selectedRequest) || null}
         open={showRequestDetails}
         onOpenChange={setShowRequestDetails}
+        providerId="" // Provide empty string as default
       />
     </div>
   );
