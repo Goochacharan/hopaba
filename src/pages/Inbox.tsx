@@ -14,7 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { RequestDetailsDialog } from '@/components/request/RequestDetailsDialog';
 import { MatchingProvidersDialog } from '@/components/request/MatchingProvidersDialog';
-import { ProviderImageCarousel } from '@/components/providers/ProviderImageCarousel';
+import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel';
 import { SavedQuotationsList } from '@/components/messaging/SavedQuotationsList';
 
 const Inbox = () => {
@@ -22,7 +22,7 @@ const Inbox = () => {
   const navigate = useNavigate();
   
   const { conversations, isLoading: isLoadingConversations } = useConversationsOptimized();
-  const { serviceRequests, isLoading: isLoadingRequests } = useServiceRequests();
+  const { userRequests, isLoadingUserRequests } = useServiceRequests();
   
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
@@ -43,11 +43,17 @@ const Inbox = () => {
 
   // Filter and sort service requests (newest first)
   const sortedRequests = useMemo(() => {
-    if (!serviceRequests) return [];
-    return [...serviceRequests]
+    if (!userRequests) return [];
+    return [...userRequests]
       .filter(request => request.user_id === user?.id)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  }, [serviceRequests, user?.id]);
+  }, [userRequests, user?.id]);
+
+  // Find the selected request for the dialog
+  const selectedRequest = useMemo(() => {
+    if (!selectedRequestId || !userRequests) return null;
+    return userRequests.find(request => request.id === selectedRequestId) || null;
+  }, [selectedRequestId, userRequests]);
 
   const handleConversationClick = (conversationId: string) => {
     sessionStorage.setItem('conversationNavigationSource', 'inbox');
@@ -203,7 +209,7 @@ const Inbox = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingRequests ? (
+              {isLoadingUserRequests ? (
                 <div className="space-y-4">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="animate-pulse">
@@ -348,7 +354,7 @@ const Inbox = () => {
 
       {/* Request Details Dialog */}
       <RequestDetailsDialog
-        requestId={selectedRequestId}
+        request={selectedRequest}
         open={showRequestDetails}
         onOpenChange={setShowRequestDetails}
         providerId=""
