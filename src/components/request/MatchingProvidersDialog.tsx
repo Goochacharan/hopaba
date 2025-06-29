@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone, Languages, Heart } from 'lucide-react';
+import { Loader2, MessageSquare, MapPin, Star, Navigation, Phone, Languages } from 'lucide-react';
 import { ServiceProvider } from '@/types/serviceRequestTypes';
 import { useConversations } from '@/hooks/useConversations';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,7 +25,6 @@ import ProviderImageCarousel from '@/components/providers/ProviderImageCarousel'
 import { usePresence } from '@/hooks/usePresence';
 import { OnlineIndicator } from '@/components/ui/online-indicator';
 import { useServiceProviderLanguages } from '@/hooks/useBusinessLanguages';
-import { useWishlist } from '@/contexts/WishlistContext';
 
 interface MatchingProvidersDialogProps {
   requestId: string | null;
@@ -87,7 +85,7 @@ const getPricingTypeBadge = (pricingType: string | undefined) => {
     case 'fixed':
       return <Badge variant="default" className="ml-2">Fixed Price</Badge>;
     case 'negotiable':
-      return <Badge variant="outline" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
+      return <Badge variant="condition" className="ml-2 bg-orange-200 text-orange-800">Negotiable</Badge>;
     case 'wholesale':
       return <Badge variant="secondary" className="ml-2 bg-purple-200 text-purple-800">Wholesale</Badge>;
     default:
@@ -145,8 +143,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { conversations, createConversation, isCreatingConversation } = useConversations();
-  const { toggleWishlist, isInWishlist } = useWishlist();
-  
   const [contactedProviders, setContactedProviders] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<ProviderFiltersType>({
     minRating: [0],
@@ -214,33 +210,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     }
   };
 
-  // Convert provider data to business object for wishlist
-  const convertProviderToBusiness = (provider: MatchingProviderResult) => {
-    return {
-      id: provider.provider_id,
-      name: provider.provider_name,
-      category: provider.provider_category,
-      subcategory: provider.provider_subcategory ? [provider.provider_subcategory] : [], // Convert string to array
-      description: '',
-      area: provider.area || '',
-      city: provider.city || '',
-      contact_phone: provider.contact_phone || '',
-      images: provider.images || [],
-      address: provider.address || '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      type: 'business' as const
-    };
-  };
-
-  // Handle wishlist toggle for providers
-  const handleProviderWishlistToggle = (e: React.MouseEvent, provider: MatchingProviderResult) => {
-    e.stopPropagation();
-    const businessItem = convertProviderToBusiness(provider);
-    toggleWishlist(businessItem);
-  };
-
-  // ... keep existing code (fetch matching providers using the database function with expanded details)
+  // Fetch matching providers using the database function with expanded details
   const { data: matchingProviders, isLoading, error, refetch } = useQuery({
     queryKey: ['matchingProviders', requestId],
     queryFn: async () => {
@@ -649,7 +619,6 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
     calculateDistances();
   }, [matchingProviders]);
 
-  // Handle chat with provider
   const handleChatWithProvider = async (provider: MatchingProviderResult) => {
     if (!user || !requestId) {
       toast({
@@ -912,28 +881,12 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                   </CardHeader>
                   
                   <CardContent className="flex-1 space-y-4">
-                    {/* Shop Images Carousel with Wishlist Icon */}
-                    <div className="relative">
-                      <ProviderImageCarousel 
-                        images={provider.images || []}
-                        providerName={provider.provider_name}
-                        className="mb-3"
-                      />
-                      {/* Wishlist Heart Icon */}
-                      <button
-                        onClick={(e) => handleProviderWishlistToggle(e, provider)}
-                        className="absolute top-2 left-2 p-1.5 rounded-full bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200 z-10"
-                        title={isInWishlist(provider.provider_id, 'business') ? "Remove from wishlist" : "Add to wishlist"}
-                      >
-                        <Heart 
-                          className={`h-4 w-4 transition-colors ${
-                            isInWishlist(provider.provider_id, 'business')
-                              ? 'fill-red-500 text-red-500' 
-                              : 'text-gray-600 hover:text-red-500'
-                          }`}
-                        />
-                      </button>
-                    </div>
+                    {/* Shop Images Carousel */}
+                    <ProviderImageCarousel 
+                      images={provider.images || []}
+                      providerName={provider.provider_name}
+                      className="mb-3"
+                    />
                     
                     {/* Category and Subcategory */}
                     <div className="flex items-center gap-2 flex-wrap">
