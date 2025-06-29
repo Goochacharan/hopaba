@@ -1,15 +1,12 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { DollarSign, Truck, Package, Store, ImageIcon, Bookmark, BookmarkCheck } from 'lucide-react';
+import { DollarSign, Truck, Package, Store, ImageIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Message } from '@/types/serviceRequestTypes';
 import { useNavigate } from 'react-router-dom';
-import { useSavedQuotations } from '@/hooks/useSavedQuotations';
 
 interface EnhancedMessageItemProps {
   message: Message;
@@ -17,8 +14,6 @@ interface EnhancedMessageItemProps {
   otherPartyName: string;
   businessName?: string;
   providerId?: string;
-  conversationId?: string;
-  requestId?: string;
 }
 
 export const EnhancedMessageItem: React.FC<EnhancedMessageItemProps> = ({ 
@@ -26,38 +21,17 @@ export const EnhancedMessageItem: React.FC<EnhancedMessageItemProps> = ({
   isUser, 
   otherPartyName, 
   businessName,
-  providerId,
-  conversationId,
-  requestId
+  providerId
 }) => {
   const navigate = useNavigate();
-  const { saveQuotation, removeSavedQuotation, isQuotationSaved, isSaving, isRemoving } = useSavedQuotations();
-  
   const hasQuotation = message.quotation_price !== null && message.quotation_price !== undefined;
   const hasAttachments = message.attachments && message.attachments.length > 0;
   const hasQuotationImages = message.quotation_images && message.quotation_images.length > 0;
-  const isSaved = isQuotationSaved(message.id);
   
   // Handle business page navigation
   const handleBusinessClick = () => {
     if (providerId) {
       navigate(`/business/${providerId}`);
-    }
-  };
-
-  // Handle save/unsave quotation
-  const handleSaveToggle = () => {
-    if (!hasQuotation || !providerId || !conversationId || !requestId) return;
-    
-    if (isSaved) {
-      removeSavedQuotation(message.id);
-    } else {
-      saveQuotation({
-        messageId: message.id,
-        conversationId,
-        providerId,
-        requestId
-      });
     }
   };
 
@@ -114,13 +88,13 @@ export const EnhancedMessageItem: React.FC<EnhancedMessageItemProps> = ({
           {/* Enhanced Quotation Card */}
           {hasQuotation && (
             <Card className={cn(
-              "border-2 shadow-md relative",
+              "border-2 shadow-md",
               isUser 
                 ? "bg-primary text-primary-foreground border-primary" 
                 : "bg-gradient-to-r from-green-50 to-green-100 border-green-300"
             )}>
               <CardContent className="p-4">
-                {/* Header with Save Button */}
+                {/* Header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <DollarSign className={cn(
@@ -135,43 +109,18 @@ export const EnhancedMessageItem: React.FC<EnhancedMessageItemProps> = ({
                     </span>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    {/* Pricing Type Badge */}
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        "text-xs",
-                        isUser 
-                          ? "border-primary-foreground/20 text-primary-foreground" 
-                          : getPricingTypeColor(message.pricing_type)
-                      )}
-                    >
-                      {getPricingTypeLabel(message.pricing_type)}
-                    </Badge>
-                    
-                    {/* Save Button - Only show for received quotations */}
-                    {!isUser && providerId && conversationId && requestId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSaveToggle}
-                        disabled={isSaving || isRemoving}
-                        className={cn(
-                          "h-8 w-8 p-0",
-                          isSaved 
-                            ? "text-yellow-600 hover:text-yellow-700" 
-                            : "text-green-600 hover:text-green-700"
-                        )}
-                        title={isSaved ? "Remove from saved" : "Save quotation"}
-                      >
-                        {isSaved ? (
-                          <BookmarkCheck className="h-4 w-4" />
-                        ) : (
-                          <Bookmark className="h-4 w-4" />
-                        )}
-                      </Button>
+                  {/* Pricing Type Badge */}
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs",
+                      isUser 
+                        ? "border-primary-foreground/20 text-primary-foreground" 
+                        : getPricingTypeColor(message.pricing_type)
                     )}
-                  </div>
+                  >
+                    {getPricingTypeLabel(message.pricing_type)}
+                  </Badge>
                 </div>
 
                 {/* Main Price */}
