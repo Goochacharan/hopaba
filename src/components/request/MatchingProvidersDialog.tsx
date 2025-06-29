@@ -93,8 +93,8 @@ const getPricingTypeBadge = (pricingType: string | undefined) => {
   }
 };
 
-// Helper function to get pricing display
-const getPricingDisplay = (pricing: any) => {
+// Helper function to get pricing display with save button
+const getPricingDisplay = (pricing: any, providerId: string, requestId: string, conversationId?: string) => {
   if (!pricing) return null;
   
   return (
@@ -842,6 +842,7 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
               const hasConversation = hasExistingConversation(provider.provider_id);
               const isProcessing = isCreatingConversation && contactedProviders.has(provider.provider_id);
               const isProviderOnline = isUserOnline(provider.user_id);
+              const conversationId = getExistingConversationId(provider.provider_id);
 
               return (
                 <Card key={provider.provider_id} className="flex flex-col h-full">
@@ -956,7 +957,12 @@ export function MatchingProvidersContent({ requestId }: { requestId: string }) {
                     </div>
 
                     {/* Pricing Display with Type Badge */}
-                    {provider.latest_pricing && getPricingDisplay(provider.latest_pricing)}
+                    {provider.latest_pricing && getPricingDisplay(
+                      provider.latest_pricing, 
+                      provider.provider_id, 
+                      requestId, 
+                      conversationId || undefined
+                    )}
                     
                     {/* Languages Spoken */}
                     <ProviderLanguagesDisplay providerId={provider.provider_id} />

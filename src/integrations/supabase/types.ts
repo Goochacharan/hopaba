@@ -640,6 +640,39 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_quotations: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          message_id: string
+          provider_id: string
+          request_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message_id: string
+          provider_id: string
+          request_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message_id?: string
+          provider_id?: string
+          request_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       seller_listing_limits: {
         Row: {
           created_at: string
